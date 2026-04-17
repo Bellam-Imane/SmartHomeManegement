@@ -15,5 +15,26 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+# MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: mongo_db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # InfluxDB (مهمة بزاف للـ IoT والـ Sensors)
+  influxdb:
+    image: influxdb:latest
+    container_name: influx_db
+    restart: always
+    ports:
+      - "8086:8086"
+    volumes:
+      - influx_data:/var/lib/influxdb2
 volumes:
   postgres_data:
+  mongo_data:
+  influx_data:
