@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const pool = require('./src/config/db');
+const { createUserTable } = require('./src/models/User'); // هادي مزيانة هنا
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -15,6 +16,10 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+// هنا كنكرييو الجدول عاد كنطلقو السيرفر
+createUserTable().then(() => {
+    console.log("✅ Database is ready to use!");
+    app.listen(port, () => {
+        console.log(`Server running on http://localhost:${port}`);
+    });
 });
