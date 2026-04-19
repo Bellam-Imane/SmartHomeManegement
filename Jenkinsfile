@@ -2,32 +2,39 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
+        stage('Récupération du Code') {
             steps {
-                echo 'Récupération du code depuis GitHub...'
+                echo 'Récupération du code source depuis GitHub...'
+                // Cette commande récupère automatiquement le code du dépôt configuré
                 checkout scm
             }
         }
-        stage('Build & Run Services') {
+
+        stage('Démarrage des Services') {
             steps {
-                echo 'Démarrage des services...'
-                sh 'docker compose up -d' 
-             }
+                echo 'Lancement des conteneurs via Docker Compose...'
+                /* On utilise "docker compose" (sans le tiret) pour les versions récentes.
+                   Le flag -d permet de lancer en arrière-plan.
+                */
+                sh 'docker compose up -d'
+            }
         }
-        stage('Verification') {
+
+        stage('Vérification du Déploiement') {
             steps {
-                echo 'Vérification de l\'état des conteneurs...'
+                echo 'Vérification de l\'état des services en cours...'
+                // Affiche la liste des conteneurs actifs pour confirmer le succès
                 sh 'docker ps'
             }
         }
     }
-    
+
     post {
         success {
-            echo 'Le déploiement s\'est terminé avec succès !'
+            echo 'Félicitations ! Le déploiement s\'est terminé avec succès.'
         }
         failure {
-            echo 'Il y a eu une erreur lors du déploiement.'
+            echo 'Erreur : Le pipeline a échoué. Veuillez vérifier les logs Docker.'
         }
     }
 }
