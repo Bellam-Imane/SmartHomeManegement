@@ -27,7 +27,7 @@ pipeline {
 
         stage('Verify Containers') {
             steps {
-                echo 'Listing running containers...'
+                echo 'Listing running containers....'
                 bat 'docker ps'
             }
         }
