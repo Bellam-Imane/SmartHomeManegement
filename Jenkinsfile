@@ -2,39 +2,56 @@ pipeline {
     agent any
 
     stages {
-        stage('Récupération du Code') {
+
+        stage('Checkout Code') {
             steps {
-                echo 'Récupération du code source depuis GitHub...'
-                // Cette commande récupère automatiquement le code du dépôt configuré
+                echo 'Pulling code from GitHub...'
                 checkout scm
             }
         }
 
-        stage('Démarrage des Services') {
+        stage('Check Docker Environment') {
             steps {
-                echo 'Lancement des conteneurs via Docker Compose...'
-                /* On utilise "docker compose" (sans le tiret) pour les versions récentes.
-                   Le flag -d permet de lancer en arrière-plan.
-                */
-                sh 'docker compose up -d'
+                echo 'Checking Docker & Compose versions...'
+                bat 'docker version'
+                bat 'docker compose version'
             }
         }
 
-        stage('Vérification du Déploiement') {
+        stage('Start Databases (Docker Compose)') {
             steps {
-                echo 'Vérification de l\'état des services en cours...'
-                // Affiche la liste des conteneurs actifs pour confirmer le succès
-                sh 'docker ps'
+                echo 'Starting PostgreSQL, MongoDB, InfluxDB...'
+                bat 'docker compose -f docker-compose.yml up -d'
             }
         }
+
+        stage('Verify Containers') {
+            steps {
+                echo 'Listing running containers...'
+                bat 'docker ps'
+            }
+        }
+
+        stage('Run Backend') {
+            steps {
+            bat 'npm install'
+            bat 'npm test'
+            bat 'npm start'
+        }
+}
+
     }
 
     post {
         success {
-            echo 'Félicitations ! Le déploiement s\'est terminé avec succès.'
+            echo '✅ Smart Home infrastructure deployed successfully!'
         }
+
         failure {
-            echo 'Erreur : Le pipeline a échoué. Veuillez vérifier les logs Docker.'
+            echo '❌ Pipeline failed. Check Docker logs.'
+            bat 'docker logs postgres_db'
+            bat 'docker logs mongo_db'
+            bat 'docker logs influx_db'
         }
     }
 }

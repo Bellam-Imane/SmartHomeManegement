@@ -48,22 +48,7 @@ services:
     networks:
       - smarthome_net
 
-  # Jenkins 
-  jenkins:
-    image: jenkins/jenkins:lts
-    container_name: jenkins_container
-    restart: always
-    privileged: true
-    user: root 
-    ports:
-      - "8080:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins_data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock 
-    networks:
-      - smarthome_net
-
+  
 networks:
   smarthome_net:
     driver: bridge
@@ -72,4 +57,4 @@ volumes:
   postgres_data:
   mongo_data:
   influx_data:
-  jenkins_data:
+  
