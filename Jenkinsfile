@@ -10,9 +10,9 @@ pipeline {
         }
         stage('Build & Run Services') {
             steps {
-                echo 'Démarrage des bases de données et services via Docker Compose...'
-                sh 'docker-compose up -d'
-            }
+                echo 'Démarrage des services...'
+                sh 'docker compose up -d' 
+             }
         }
         stage('Verification') {
             steps {
