@@ -1,12 +1,13 @@
 const express = require('express');
+const cors = require('cors');
 const app = express();
 const pool = require('./src/config/db');
-const { createUserTable } = require('./src/models/User'); // هادي مزيانة هنا
-const port = process.env.PORT || 3000;
-
+const { createUserTable } = require('./src/models/User'); 
+const port = process.env.PORT || 5000; 
+app.use(cors());
 app.use(express.json());
 
-// تجربة الربط
+
 app.get('/test-db', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW()');
@@ -16,7 +17,7 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
-// هنا كنكرييو الجدول عاد كنطلقو السيرفر
+
 createUserTable().then(() => {
     console.log("✅ Database is ready to use!");
     app.listen(port, () => {
