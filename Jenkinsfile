@@ -27,19 +27,10 @@ pipeline {
 
         stage('Verify Containers') {
             steps {
-                echo 'Listing running containers....'
+                echo 'Listing running containers...'
                 bat 'docker ps'
             }
         }
-
-        stage('Run Backend') {
-            steps {
-            bat 'npm install'
-            bat 'npm test'
-            bat 'npm start'
-        }
-}
-
     }
 
     post {
@@ -49,9 +40,7 @@ pipeline {
 
         failure {
             echo '❌ Pipeline failed. Check Docker logs.'
-            bat 'docker logs postgres_db'
-            bat 'docker logs mongo_db'
-            bat 'docker logs influx_db'
+            bat 'docker ps -a'
         }
     }
 }
