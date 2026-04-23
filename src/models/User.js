@@ -1,25 +1,49 @@
-const pool = require('../config/db');
+const mongoose = require('mongoose');
 
-/**
- * وظيفة لإنشاء جدول المستخدمين إذا لم يكن موجوداً
- */
-const createUserTable = async () => {
-  const queryText = `
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      username VARCHAR(50) UNIQUE NOT NULL,
-      email VARCHAR(100) UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  
-  try {
-    const res = await pool.query(queryText);
-    console.log("✅ User table is ready (Created or already exists).");
-  } catch (err) {
-    console.error("❌ Error while creating User table:", err.message);
+const userSchema = new mongoose.Schema({
+  //--- Classe Utilisateur ---
+  email: {
+    type : String,
+    required: true,
+    unique: true,
+    lowercase: true 
+  },
+  motDePasse: {
+    type: String,
+    required: true
+  },
+  dateCreation: {
+    type: Date,
+    default: Date.now
+  },
+  estActif: {
+    type : Boolean,
+    default: false
+  },
+
+  //Etat de l'utilisateur (userStatus)
+  status: {
+    type : String,
+    enum : ['ACTIVE', 'INACTIVE', 'BLOCKED', 'PENDING'],
+    default: 'PENDING'
+  },
+
+
+  // --- Classe Profile (Intégrée en tant q'objet) ---
+  profile: {
+    nom: {type: String, required: true } ,
+    prenom: { type : String, required: true } ,
+    photo: {type: String },
+    telephone: {type: String }
+  } ,
+
+  // --- Relation avec la classe Role ---
+  role: {
+    type: mongoose.Schema.Types.ObjectId ,
+    ref: 'Role' //Lien vers le modèle Role 
   }
-};
+},{
+  timestamps: true // Pour garder une trace des modifications 
+});
 
-module.exports = { createUserTable };
+module.exports = mongoose.model('User', userSchema);
