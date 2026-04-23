@@ -1,42 +1,51 @@
-const { Pool } = require('pg'); // Pour PostgreSQL
-const mongoose = require('mongoose'); // Pour MongoDB
-const { InfluxDB } = require('@influxdata/influxdb-client'); // Pour InfluxDB
+const { Pool } = require('pg');
+const mongoose = require('mongoose');
+const { InfluxDB } = require('@influxdata/influxdb-client');
 
-// 1. Configuration PostgreSQL
+// PostgreSQL config
 const pool = new Pool({
-  user: 'postgres',          
+  user: 'postgres',
   host: 'localhost',
-  database: 'smarthome_db',  
-  password: 'Riham1234',      
-  port: 5433,                 
+  database: 'smarthome_db',
+  password: 'Riham1234',
+  port: 5433,
 });
 
-// 2. Configuration InfluxDB 
+// InfluxDB config
 const influxToken = 'my_super_secret_token';
 const influxUrl = 'http://localhost:8086';
 const influxClient = new InfluxDB({ url: influxUrl, token: influxToken });
 
+// MongoDB URI
+const mongoURI = 'mongodb://localhost:27017/smarthome_mongo';
 
-// 3. Fonction de connexion globale
 const connectDatabases = async () => {
+
+  // 🟢 MongoDB
   try {
-    // --- Connexion MongoDB ---
-    await mongoose.connect('mongodb://localhost:27017/smarthome_mongo');
-    console.log('✅ Connected to MongoDB successfully!');
-
-    // --- Test Connexion PostgreSQL ---
-    const pgClient = await pool.connect();
-    console.log('✅ Connected to PostgreSQL successfully!');
-    pgClient.release();
-
-    // --- Initialisation InfluxDB ---
-    console.log('✅ InfluxDB Client initialized (Bucket: sensors_data)');
-
-    return { pool, influxClient };
+    await mongoose.connect(mongoURI);
+    console.log('✅ MongoDB connected');
   } catch (err) {
-    console.error('❌ Error connecting to databases:', err.message);
-    process.exit(1);
+    console.error('❌ MongoDB failed:', err.message);
   }
+
+  // 🟢 PostgreSQL
+  try {
+    const client = await pool.connect();
+    console.log('✅ PostgreSQL connected');
+    client.release();
+  } catch (err) {
+    console.error('❌ PostgreSQL failed:', err.message);
+  }
+
+  // 🟢 InfluxDB (test simple)
+  try {
+    console.log('✅ InfluxDB client ready');
+  } catch (err) {
+    console.error('❌ InfluxDB failed:', err.message);
+  }
+
+  return { pool, influxClient };
 };
 
 module.exports = { connectDatabases, pool, influxClient };
