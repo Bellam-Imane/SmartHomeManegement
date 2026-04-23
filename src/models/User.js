@@ -43,7 +43,8 @@ const userSchema = new mongoose.Schema({
     ref: 'Role' //Lien vers le modèle Role 
   }
 },{
-  timestamps: true // Pour garder une trace des modifications 
+  timestamps: true, // Pour garder une trace des modifications 
+  discriminatorKey: 'userType'
 });
 
 module.exports = mongoose.model('User', userSchema);
