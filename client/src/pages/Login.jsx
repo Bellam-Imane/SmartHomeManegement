@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import backgroundLogin from '../assets/background-login.jpeg';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -30,19 +31,19 @@ const Login = () => {
             <div style={styles.leftSide}>
                 <div style={styles.overlay}>
                     <h1 style={styles.logoText}>SmartHome</h1>
-                    <p style={styles.slogan}>Manage your home with intelligence.</p>
+                    <p style={styles.slogan}>Gérez votre maison avec intelligence.</p>
                 </div>
             </div>
 
             {/* Right Side: Authentication Form */}
             <div style={styles.rightSide}>
                 <div style={styles.formCard}>
-                    <h2 style={styles.title}>Sign In</h2>
-                    <p style={styles.subtitle}>Enter your account details below.</p>
+                    <h2 style={styles.title}>Connexion</h2>
+                    <p style={styles.subtitle}>Entrez vos informations ci-dessous.</p>
 
                     <form onSubmit={handleLogin} style={styles.form}>
                         <div style={styles.inputGroup}>
-                            <label style={styles.label}>Email Address</label>
+                            <label style={styles.label}>Adresse Email</label>
                             <input 
                                 type="email" 
                                 placeholder="name@example.com" 
@@ -54,7 +55,7 @@ const Login = () => {
                         </div>
 
                         <div style={styles.inputGroup}>
-                            <label style={styles.label}>Password</label>
+                            <label style={styles.label}>Mot de passe</label>
                             <input 
                                 type="password" 
                                 placeholder="••••••••" 
@@ -66,14 +67,14 @@ const Login = () => {
                         </div>
 
                         <div style={styles.forgotPassContainer}>
-                            <Link to="/forgot-password" style={styles.link}>Forgot password?</Link>
+                            <Link to="/forgot-password" style={styles.link}>Mot de passe oublié?</Link>
                         </div>
 
-                        <button type="submit" style={styles.button}>Login</button>
+                        <button type="submit" style={styles.button}>Se connecter</button>
                     </form>
 
                     <p style={styles.footerText}>
-                        Don't have an account? <Link to="/register" style={styles.linkBold}>Sign up</Link>
+                        Vous n'avez pas de compte? <Link to="/register" style={styles.linkBold}>S'inscrire</Link>
                     </p>
                 </div>
             </div>
@@ -84,7 +85,7 @@ const Login = () => {
 // Component Styles
 const styles = {
     container: { display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' },
-    leftSide: { flex: 1, backgroundColor: '#1a1a1a', backgroundImage: 'url("https://images.unsplash.com/photo-1558002038-1055907df827?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80")', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' },
+    leftSide: { flex: 1, backgroundColor: '#1a1a1a', backgroundImage: `url(${backgroundLogin})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' },
     overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px', color: 'white' },
     logoText: { fontSize: '3rem', fontWeight: '800', marginBottom: '10px' },
     slogan: { fontSize: '1.2rem', opacity: 0.9 },
