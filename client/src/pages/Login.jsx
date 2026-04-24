@@ -10,12 +10,12 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // هاد السطر هو اللي كيعيط للفونكسيون اللي صاوبات إيمان
+      
       const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
       
-      localStorage.setItem('token', response.data.token); // حفظ الساروت
-      alert('مزيان! دخلتي');
-      navigate('/home'); // صيفطيه للدار
+      localStorage.setItem('token', response.data.token); 
+      alert('Connexion réussie !');
+      navigate('/home');
     } catch (error) {
       alert('Email ou Mot de passe incorrect!');
     }
