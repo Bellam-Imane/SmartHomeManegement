@@ -1,35 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Home from './pages/Home';
 
 function App() {
-  const [status, setStatus] = useState("جاري الاتصال...");
-
-  useEffect(() => {
-    
-    axios.get('http://localhost:5000/test-db') 
-      .then(res => {
-        setStatus(res.data.message); 
-      })
-      .catch(err => {
-        console.error(err);
-        setStatus("Error: Backend is not responding");
-      });
-  }, []);
-
   return (
-    <div style={{ padding: '50px', textAlign: 'center', fontFamily: 'Arial' }}>
-      <h1>Smart Home Web Application 🏠</h1>
-      <div style={{ 
-        marginTop: '20px', 
-        padding: '20px', 
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        display: 'inline-block',
-        backgroundColor: status.includes('successfully') ? '#e6fffa' : '#fff5f5'
-      }}>
-        <p>Backend Status: <strong>{status}</strong></p>
-      </div>
-    </div>
+    <Router>
+      <Routes>
+        {/* Redirect the root path to the login page */}
+        <Route path="/" element={<Navigate to="/login" />} />
+        
+        {/* Route definitions */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/home" element={<Home />} />
+      </Routes>
+    </Router>
   );
 }
 
