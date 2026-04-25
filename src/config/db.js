@@ -17,7 +17,7 @@ const influxUrl = 'http://localhost:8086';
 const influxClient = new InfluxDB({ url: influxUrl, token: influxToken });
 
 // MongoDB URI
-const mongoURI = 'mongodb://localhost:27017/smarthome_mongo';
+const mongoURI = "mongodb://127.0.0.1:27018/smartHomeDB";
 
 const connectDatabases = async () => {
 

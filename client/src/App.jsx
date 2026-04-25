@@ -1,35 +1,59 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+/**
+ * Main Application Component
+ * Handles global routing and backend connectivity check
+ */
 function App() {
-  const [status, setStatus] = useState("جاري الاتصال...");
+  const [status, setStatus] = useState("Connecting...");
 
+  // Verify backend connectivity on mount
   useEffect(() => {
-    
-    axios.get('http://localhost:5000/test-db') 
+    axios.get('http://localhost:5000/api/auth/status')
       .then(res => {
-        setStatus(res.data.message); 
+        setStatus(res.data.message);
       })
       .catch(err => {
-        console.error(err);
+        console.error("Backend Error:", err);
         setStatus("Error: Backend is not responding");
       });
   }, []);
 
   return (
-    <div style={{ padding: '50px', textAlign: 'center', fontFamily: 'Arial' }}>
-      <h1>Smart Home Web Application 🏠</h1>
-      <div style={{ 
-        marginTop: '20px', 
-        padding: '20px', 
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        display: 'inline-block',
-        backgroundColor: status.includes('successfully') ? '#e6fffa' : '#fff5f5'
-      }}>
-        <p>Backend Status: <strong>{status}</strong></p>
+    <Router>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Arial' }}>
+        <h1>Smart Home Web Application 🏠</h1>
+        
+        {/* Connection Status Banner */}
+        <div style={{ 
+          marginBottom: '20px', 
+          padding: '10px', 
+          borderRadius: '5px',
+          backgroundColor: status.includes('successfully') ? '#e6fffa' : '#fff5f5',
+          border: '1px solid #ccc'
+        }}>
+          Backend Status: <strong>{status}</strong>
+        </div>
+
+        {/* Application Routing Configuration */}
+        <Routes>
+          {/* Riham's Task: Forgot Password Route */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          
+          {/* Default Route */}
+          <Route path="/" element={
+            <div>
+              <h2>Welcome to the Dashboard</h2>
+              <p>Go to <a href="/forgot-password">Forgot Password</a> to test your page.</p>
+            </div>
+          } />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+        </Routes>
       </div>
-    </div>
+    </Router>
   );
 }
 
