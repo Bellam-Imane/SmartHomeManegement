@@ -10,7 +10,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // --- Middlewares ---
-app.use(cors()); // Autoriser les requêtes cross-origin
+app.use(cors({ origin: 'http://localhost:3000' }));// Autoriser les requêtes cross-origin
 app.use(express.json()); // Parser JSON body
 
 // --- Routes ---
