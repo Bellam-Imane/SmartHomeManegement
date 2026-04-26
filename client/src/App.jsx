@@ -8,6 +8,7 @@ function App() {
   return (
     <Router>
       <Routes>
+      
         {/* Redirect the root path to the login page */}
         <Route path="/" element={<Navigate to="/login" />} />
         
@@ -17,6 +18,8 @@ function App() {
         <Route path="/home" element={<Home />} />
       </Routes>
     </Router>
+
+    
   );
 }
 

@@ -8,7 +8,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'smarthome_db',
   password: 'Riham1234',
-  port: 5433,
+  port: 5432,
 });
 
 // InfluxDB config
