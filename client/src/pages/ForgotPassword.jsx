@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './ForgotPassword.css';
+import bgLogin from '../assets/background-login.jpeg';
 
-/**
- * Composant ForgotPassword
- * Permet à l'utilisateur de demander la réinitialisation de son mot de passe
- */
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
@@ -15,11 +12,8 @@ const ForgotPassword = () => {
         e.preventDefault();
         setMessage('');
         setError('');
-
         try {
-            // Appel à l'API backend 
             const response = await axios.post('http://localhost:5000/api/auth/forgot-passwords', { email });
-            
             if (response.status === 200) {
                 setMessage("Un lien de réinitialisation a été envoyé à votre adresse e-mail.");
             }
@@ -29,37 +23,29 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="forgot-password-container">
-            <div className="forgot-password-card">
-                <h2>Récupération de compte</h2>
-                <p>Veuillez saisir votre e-mail pour réinitialiser votre mot de passe Smart Home.</p>
-                
-                <form onSubmit={handleFormSubmit}>
-                    <div className="form-group">
-                        <label>Adresse E-mail</label>
-                        <input 
-                            type="email" 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="exemple@domaine.com"
-                            required 
-                        />
-                    </div>
-                    
-                    <button type="submit" className="btn-submit">
-                        Envoyer les instructions
-                    </button>
-                </form>
-
-                {message && <div className="alert alert-success">{message}</div>}
-                {error && <div className="alert alert-danger">{error}</div>}
-
-                <div className="footer-links">
-                    <a href="/login">Retour à la page de connexion</a>
+        <div className="forgot-main-wrapper">
+            <div className="forgot-visual-section" style={{ backgroundImage: `url(${bgLogin})` }}>
+                <div className="forgot-visual-overlay">
+                    <h1>SmartHome</h1>
+                    <p>Récupérez l'accès à votre maison intelligente.</p>
+                </div>
+            </div>
+            <div className="forgot-form-section">
+                <div className="forgot-form-container">
+                    <h2>Récupération</h2>
+                    <form onSubmit={handleFormSubmit}>
+                        <div className="forgot-input-group">
+                            <label>Adresse E-mail</label>
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nom@exemple.com" required />
+                        </div>
+                        <button type="submit" className="forgot-btn-dark">Envoyer</button>
+                    </form>
+                    {error && <div className="alert-box error">{error}</div>}
+                    {message && <div className="alert-box success">{message}</div>}
+                    <div style={{marginTop: '20px'}}><a href="/login" style={{color: '#4a51e0', textDecoration: 'none'}}>Retour à la connexion</a></div>
                 </div>
             </div>
         </div>
     );
 };
-
 export default ForgotPassword;

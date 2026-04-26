@@ -87,27 +87,35 @@ exports.forgotPassword = async (req, res) => {
             return res.status(404).json({ error: "Utilisateur non trouvé" });
         }
 
-        const token = jwt.sign({ id: user._id }, "SECRET_KEY_A_CHANGER", { expiresIn: '15m' });
+        // Configuration du « transporteur » (Transporter) en utilisant votre compte Gmail et le code que vous avez obtenu
+        const transporter = nodemailer.createTransport({
+        service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+});
 
+        const token = jwt.sign({ id: user._id }, "SECRET_KEY_A_CHANGER", { expiresIn: '15m' });
         const resetLink = `http://localhost:3000/reset-password/${token}`;
-        console.log("🔗 Voici le lien :");
-        console.log(resetLink); 
 
         const mailOptions = {
-            from: 'mabelle.reichel72@ethereal.email',
-            to: user.email,
+            from: process.env.EMAIL_USER, 
+            to: user.email,               
             subject: 'Réinitialisation de votre mot de passe',
-            text: `Cliquez sur ce lien pour changer votre mot de passe : ${resetLink}`
+            text: `Bonjour, Cliquez sur ce lien pour changer votre mot de passe : ${resetLink}`
         };
+        // Envoyez l’e-mail correctement
+        await transporter.sendMail(mailOptions);
 
+        console.log("📧 Email envoyé avec succès à :", user.email);
         return res.status(200).json({ message: "Lien de réinitialisation envoyé par email !" });
 
     } catch (err) {
-        console.error(err);
+        console.error("Erreur Nodemailer:", err);
         res.status(500).json({ error: "Erreur lors de l'envoi de l'email" });
     }
 };
-
 // 3. La fonction qui change le mot de passe dans la base de données
 exports.resetPassword = async (req, res) => {
     const { token } = req.params; 
