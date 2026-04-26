@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
@@ -10,8 +11,15 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // --- Middlewares ---
-app.use(cors()); // Autoriser les requêtes cross-origin
+app.use(cors({ origin: 'http://localhost:3000' }));// Autoriser les requêtes cross-origin
 app.use(express.json()); // Parser JSON body
+
+
+app.use((req, res, next) => {
+    console.log("👉 REQUEST:", req.method, req.url);
+    next();
+});
+
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);

@@ -1,9 +1,10 @@
-const User = require('./User');
 const mongoose = require('mongoose');
 
-const Administrateur = User.discriminator('Administrateur', new mongoose.Schema({
-    dateNomination: { type: Date, default: Date.now } ,
-    numUrgenceMaison: { type: String } 
-})) ;
+const schema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
+    motDePasse: { type: String, required: true },
+    status: { type: String, default: 'ACTIVE' },
+   
+}, { timestamps: true });
 
-module.exports = Administrateur ; 
+module.exports = mongoose.model('Administrateur', schema, 'administrateurs');

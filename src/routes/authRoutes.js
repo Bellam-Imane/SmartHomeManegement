@@ -2,8 +2,15 @@ const express = require('express');
 const router = express.Router(); 
 const authController = require('../controllers/authController');
 
-// Route POST pour enregistrer un administrateur
+// Route 
+router.get('/status', (req, res) => res.json({ message: "successfully connected" }));
+
+// Routes ghizlane
 router.post('/register-admin', authController.registerAdmin);
+router.post('/login', authController.login);
 
+// Routes riham
+router.post('/forgot-passwords', authController.forgotPassword);
+router.post('/reset-password/:token', authController.resetPassword);
 
-module.exports = router; 
+module.exports = router;
