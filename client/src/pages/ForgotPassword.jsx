@@ -26,8 +26,8 @@ const ForgotPassword = () => {
         <div className="forgot-main-wrapper">
             <div className="forgot-visual-section" style={{ backgroundImage: `url(${bgLogin})` }}>
                 <div className="forgot-visual-overlay">
-                    <h1>SmartHome</h1>
-                    <p>Récupérez l'accès à votre maison intelligente.</p>
+                    <h1 className="text-6xl font-bold mb-4 tracking-tight">SmartHome</h1>
+                    <p className="text-xl opacity-90 max-w-md">Gérez votre maison avec intelligence.</p>
                 </div>
             </div>
             <div className="forgot-form-section">

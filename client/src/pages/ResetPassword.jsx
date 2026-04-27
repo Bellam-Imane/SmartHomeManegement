@@ -29,8 +29,8 @@ const ResetPassword = () => {
             {/* Côté gauche (photo)*/}
             <div className="reset-visual-section" style={{ backgroundImage: `url(${bgLogin})` }}>
                 <div className="reset-visual-overlay">
-                    <h1>SmartHome</h1>
-                    <p>Sécurisez votre compte avec un nouveau mot de passe.</p>
+                    <h1 className="text-6xl font-bold mb-4 tracking-tight">SmartHome</h1>
+                    <p className="text-xl opacity-90 max-w-md">Gérez votre maison avec intelligence.</p>
                 </div>
             </div>
 
