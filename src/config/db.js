@@ -2,22 +2,22 @@ const { Pool } = require('pg');
 const mongoose = require('mongoose');
 const { InfluxDB } = require('@influxdata/influxdb-client');
 
-// PostgreSQL config
+// PostgreSQL config - Using environment variables
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'smarthome_db',
-  password: 'Riham1234',
-  port: 5432,
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'smarthome_db',
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
 });
 
-// InfluxDB config
-const influxToken = 'my_super_secret_token';
-const influxUrl = 'http://localhost:8086';
+// InfluxDB config - Using environment variables
+const influxToken = process.env.INFLUX_TOKEN || 'my_super_secret_token';
+const influxUrl = process.env.INFLUX_URL || 'http://localhost:8086';
 const influxClient = new InfluxDB({ url: influxUrl, token: influxToken });
 
-// MongoDB URI
-const mongoURI = "mongodb://127.0.0.1:27017/smartHomeDB";
+// MongoDB URI - Using environment variables
+const mongoURI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/smartHomeDB";
 
 const connectDatabases = async () => {
 
@@ -36,6 +36,7 @@ const connectDatabases = async () => {
     client.release();
   } catch (err) {
     console.error('❌ PostgreSQL failed:', err.message);
+    console.error('   Details:', err.code, '-', err.detail || err.message);
   }
 
   // 🟢 InfluxDB (test simple)

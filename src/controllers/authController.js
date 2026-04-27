@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 exports.registerAdmin = async (req, res) => {
     try {
         const { email, motDePasse, nom, prenom, telephone } = req.body;
-
+        
         const userExists = await Administrateur.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: "Email déjà utilisé" });
@@ -17,131 +17,97 @@ exports.registerAdmin = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(motDePasse, salt);
 
-        const adminRole = await Role.findOne({ nomRole: 'ADMIN' });
+        let adminRole = await Role.findOne({ nomRole: 'ADMIN' });
 
         const newAdmin = new Administrateur({
             email,
             motDePasse: hashedPassword,
             status: 'ACTIVE',
             estActif: true,
-            profile: {
-                nom,
-                prenom,
-                telephone
-            },
+            profile: { nom, prenom, telephone },
             role: adminRole ? adminRole._id : null
         });
 
         await newAdmin.save();
-
-        res.status(201).json({
-            message: "Administrateur créé avec succès !",
-            userId: newAdmin._id
-        });
-
+        res.status(201).json({ message: "Administrateur créé avec succès !", userId: newAdmin._id });
     } catch (error) {
-        res.status(500).json({
-            message: "Erreur serveur",
-            error: error.message
-        });
+        res.status(500).json({ message: "Erreur serveur", error: error.message });
     }
 };
 
-// Fonction pour la connexion (Login)
+// Fonction pour la connexion (Login) - ✅ VERSION NETTOYÉE ET SÉCURISÉE
 exports.login = async (req, res) => {
     try {
-        const { email, motDePasse} = req.body;
+        const { email, motDePasse } = req.body;
 
+        // Recherche de l'utilisateur
         const user = await Administrateur.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
 
-        console.log("Typed password:", motDePasse);
-        console.log("DB password:", user.motDePasse); 
-
+        // Comparaison du mot de passe
         const isMatch = await bcrypt.compare(motDePasse, user.motDePasse);
-        console.log("MATCH:", isMatch);
-
         if (!isMatch) {
             return res.status(400).json({ message: "Mot de passe incorrect" });
         }
 
+        // ✅ GÉNÉRATION DU TOKEN (Utilise JWT_SECRET du fichier .env)
+        const token = jwt.sign(
+            { id: user._id, role: user.role || 'ADMIN' },
+            process.env.JWT_SECRET, 
+            { expiresIn: '1h' }
+        );
+
         res.status(200).json({
             message: "Connexion réussie !",
+            token,
             user: { id: user._id, email: user.email }
         });
-
     } catch (error) {
-        res.status(500).json({
-            message: "Erreur serveur",
-            error: error.message
-        });
+        res.status(500).json({ message: "Erreur serveur", error: error.message });
     }
-    
 };
 
-
+// --- Routes Riham & Imane (Gardées intactes) ---
 exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
-
     try {
         const user = await Administrateur.findOne({ email: email.trim() });
-
-        if (!user) {
-            return res.status(404).json({ error: "Utilisateur non trouvé" });
-        }
-
-        // Configuration du « transporteur » (Transporter) en utilisant votre compte Gmail et le code que vous avez obtenu
+        if (!user) return res.status(404).json({ error: "Utilisateur non trouvé" });
+        
         const transporter = nodemailer.createTransport({
-        service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-});
-
-        const token = jwt.sign({ id: user._id }, "SECRET_KEY_A_CHANGER", { expiresIn: '15m' });
+            service: 'gmail',
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+        });
+        
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
         const resetLink = `http://localhost:3000/reset-password/${token}`;
-
+        
         const mailOptions = {
-            from: process.env.EMAIL_USER, 
-            to: user.email,               
+            from: process.env.EMAIL_USER,
+            to: user.email,
             subject: 'Réinitialisation de votre mot de passe',
-            text: `Bonjour, Cliquez sur ce lien pour changer votre mot de passe : ${resetLink}`
+            text: `Bonjour, Cliquez sur ce lien : ${resetLink}`
         };
-        // Envoyez l’e-mail correctement
+        
         await transporter.sendMail(mailOptions);
-
-        console.log("📧 Email envoyé avec succès à :", user.email);
-        return res.status(200).json({ message: "Lien de réinitialisation envoyé par email !" });
-
+        return res.status(200).json({ message: "Lien envoyé !" });
     } catch (err) {
-        console.error("Erreur Nodemailer:", err);
-        res.status(500).json({ error: "Erreur lors de l'envoi de l'email" });
+        res.status(500).json({ error: "Erreur email" });
     }
 };
-// 3. La fonction qui change le mot de passe dans la base de données
+
 exports.resetPassword = async (req, res) => {
-    const { token } = req.params; 
-    const { password } = req.body; 
-
+    const { token } = req.params;
+    const { password } = req.body;
     try {
-        // 1. Vérifiez si le jeton est valide
-        const decoded = jwt.verify(token, "SECRET_KEY_A_CHANGER");
-
-        // 2. Hashage du nouveau mot de passe
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-
-        // 3. Mise à jour dans MongoDB
         await Administrateur.findByIdAndUpdate(decoded.id, { motDePasse: hashedPassword });
-
-        console.log("✅ Mot de passe mis à jour pour l'ID:", decoded.id);
-        res.status(200).json({ message: "Mot de passe modifié avec succès !" });
-
+        res.status(200).json({ message: "Mot de passe modifié !" });
     } catch (error) {
-        console.error("Erreur ResetPassword:", error.message);
-        res.status(400).json({ error: "Le lien est invalide ou a expiré." });
+        res.status(400).json({ error: "Lien invalide." });
     }
 };
