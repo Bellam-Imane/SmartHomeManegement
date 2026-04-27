@@ -20,13 +20,13 @@ function App() {
     <Router>
 
       <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Arial' }}>
-        <div style={{ 
+        {/* <div style={{ 
           marginBottom: '20px', padding: '10px', borderRadius: '5px',
           backgroundColor: status.includes('successfully') ? '#e6fffa' : '#fff5f5',
           border: '1px solid #ccc'
         }}>
           Backend Status: <strong>{status}</strong>
-        </div>
+        </div>  */}
 
         <Routes>
          
