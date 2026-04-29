@@ -1,0 +1,19 @@
+import React from 'react';
+
+const Devices = () => {
+  return (
+    
+    <div className="bg-white p-8 rounded-[40px] shadow-sm w-full min-h-[calc(100vh-2.5rem)] flex flex-col">
+      
+      {/* Header الصفحة */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-[#1a1a1a]">Mes Appareils</h1>
+        <p className="text-gray-500 mt-1">Contrôlez tous les équipements connectés de votre maison.</p>
+      </div>
+
+    
+    </div>
+  );
+};
+
+export default Devices;
