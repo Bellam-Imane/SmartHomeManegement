@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import backgroundLogin from '../assets/background-login.jpeg';
 
+
+
 const Login = () => {
     const [email, setEmail] = useState('');
     const [motDePasse, setPassword] = useState('');
@@ -26,7 +28,7 @@ const Login = () => {
         localStorage.setItem('token', response.data.token);
         alert('Connexion réussie !');
 
-        navigate('/home');
+        navigate('/home/Dashboard');
 
     } catch (error) {
         console.log("ERROR:", error.response?.data || error.message);
