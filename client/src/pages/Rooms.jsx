@@ -1,18 +1,26 @@
 import React from 'react';
 
-const Rooms = () => {
-  return (
-    
-    <div className="bg-white p-8 rounded-[40px] shadow-sm w-full min-h-[calc(100vh-2.5rem)] flex flex-col">
-      
-      
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#1a1a1a]">Mes Pièces</h1>
-        <p className="text-gray-500 mt-1">Gérez l'éclairage et les appareils de chaque chambre.</p>
-      </div>
+import VoiceControlButton from '../components/VoiceControlButton';
 
-     
-    </div>
+const Rooms = () => {
+  
+  const handleVoiceClick = () => {
+    console.log("Microphone cliqué");
+  };
+
+  return (
+    <header className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-md rounded-2xl shadow-sm">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-800" >
+          Mes Pièces 
+        </h1>
+        <p  className="text-gray-500 mt-1 text-sm font-medium" >
+          Gérez les appareils de chaque pièce.
+        </p>
+      </div>
+      <VoiceControlButton  onClick={handleVoiceClick} />
+
+    </header>
   );
 };
 
