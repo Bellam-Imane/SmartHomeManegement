@@ -1,119 +1,276 @@
-import React from 'react';
-import { UserPlus, Edit2, Trash2, Shield, Smartphone, Lightbulb, Thermometer, Video, Mic, User } from 'lucide-react';
+import { useState } from "react";
+import {
+  ArrowLeft,
+  Search,
+  Bell,
+  Mic,
+  Pencil,
+  Trash2,
+  Lock,
+  Lightbulb,
+  Thermometer,
+  Video,
+  ShieldCheck,
+  User,
+  Users,
+} from "lucide-react";
 
-const Users = () => {
-  // بيانات تجريبية للأعضاء (Data)
-  const members = [
-    { id: 1, name: "Alisha H.", role: "Admin", status: "Online", devices: "8 appareils", initial: "A" },
-    { id: 2, name: "Miguel", role: "Membre", status: "Online", devices: "3 appareils", initial: "M" },
-    { id: 3, name: "Sarah", role: "Invité", status: "Online", devices: "1 appareil", initial: "S" },
-    { id: 4, name: "Miguel", role: "Membre", status: "Offline", devices: "1 appareil", initial: "M" },
-  ];
+// ─── Avatar Component (التعديل الوحيد اللي زدت هو هاد الجزء باش يقرأ الصور) ───
+function Avatar({ name, src }) {
+  return (
+    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full overflow-hidden bg-gray-100">
+      {src ? (
+        <img src={src} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <div className="text-sm font-semibold text-gray-600">{name[0]}</div>
+      )}
+    </div>
+  );
+}
 
-  // بيانات جدول الصلاحيات
-  const permissions = [
-    { id: 1, name: "Serrure porte entrée", location: "Entrée", icon: <Smartphone size={20}/>, admin: true, member: true, guest: true },
-    { id: 2, name: "Lumières du salon", location: "Salon", icon: <Lightbulb size={20}/>, admin: true, member: true, guest: false },
-    { id: 3, name: "Thermostat intelligent", location: "Couloir", icon: <Thermometer size={20}/>, admin: true, member: false, guest: false },
-    { id: 4, name: "Caméra de l'allée", location: "Extérieur", icon: <Video size={20}/>, admin: true, member: true, guest: false },
-  ];
+// ─── Toggle Switch ───────────────────────────────────────────────────────────
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+        checked ? "bg-gray-900" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
+// ─── Badge ───────────────────────────────────────────────────────────────────
+function Badge({ label }) {
+  return (
+    <span className="ml-2 inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
+      {label}
+    </span>
+  );
+}
+
+// ─── Status Dot ──────────────────────────────────────────────────────────────
+function StatusDot({ online }) {
+  return (
+    <span
+      className={`mr-1.5 inline-block h-2 w-2 rounded-full ${
+        online ? "bg-green-500" : "bg-gray-400"
+      }`}
+    />
+  );
+}
+
+// ─── Member Card (رجعتو كيف كان وزدت src ف الـ Avatar) ───────────────────────
+function MemberCard({ member }) {
+  return (
+    <div
+      className="flex items-center justify-between rounded-2xl bg-white px-5 py-4 transition-transform duration-200 hover:-translate-y-0.5"
+      style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)" }}
+    >
+      <div className="flex items-center gap-4">
+        {/* هنا ناديت على الصورة */}
+        <Avatar name={member.name} src={member.img} />
+        <div>
+          <div className="flex items-center text-sm font-semibold text-gray-900">
+            {member.name}
+            <Badge label={member.role} />
+          </div>
+          <div className="mt-1 flex items-center text-xs text-gray-400">
+            <StatusDot online={member.online} />
+            {member.online ? "Online" : "Offline"}
+            &nbsp;•&nbsp;
+            {member.devices} appareils
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="text-gray-300 transition-colors hover:text-gray-600">
+          <Pencil size={14} />
+        </button>
+        <button className="text-red-300 transition-colors hover:text-red-500">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Permission Row ───────────────────────────────────────────────────────────
+function PermRow({ device, permissions, onChange }) {
+  return (
+    <div className="flex items-center border-b border-gray-100 py-4 last:border-none">
+      <div className="flex flex-1 items-center gap-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
+          {device.icon}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-900">{device.name}</p>
+          <p className="text-xs text-gray-400">{device.room}</p>
+        </div>
+      </div>
+      {["admin", "membre", "invite"].map((role) => (
+        <div key={role} className="flex w-28 justify-center">
+          <Toggle
+            checked={permissions[role]}
+            onChange={(val) => onChange(device.id, role, val)}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Initial Data (ربطت الصور بـ user1 و user2) ─────────────────────────────
+const MEMBERS_DATA = [
+  { id: 1, name: "Alisha H.", role: "Admin",  online: true,  devices: 8, img: "/assets/user1.jpg" },
+  { id: 2, name: "Miguel",   role: "Membre", online: true,  devices: 3, img: "/assets/user2.jpg" },
+  { id: 3, name: "Sarah",    role: "Invité", online: true,  devices: 1, img: "/assets/user1.jpg" },
+  { id: 4, name: "James",    role: "Membre", online: false, devices: 4, img: "/assets/user2.jpg" },
+  { id: 5, name: "Elena",    role: "Invité", online: true,  devices: 2, img: "/assets/user1.jpg" },
+  { id: 6, name: "Miguel",   role: "Membre", online: true,  devices: 2, img: "/assets/user2.jpg" },
+];
+
+const INITIAL_DEVICES = [
+  { id: "serrure", name: "Serrure porte entrée", room: "Entrée", icon: <Lock size={18} />, permissions: { admin: true, membre: true, invite: true } },
+  { id: "lumieres", name: "Lumières du salon", room: "salon", icon: <Lightbulb size={18} />, permissions: { admin: true, membre: true, invite: false } },
+  { id: "thermostat", name: "Thermostat intelligent", room: "Couloir", icon: <Thermometer size={18} />, permissions: { admin: true, membre: false, invite: false } },
+  { id: "camera", name: "Caméra de l'allée", room: "Extérieur", icon: <Video size={18} />, permissions: { admin: true, membre: true, invite: false } },
+];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function UsersPage() {
+  const [search, setSearch] = useState("");
+  const [members] = useState(MEMBERS_DATA);
+  const [devices, setDevices] = useState(INITIAL_DEVICES);
+
+  const handleToggle = (deviceId, role, value) => {
+    setDevices((prev) =>
+      prev.map((d) =>
+        d.id === deviceId
+          ? { ...d, permissions: { ...d.permissions, [role]: value } }
+          : d
+      )
+    );
+  };
+
+  const filtered = members.filter((m) =>
+    m.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    // استعملت نفس الـ div الكبيرة اللي كانت عند إيمان باش يجي السايز مقاد
-    <div className="bg-white p-8 rounded-[40px] shadow-sm w-full min-h-[calc(100vh-2.5rem)] flex flex-col font-sans overflow-y-auto">
-      
-      {/* Header - دمجت فيه ستيل إيمان مع الأزرار الجديدة */}
-      <div className="mb-10 flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-[#1a1a1a]">Membres et famille</h1>
-          <p className="text-gray-500 mt-1">Gérez les membres de la famille et leurs accès au tableau de bord.</p>
+    <div className="min-h-screen bg-white font-sans text-gray-900" style={{backgroundColor:"#ffffff"}}>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-8 py-5">
+        <div className="flex items-center gap-4">
+          <button className="text-gray-500 hover:text-gray-900 transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="h-9 w-px bg-gray-200" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Members et famille
+            </h1>
+            <p className="mt-0.5 text-xs text-gray-400">
+              10 membres au total dans le foyer
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-3">
-             <div className="hidden md:flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
-                <Mic size={16} className="text-gray-500"/>
-                <span className="text-xs font-bold text-gray-600 uppercase tracking-tighter">contrôle vocal</span>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-             </div>
-             <button className="bg-[#2D3748] text-white px-5 py-2.5 rounded-2xl hover:bg-black transition-all shadow-md flex items-center gap-2 text-sm font-medium">
-                <UserPlus size={18}/> Ajouter un membre
-             </button>
+          <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-sm">
+            <Search size={14} className="text-gray-400" />
+            <input
+              type="text"
+              placeholder="chercher..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-52 bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none"
+            />
+          </div>
+
+          <button className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+            <Bell size={17} />
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-400 text-[9px] font-bold text-white leading-none">
+              1
+            </span>
+          </button>
+
+          <div className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-700">
+              <Mic size={14} />
+            </div>
+            <span className="text-sm font-bold text-gray-900">contrôle vocal</span>
+            <span className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]" />
+          </div>
         </div>
       </div>
 
-      {/* القسم الأول: Membres Actifs */}
-      <div className="mb-12">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Membres Actifs</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {members.map((member) => (
-            <div key={member.id} className="p-4 rounded-[2rem] border border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-[#edf2f7] text-[#2d3748] rounded-full flex items-center justify-center font-bold text-lg">
-                  {member.initial}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-gray-900">{member.name}</h3>
-                    <span className="text-[10px] px-2 py-0.5 bg-white border border-gray-200 text-gray-500 rounded-full font-bold uppercase tracking-widest">{member.role}</span>
-                  </div>
-                  <p className="text-xs text-gray-400 font-medium">{member.status}  •  {member.devices}</p>
-                </div>
-              </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all mr-2">
-                <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-white rounded-xl shadow-sm transition-all"><Edit2 size={16}/></button>
-                <button className="p-2 text-gray-400 hover:text-red-500 hover:bg-white rounded-xl shadow-sm transition-all"><Trash2 size={16}/></button>
-              </div>
+      <div className="mx-auto max-w-5xl px-8 py-8 space-y-6">
+        {/* ── Active Members (الزر رجع كيف كان) ── */}
+        <div className="rounded-2xl bg-white p-7" style={{boxShadow:"0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)"}}>
+          <div className="mb-6 flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Membres Actifs</h2>
+              <p className="mt-1 text-xs text-gray-400">
+                Gérez les personnes qui ont accès au tableau de bord de votre maison
+              </p>
             </div>
+            {/* هاد الزر رجعتو للشكل الأصلي ديالك */}
+            <button className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors shadow-sm">
+              Ajouter un membre
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            {filtered.map((m) => (
+              <MemberCard key={m.id} member={m} />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Permissions Matrix ── */}
+        <div className="rounded-2xl bg-white p-7" style={{boxShadow:"0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)"}}>
+          <div className="mb-5">
+            <h2 className="text-lg font-bold text-gray-900">Matrice des Permissions</h2>
+            <p className="mt-1 text-xs text-gray-400">
+              Définissez un accès granulaire pour chaque rôle au sein des pièces et des appareils.
+            </p>
+          </div>
+
+          <div className="flex items-center border-b border-gray-100 pb-3">
+            <div className="flex-1 text-xs font-medium text-gray-500">
+              Appareil / Ressource
+            </div>
+            {[
+              { label: "Admin",  Icon: ShieldCheck },
+              { label: "Membre", Icon: User },
+              { label: "Invité", Icon: Users },
+            ].map(({ label, Icon }) => (
+              <div key={label} className="flex w-28 flex-col items-center gap-1">
+                <Icon size={17} className="text-gray-600" />
+                <span className="text-xs font-semibold text-gray-800">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          {devices.map((device) => (
+            <PermRow
+              key={device.id}
+              device={device}
+              permissions={device.permissions}
+              onChange={handleToggle}
+            />
           ))}
         </div>
       </div>
-
-      {/* القسم الثاني: Matrice des Permissions */}
-      <div className="flex-1">
-        <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Matrice des Permissions</h2>
-            <p className="text-sm text-gray-400 italic">Définissez un accès granulaire pour chaque rôle.</p>
-        </div>
-        
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-50">
-                <th className="pb-4">Appareil / Ressource</th>
-                <th className="pb-4 text-center">Admin</th>
-                <th className="pb-4 text-center">Membre</th>
-                <th className="pb-4 text-center">Invité</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {permissions.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-[#f8fafc] rounded-2xl text-gray-500">{item.icon}</div>
-                      <div>
-                        <div className="font-bold text-gray-800 text-sm">{item.name}</div>
-                        <div className="text-[10px] text-gray-400 font-bold uppercase">{item.location}</div>
-                      </div>
-                    </div>
-                  </td>
-                  {/* Toggle Switches */}
-                  {[item.admin, item.member, item.guest].map((checked, index) => (
-                    <td key={index} className="py-4 text-center">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked={checked} className="sr-only peer" />
-                        <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2D3748]"></div>
-                      </label>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
   );
-};
-
-export default Users;
+}
