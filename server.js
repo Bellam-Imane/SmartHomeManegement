@@ -31,7 +31,11 @@ app.get('/test-health', (req, res) => {
     status: "All systems operational"
   });
 });
-
+// Middleware pour capturer les erreurs 500
+app.use((err, req, res, next) => {
+  console.error("❌ ERROR STACK:", err.stack);
+  res.status(500).json({ message: "Erreur interne du serveur", error: err.message });
+});
 // --- Start server after DB connection ---
 connectDatabases()
   .then(() => {
