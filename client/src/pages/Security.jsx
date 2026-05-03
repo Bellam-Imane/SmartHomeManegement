@@ -83,10 +83,8 @@ const AirQualityCard = ({ img, title, subtitle, value, score }) => (
   </div>
 );
 
-// (Interactive Lock Card)
 const LockCard = ({ name, initialState }) => {
   const [isLocked, setIsLocked] = useState(initialState);
-
   return (
     <div style={{ 
       background: 'white', borderRadius: '24px', padding: '18px', 
@@ -94,11 +92,7 @@ const LockCard = ({ name, initialState }) => {
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '110px'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <img 
-            src={isLocked ? icon_VERROUILLE : icon_DEVERROUILLE} 
-            alt="lock status" 
-            style={{ width: '22px', height: '22px', objectFit: 'contain' }} 
-          />
+          <img src={isLocked ? icon_VERROUILLE : icon_DEVERROUILLE} alt="lock status" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
           <img 
             onClick={() => setIsLocked(!isLocked)}
             src={icon_start} 
@@ -108,12 +102,7 @@ const LockCard = ({ name, initialState }) => {
       </div>
       <div style={{ marginTop: '10px' }}>
         <div style={{ fontWeight: '700', fontSize: '13px', color: '#1a1a2e' }}>{name}</div>
-        <div style={{ 
-          fontSize: '9px', 
-          color: isLocked ? '#1a1a2e' : '#ef4444', 
-          fontWeight: 'bold', 
-          textTransform: 'uppercase' 
-        }}>
+        <div style={{ fontSize: '9px', color: isLocked ? '#1a1a2e' : '#ef4444', fontWeight: 'bold', textTransform: 'uppercase' }}>
           {isLocked ? 'VERROUILLÉ' : 'DÉVERROUILLÉ'}
         </div>
       </div>
@@ -141,6 +130,9 @@ const Security = () => {
       fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box'
     }}>
       
+      {/* CSS For Blinking Animation */}
+      <style>{`@keyframes blinker { 50% { opacity: 0; } }`}</style>
+
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
@@ -220,15 +212,33 @@ const Security = () => {
                 <option value="escalier">Escalier</option>
               </select>
             </div>
-            <div style={{ position: 'relative', borderRadius: '45px', overflow: 'hidden', background: 'black', aspectRatio: '16/11' }}>
+            
+            {/* CAMERA FEED BOX WITH BLINKING & VIEW LIVE BUTTON */}
+            <div style={{ 
+                position: isFullScreen ? 'fixed' : 'relative', top: 0, left: 0,
+                width: isFullScreen ? '100vw' : '100%', height: isFullScreen ? '100vh' : 'auto',
+                aspectRatio: isFullScreen ? 'none' : '16/11', zIndex: isFullScreen ? 9999 : 1,
+                borderRadius: isFullScreen ? 0 : '45px', overflow: 'hidden', background: 'black' 
+            }}>
               <img src={currentCam.img} alt={currentCam.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', top: '25px', left: '25px', background: '#FF0000', color: 'white', padding: '6px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '900' }}>● LIVE</div>
+              
+              {/* Blinking Live Indicator */}
+              <div style={{ position: 'absolute', top: '25px', left: '25px', background: '#FF0000', color: 'white', padding: '6px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '18px', animation: 'blinker 2s linear infinite' }}>●</span> LIVE
+              </div>
+
               <div style={{ position: 'absolute', bottom: '30px', left: '30px', color: 'white' }}>
                 <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800' }}>{currentCam.name}</h2>
                 <p style={{ margin: 0, opacity: 0.8, fontSize: '14px' }}>{currentCam.desc}</p>
               </div>
+
+              {/* View Live Button */}
+              <button onClick={() => setIsFullScreen(!isFullScreen)} style={{ position: 'absolute', bottom: '30px', right: '30px', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(15px)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '12px 25px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold' }}>
+                {isFullScreen ? '✖ Fermer' : 'View Live'}
+              </button>
             </div>
           </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '700' }}>Capteurs Connectés</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
