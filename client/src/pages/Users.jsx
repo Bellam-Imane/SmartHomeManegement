@@ -73,7 +73,7 @@ function MemberCard({ member }) {
   return (
     <div
       className="flex items-center justify-between rounded-2xl bg-white px-5 py-4 transition-transform duration-200 hover:-translate-y-0.5"
-      style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)" }}
+      style={{ boxShadow: "15 8px 40px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-center gap-4">
         {/* هنا ناديت على الصورة */}
