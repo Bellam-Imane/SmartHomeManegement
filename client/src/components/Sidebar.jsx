@@ -31,7 +31,7 @@ const Sidebar = () => {
 
   return (
     
-    <div className="h-[95vh] w-full bg-[#b5b8c4] rounded-[40px] flex flex-col items-center py-8 shadow-xl overflow-y-auto no-scrollbar">
+    <div className="h-full w-full bg-[#b5b8c4] rounded-[40px] flex flex-col items-center py-8 shadow-xl ">
 
       {/* MENU */}
       
