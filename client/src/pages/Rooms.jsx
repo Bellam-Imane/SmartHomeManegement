@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 import VoiceControlButton from '../components/VoiceControlButton';
+import RoomCard from '../components/RoomCard';
 
 const Rooms = () => {
   
@@ -8,25 +9,56 @@ const Rooms = () => {
     console.log("Microphone cliqué");
   };
 
+  const roomsData = [
+    {
+      id: 1,
+      name: 'Salon',
+      devices: 8,
+      image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1000&auto=format&fit=crop',
+    },
+    {
+      id: 2,
+      name: 'Chambre à coucher',
+      devices: 4,
+      image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?q=80&w=1000&auto=format&fit=crop',
+    },
+    {
+      id: 3,
+      name: 'Cuisine',
+      devices: 6,
+      
+      image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=1000&auto=format&fit=crop'
+    },
+    {
+      id: 4,
+      name: 'Salle de bain',
+      devices: 2,
+      image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=1000&auto=format&fit=crop',
+    }
+  ];
+
+  // 2. Fonctions de gestion
+  const handleEditRoom = (id) => {
+    console.log("Action: Modifier la pièce ID ->", id);
+  };
+
+  const handleDeleteRoom = (id) => {
+    console.log("Action: Supprimer la pièce ID ->", id);
+  };
+
   return (
-    <div className="p-6 min-h-screen" >
+    <div className="p-6 min-h-screen">
+      {/* --- Header --- */}
       <header className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-md rounded-2xl shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800" >
-            Mes Pièces 
-          </h1>
-          <p  className="text-gray-500 mt-1 text-sm font-medium" >
-            Gérez les appareils de chaque pièce.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-800">Mes Pièces</h1>
+          <p className="text-gray-500 mt-1 text-sm font-medium">Gérez les appareils de chaque pièce.</p>
         </div>
-        <VoiceControlButton  onClick={handleVoiceClick} />
-
+        <VoiceControlButton onClick={handleVoiceClick} />
       </header>
 
-      
+      {/* --- Actions Bar --- */}
       <div className="mt-10 flex items-center justify-end gap-4">
-        
-       
         <div className="relative w-full max-w-[300px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
@@ -36,30 +68,32 @@ const Rooms = () => {
           />
         </div>
 
-       
         <button className="flex items-center gap-3 px-8 py-3 bg-[#1e293b] text-white rounded-full font-semibold shadow-md hover:bg-[#334155] transition-all whitespace-nowrap text-base">
           <Plus size={20} />
           <span>Ajouter une pièce</span>
         </button>
 
-        
-
-  
         <button className="p-3 text-gray-700 hover:bg-gray-200 rounded-full transition-colors shadow-sm bg-white border border-gray-100">
           <SlidersHorizontal size={24} />
         </button>
-
       </div>
 
-      
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Rooms Cards */}
+      {/* --- 3. Grille des cartes --- */}
+      <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {roomsData.map((room) => (
+          <RoomCard 
+            key={room.id}
+            id={room.id}
+            name={room.name}
+            devices={room.devices}
+            image={room.image}
+            onEdit={handleEditRoom}
+            onDelete={handleDeleteRoom}
+          />
+        ))}
       </div>
-
-   
-  </div>
-    
-);
+    </div>
+  );
 };
 
 export default Rooms;
