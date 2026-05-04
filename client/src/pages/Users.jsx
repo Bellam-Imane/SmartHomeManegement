@@ -17,7 +17,11 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+<<<<<<< HEAD
 // COMPONENT: VoiceControlButton 
+=======
+// ─── COMPONENT: VoiceControlButton ──────────────────────────────────────────
+>>>>>>> main
 const VoiceControlButton = ({ onClick, isActive = false }) => {
   return (
     <button
@@ -37,7 +41,11 @@ const VoiceControlButton = ({ onClick, isActive = false }) => {
   );
 };
 
+<<<<<<< HEAD
 //  COMPONENT: Toggle Switch 
+=======
+// ─── COMPONENT: Toggle Switch ────────────────────────────────────────────────
+>>>>>>> main
 function Toggle({ checked, onChange }) {
   return (
     <button
@@ -57,7 +65,11 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+<<<<<<< HEAD
 //  COMPONENT: Badge 
+=======
+// ─── COMPONENT: Badge ────────────────────────────────────────────────────────
+>>>>>>> main
 function Badge({ label }) {
   return (
     <span className="ml-2 inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
@@ -66,7 +78,11 @@ function Badge({ label }) {
   );
 }
 
+<<<<<<< HEAD
 // COMPONENT: Status Dot 
+=======
+// ─── COMPONENT: Status Dot ───────────────────────────────────────────────────
+>>>>>>> main
 function StatusDot({ online }) {
   return (
     <span
@@ -77,7 +93,11 @@ function StatusDot({ online }) {
   );
 }
 
+<<<<<<< HEAD
 //  COMPONENT: Avatar 
+=======
+// ─── COMPONENT: Avatar ───────────────────────────────────────────────────────
+>>>>>>> main
 function Avatar({ src, name, bg, color }) {
   return (
     <div
@@ -93,7 +113,11 @@ function Avatar({ src, name, bg, color }) {
   );
 }
 
+<<<<<<< HEAD
 //  COMPONENT: Member Card 
+=======
+// ─── COMPONENT: Member Card ──────────────────────────────────────────────────
+>>>>>>> main
 function MemberCard({ member }) {
   return (
     <div
@@ -132,7 +156,11 @@ function MemberCard({ member }) {
   );
 }
 
+<<<<<<< HEAD
 // COMPONENT: Permission Row 
+=======
+// ─── COMPONENT: Permission Row ───────────────────────────────────────────────
+>>>>>>> main
 function PermRow({ device, permissions, onChange }) {
   return (
     <div className="flex items-center border-b border-gray-100 py-4 last:border-none">
@@ -157,7 +185,11 @@ function PermRow({ device, permissions, onChange }) {
   );
 }
 
+<<<<<<< HEAD
 //  COMPONENT: QR Code Placeholder 
+=======
+// ─── COMPONENT: QR Code Placeholder ──────────────────────────────────────────
+>>>>>>> main
 function QRCodePlaceholder() {
   const modules = [
     [90,10],[100,10],[110,10],[90,20],[110,20],[100,30],[90,40],[100,40],
@@ -193,7 +225,11 @@ function QRCodePlaceholder() {
   );
 }
 
+<<<<<<< HEAD
 // COMPONENT: Modal Backdrop 
+=======
+// ─── COMPONENT: Modal Backdrop ───────────────────────────────────────────────
+>>>>>>> main
 function ModalBackdrop({ onClose, children }) {
   return (
     <div
@@ -211,7 +247,11 @@ function ModalBackdrop({ onClose, children }) {
   );
 }
 
+<<<<<<< HEAD
 // COMPONENT: Role Selection Modal
+=======
+// ─── COMPONENT: Role Selection Modal ──────────────────────────────────────────
+>>>>>>> main
 const ROLES = [
   { key: "admin", label: "Admin", Icon: ShieldCheck, desc: "Accès complet aux paramètres" },
   { key: "membre", label: "Membre", Icon: User, desc: "Contrôle des appareils" },
@@ -252,7 +292,11 @@ function RoleSelectionModal({ onClose, onNext }) {
   );
 }
 
+<<<<<<< HEAD
 // COMPONENT: QR Code Modal 
+=======
+// ─── COMPONENT: QR Code Modal ─────────────────────────────────────────────────
+>>>>>>> main
 const TIMER_TOTAL = 5 * 60;
 
 function QRCodeModal({ onClose }) {
@@ -314,7 +358,11 @@ function QRCodeModal({ onClose }) {
   );
 }
 
+<<<<<<< HEAD
 //  DATA: Members & Devices 
+=======
+// ─── DATA: Members & Devices ──────────────────────────────────────────────────
+>>>>>>> main
 const MEMBERS = [
   { id: 1, name: "Alisha H.", role: "Admin", online: true, devices: 8, avatarBg: "#FDE68A", avatarColor: "#92400E", image: "/assets/user1.jpg" },
   { id: 2, name: "Miguel", role: "Membre", online: true, devices: 3, avatarBg: "#BFDBFE", avatarColor: "#1E40AF", image: "/assets/user2.jpg" },
@@ -331,7 +379,11 @@ const INITIAL_DEVICES = [
   { id: "camera", name: "Caméra de l'allée", room: "Extérieur", icon: <Video size={18} />, permissions: { admin: true, membre: true, invite: false } },
 ];
 
+<<<<<<< HEAD
 //  MAIN PAGE COMPONENT 
+=======
+// ─── MAIN PAGE COMPONENT ─────────────────────────────────────────────────────
+>>>>>>> main
 export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [devices, setDevices] = useState(INITIAL_DEVICES);
@@ -361,7 +413,10 @@ export default function UsersPage() {
         </ModalBackdrop>
       )}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
       <div className="min-h-screen font-sans text-gray-900" style={{ backgroundColor: "#ffffff" }}>
         {/* Header Section */}
         <div className="flex items-center justify-between border-b border-gray-100 bg-white px-8 py-5">
