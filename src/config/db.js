@@ -8,7 +8,7 @@ const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME || 'smarthome_db',
   password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 5432,
+  port: process.env.DB_PORT || 5433,
 });
 
 // InfluxDB config - Using environment variables
