@@ -17,7 +17,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-// ─── COMPOSANT DIAL IMANE (VoiceControlButton) ──────────────────────────────
+// ─── COMPONENT: VoiceControlButton ──────────────────────────────────────────
 const VoiceControlButton = ({ onClick, isActive = false }) => {
   return (
     <button
@@ -27,7 +27,7 @@ const VoiceControlButton = ({ onClick, isActive = false }) => {
           ? 'bg-red-500 shadow-red-200' 
           : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
         }`}
-      title="Contrôle Vocal"
+      title="Voice Control"
     >
       <span className={`absolute inset-0 rounded-full bg-current opacity-20 animate-ping 
         ${isActive ? 'block' : 'hidden group-hover:block'}`}>
@@ -37,7 +37,7 @@ const VoiceControlButton = ({ onClick, isActive = false }) => {
   );
 };
 
-// ─── Toggle Switch ────────────────────────────────────────────────────────────
+// ─── COMPONENT: Toggle Switch ────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
   return (
     <button
@@ -57,7 +57,7 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-// ─── Badge ────────────────────────────────────────────────────────────────────
+// ─── COMPONENT: Badge ────────────────────────────────────────────────────────
 function Badge({ label }) {
   return (
     <span className="ml-2 inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
@@ -66,7 +66,7 @@ function Badge({ label }) {
   );
 }
 
-// ─── Status Dot ───────────────────────────────────────────────────────────────
+// ─── COMPONENT: Status Dot ───────────────────────────────────────────────────
 function StatusDot({ online }) {
   return (
     <span
@@ -77,7 +77,7 @@ function StatusDot({ online }) {
   );
 }
 
-// ─── Avatar (MODIFIÉ POUR LES IMAGES) ─────────────────────────────────────────
+// ─── COMPONENT: Avatar ───────────────────────────────────────────────────────
 function Avatar({ src, name, bg, color }) {
   return (
     <div
@@ -93,7 +93,7 @@ function Avatar({ src, name, bg, color }) {
   );
 }
 
-// ─── Member Card ──────────────────────────────────────────────────────────────
+// ─── COMPONENT: Member Card ──────────────────────────────────────────────────
 function MemberCard({ member }) {
   return (
     <div
@@ -101,7 +101,6 @@ function MemberCard({ member }) {
       style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-center gap-4">
-        {/* Pass l'image hna */}
         <Avatar 
           src={member.image} 
           name={member.name} 
@@ -133,7 +132,7 @@ function MemberCard({ member }) {
   );
 }
 
-// ─── Permission Row ───────────────────────────────────────────────────────────
+// ─── COMPONENT: Permission Row ───────────────────────────────────────────────
 function PermRow({ device, permissions, onChange }) {
   return (
     <div className="flex items-center border-b border-gray-100 py-4 last:border-none">
@@ -158,7 +157,7 @@ function PermRow({ device, permissions, onChange }) {
   );
 }
 
-// ─── QR Code SVG Placeholder ─────────────────────────────────────────────────
+// ─── COMPONENT: QR Code Placeholder ──────────────────────────────────────────
 function QRCodePlaceholder() {
   const modules = [
     [90,10],[100,10],[110,10],[90,20],[110,20],[100,30],[90,40],[100,40],
@@ -194,7 +193,7 @@ function QRCodePlaceholder() {
   );
 }
 
-// ─── Modal Backdrop ───────────────────────────────────────────────────────────
+// ─── COMPONENT: Modal Backdrop ───────────────────────────────────────────────
 function ModalBackdrop({ onClose, children }) {
   return (
     <div
@@ -212,7 +211,7 @@ function ModalBackdrop({ onClose, children }) {
   );
 }
 
-// ─── Modal 1 — Role Selection ─────────────────────────────────────────────────
+// ─── COMPONENT: Role Selection Modal ──────────────────────────────────────────
 const ROLES = [
   { key: "admin", label: "Admin", Icon: ShieldCheck, desc: "Accès complet aux paramètres" },
   { key: "membre", label: "Membre", Icon: User, desc: "Contrôle des appareils" },
@@ -253,7 +252,7 @@ function RoleSelectionModal({ onClose, onNext }) {
   );
 }
 
-// ─── Modal 2 — QR Code ────────────────────────────────────────────────────────
+// ─── COMPONENT: QR Code Modal ─────────────────────────────────────────────────
 const TIMER_TOTAL = 5 * 60;
 
 function QRCodeModal({ onClose }) {
@@ -315,7 +314,7 @@ function QRCodeModal({ onClose }) {
   );
 }
 
-// ─── Data (MODIFIÉ AVEC LES PATHS DES IMAGES) ─────────────────────────────────
+// ─── DATA: Members & Devices ──────────────────────────────────────────────────
 const MEMBERS = [
   { id: 1, name: "Alisha H.", role: "Admin", online: true, devices: 8, avatarBg: "#FDE68A", avatarColor: "#92400E", image: "/assets/user1.jpg" },
   { id: 2, name: "Miguel", role: "Membre", online: true, devices: 3, avatarBg: "#BFDBFE", avatarColor: "#1E40AF", image: "/assets/user2.jpg" },
@@ -332,7 +331,7 @@ const INITIAL_DEVICES = [
   { id: "camera", name: "Caméra de l'allée", room: "Extérieur", icon: <Video size={18} />, permissions: { admin: true, membre: true, invite: false } },
 ];
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+// ─── MAIN PAGE COMPONENT ─────────────────────────────────────────────────────
 export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [devices, setDevices] = useState(INITIAL_DEVICES);
@@ -363,12 +362,13 @@ export default function UsersPage() {
       )}
 
       <div className="min-h-screen font-sans text-gray-900" style={{ backgroundColor: "#ffffff" }}>
+        {/* Header Section */}
         <div className="flex items-center justify-between border-b border-gray-100 bg-white px-8 py-5">
           <div className="flex items-center gap-4">
             <button className="text-gray-500 hover:text-gray-900 transition-colors"><ArrowLeft size={20} /></button>
             <div className="h-9 w-px bg-gray-200" />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">Members et famille</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">Membres et famille</h1>
               <p className="mt-0.5 text-xs text-gray-400">10 membres au total dans le foyer</p>
             </div>
           </div>
@@ -378,7 +378,7 @@ export default function UsersPage() {
               <Search size={14} className="text-gray-400" />
               <input 
                 type="text" 
-                placeholder="chercher..." 
+                placeholder="rechercher..." 
                 value={search} 
                 onChange={(e) => setSearch(e.target.value)} 
                 className="w-52 bg-transparent text-sm outline-none" 
@@ -396,6 +396,7 @@ export default function UsersPage() {
         </div>
 
         <div className="mx-auto max-w-5xl px-8 py-8 space-y-6">
+          {/* Active Members Section */}
           <div className="rounded-2xl bg-white p-7 shadow-sm border border-gray-50">
             <div className="mb-6 flex items-start justify-between">
               <div>
@@ -411,6 +412,7 @@ export default function UsersPage() {
             </div>
           </div>
 
+          {/* Permissions Matrix Section */}
           <div className="rounded-2xl bg-white p-7 shadow-sm border border-gray-50">
             <h2 className="text-lg font-bold text-gray-900">Matrice des Permissions</h2>
             <p className="mt-1 mb-5 text-xs text-gray-400">Définissez un accès granulaire pour chaque rôle.</p>
