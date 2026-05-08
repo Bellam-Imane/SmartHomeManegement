@@ -8,7 +8,8 @@ import {
   Zap, 
   ShieldCheck, 
   Cpu, 
-  BarChart3, 
+  BarChart3,
+  Bell, 
   Users, 
   Settings, 
   LogOut 
@@ -24,9 +25,10 @@ const Sidebar = () => {
     { id: 5, path: "/home/Security", icon: ShieldCheck },
     { id: 6, path: "/home/Automation", icon: Cpu },
     { id: 7, path: "/home/Rapports", icon: BarChart3 },
-    { id: 8, path: "/home/Users", icon: Users },
-    { id: 9, path: "/home/Settings", icon: Settings },
-    { id: 10, path: "/home/Logout", icon: LogOut },
+    { id: 8, path: "/home/Notifications", icon: Bell },
+    { id: 9, path: "/home/Users", icon: Users },
+    { id: 10, path: "/home/Settings", icon: Settings },
+    { id: 11, path: "/home/Logout", icon: LogOut },
   ];
 
   return (

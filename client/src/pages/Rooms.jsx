@@ -3,6 +3,11 @@ import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 import VoiceControlButton from '../components/VoiceControlButton';
 import RoomCard from '../components/RoomCard';
 
+
+import salonImg from '../assets/images/salonImg.png';
+import chambreImg from '../assets/images/chambreImg.png';
+import cuisineImg from '../assets/images/cuisineImg.png';
+
 const Rooms = () => {
   
   const handleVoiceClick = () => {
@@ -14,26 +19,20 @@ const Rooms = () => {
       id: 1,
       name: 'Salon',
       devices: 8,
-      image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1000&auto=format&fit=crop',
+      image: salonImg ,
     },
     {
       id: 2,
       name: 'Chambre à coucher',
       devices: 4,
-      image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?q=80&w=1000&auto=format&fit=crop',
+      image: chambreImg,
     },
     {
       id: 3,
       name: 'Cuisine',
       devices: 6,
       
-      image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=1000&auto=format&fit=crop'
-    },
-    {
-      id: 4,
-      name: 'Salle de bain',
-      devices: 2,
-      image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=1000&auto=format&fit=crop',
+      image: cuisineImg ,
     }
   ];
 

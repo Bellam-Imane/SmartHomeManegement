@@ -5,7 +5,7 @@ const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
   const [showMenu, setShowMenu] = useState(false);
 
   return (
-    <div className="group relative w-full h-[410px] rounded-[45px] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-100">
+    <div className="group relative w-full h-[340px] rounded-[45px] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-100 p-0 m-0 display-block">
       
       {/* Background Image */}
       <img 
