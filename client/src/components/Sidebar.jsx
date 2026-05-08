@@ -37,7 +37,7 @@ const Sidebar = () => {
 
       {/* MENU */}
       
-      <nav className="flex flex-col space-y-4">
+      <nav className="flex flex-col space-y-3">
         {menuItems.map((item) => {
           const Icon = item.icon;
 
@@ -53,7 +53,7 @@ const Sidebar = () => {
                 }`
               }
             >
-              <Icon size={22} /> 
+              <Icon size={21} /> 
             </NavLink>
           );
         })}
