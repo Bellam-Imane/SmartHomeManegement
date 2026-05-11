@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; 
 import livingRoomImg from '../assets/livingrom.jpeg';
 import user1 from '../assets/profile1.jfif';
 import user2 from '../assets/profile2.jfif';
@@ -7,6 +8,7 @@ import climatiseurImg from '../assets/climatiseur-removebg-preview.png';
 import lockImg from '../assets/sereure-removebg-preview.png';
 import lightImg from '../assets/lumiére-removebg-preview.png';
 import vacImg from '../assets/asp-removebg-preview.png';
+import VoiceControlButton from '../components/VoiceControlButton';
 import {
   Thermometer, Sun, Zap, Droplets,
   Lock, Unlock, Bell,
@@ -39,6 +41,7 @@ export default function Dashboard() {
   const [locked, setLocked] = useState(true);
   const [lightVal, setLightVal] = useState(36);
   const [activeTab, setActiveTab] = useState('Mois');
+  const navigate = useNavigate(); 
 
   const dataMap = {
     Jour: {
@@ -88,11 +91,16 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{
-            background: 'white', width: '42px', height: '42px', borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer'
-          }}>
+          
+          {/* Notification Bell Button */}
+          <div 
+            onClick={() => navigate('/home/Notifications')} 
+            style={{
+              background: 'white', width: '42px', height: '42px', borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer'
+            }}
+          >
             <Bell size={20} color="#1a1a2e" />
             <div style={{
               position: 'absolute', top: '2px', right: '2px', background: 'white',
@@ -166,26 +174,10 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div style={{
-          background: 'white', borderRadius: '16px', padding: '0 18px',
-          display: 'flex', alignItems: 'center', gap: '12px',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)', height: '56px',
-          minWidth: '180px', flexShrink: 0,
-        }}>
-          <div style={{
-            background: '#f3f4f6', borderRadius: '50%', width: '38px', height: '38px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e5e7eb', flexShrink: 0,
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" y1="19" x2="12" y2="23" />
-              <line x1="8" y1="23" x2="16" y2="23" />
-            </svg>
-          </div>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a2e', flex: 1, whiteSpace: 'nowrap' }}>contrôle vocal</span>
-          <div style={{ width: '8px', height: '8px', background: '#22c55e', borderRadius: '50%', boxShadow: '0 0 0 2px rgba(34,197,94,0.2)', flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <VoiceControlButton />
         </div>
+
       </div>
 
       {/* ====== MAIN GRID: 3 colonnes ====== */}
@@ -212,7 +204,6 @@ export default function Dashboard() {
 
         {/* COL 1: Camera + Chart */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Camera */}
           <div style={{
             borderRadius: 24, overflow: 'hidden', position: 'relative',
             width: '100%', aspectRatio: '16/9',
@@ -228,7 +219,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Energy Chart */}
           <div style={{
             background: 'white', borderRadius: 24, padding: 20,
             boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
@@ -266,8 +256,6 @@ export default function Dashboard() {
 
         {/* COL 2: Climatiseur + Lumière ES */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* AC Widget */}
           <div style={{
             background: '#F9F4EF', borderRadius: 24, padding: 20,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 15,
@@ -309,7 +297,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Light Widget */}
           <div style={{
             background: '#EAEAEA', borderRadius: 24, padding: 20,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
@@ -359,8 +346,6 @@ export default function Dashboard() {
 
         {/* COL 3: Serrure + Aspirateur */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* Lock Widget */}
           <div style={{
             background: '#EAEAEA', borderRadius: 24, padding: 20,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
@@ -409,7 +394,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Vacuum Widget */}
           <div style={{
             background: '#EAEAEA', borderRadius: 24, padding: 20,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
