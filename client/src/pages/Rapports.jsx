@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Mic } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; 
+import VoiceControlButton from '../components/VoiceControlButton';
 
 import user1 from '../assets/profile1.jfif';
 import user2 from '../assets/profile2.jfif';
@@ -20,7 +21,6 @@ const BarChart = ({ data }) => {
   const max = Math.max(...data.map(d => d.val));
   return (
     <div className="relative h-52 pt-2 px-8">
-      {/* Grid lines */}
       <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-[40px] px-2">
         <div className="border-b border-[#f0f2f5] w-full h-full flex items-start">
           <span className="text-[10px] text-[#b0b8c4] -ml-7">18</span>
@@ -36,7 +36,6 @@ const BarChart = ({ data }) => {
         </div>
       </div>
 
-      {/* Bars + Labels */}
       <div className="flex items-end justify-around h-[180px] relative z-10">
         {data.map((d, i) => (
           <div key={i} className="flex flex-col items-center gap-2">
@@ -59,6 +58,7 @@ const BarChart = ({ data }) => {
 const Rapports = () => {
   const [view, setView] = useState('jour');
   const [animated, setAnimated] = useState(false);
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     setTimeout(() => setAnimated(true), 100);
@@ -73,14 +73,6 @@ const Rapports = () => {
   const weekData = [
     { label: 'S1', val: 55 }, { label: 'S2', val: 80 },
     { label: 'S3', val: 63 }, { label: 'S4', val: 72, active: true },
-  ];
-
-  const devices = [
-    { icon: '❄️', name: 'Air conditionné', pct: 25 },
-    { icon: '🧊', name: 'Refrigerator', pct: 47 },
-    { icon: '🍳', name: 'Four électrique', pct: 63 },
-    { icon: '💡', name: 'Eclairage intelligent', pct: 20 },
-    { icon: '🎬', name: 'Home Theatre', pct: 35 },
   ];
 
   return (
@@ -101,15 +93,14 @@ const Rapports = () => {
         </div>
 
         <div className="flex items-center gap-6">
-          <div className="bg-white rounded-[20px] px-4 py-2 flex items-center gap-3 shadow-sm border border-gray-100 cursor-pointer h-[46px]">
-            <div className="bg-[#f3f4f6] rounded-full w-8 h-8 flex items-center justify-center">
-              <Mic size={16} color="#1a1d2e" />
-            </div>
-            <span className="text-[13px] font-bold text-[#1a1d2e]">contrôle vocal</span>
-            <div className="w-2 h-2 bg-[#22c55e] rounded-full shadow-[0_0_8px_#22c55e]" />
-          </div>
 
-          <div className="bg-white p-2 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 transition border border-gray-100 relative">
+          {/* ====== VOICE CONTROL BUTTON ====== */}
+          <VoiceControlButton />
+
+          <div 
+            onClick={() => navigate('/home/Notifications')}
+            className="bg-white p-2 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 transition border border-gray-100 relative"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1d2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
