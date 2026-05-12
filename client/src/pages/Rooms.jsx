@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 import VoiceControlButton from '../components/VoiceControlButton';
 import RoomCard from '../components/RoomCard';
+import AddRoomModal from '../components/AddRoomModal';
 
 
 import salonImg from '../assets/images/salonImg.png';
@@ -36,6 +37,8 @@ const Rooms = () => {
     }
   ];
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // 2. Fonctions de gestion
   const handleEditRoom = (id) => {
     console.log("Action: Modifier la pièce ID ->", id);
@@ -67,10 +70,17 @@ const Rooms = () => {
           />
         </div>
 
-        <button className="flex items-center gap-3 px-8 py-3 bg-[#1e293b] text-white rounded-full font-semibold shadow-md hover:bg-[#334155] transition-all whitespace-nowrap text-base">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-3 px-8 py-3 bg-[#1e293b] text-white rounded-full font-semibold shadow-md hover:bg-[#334155] transition-all whitespace-nowrap text-base"
+        >
           <Plus size={20} />
           <span>Ajouter une pièce</span>
         </button>
+        <AddRoomModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+        />
 
         <button className="p-3 text-gray-700 hover:bg-gray-200 rounded-full transition-colors shadow-sm bg-white border border-gray-100">
           <SlidersHorizontal size={24} />
