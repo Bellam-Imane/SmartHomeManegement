@@ -3,7 +3,14 @@ import { Lightbulb, Thermometer, ShieldCheck, Tv, Zap, Wifi } from 'lucide-react
 import DeviceCard from '../components/DeviceCard';
 import VoiceControlButton from '../components/VoiceControlButton'; // Import dyal l-bouton
 
+
 const Devices = () => {
+
+  const myBulbs = [
+    { id: 1, nomAppareil: 'Lampe Bureau', status: 'ENLIGNE', intensite: 80, couleur: '#FFCC00' },
+    { id: 2, nomAppareil: 'Lampe Table', status: 'HORSLIGNE', intensite: 50, couleur: '#FFFFFF' }
+  ];
+
   const [devices, setDevices] = useState([
     { id: 1, name: 'Lumière Plafond', room: 'Salon', type: 'light', isOn: true, icon: Lightbulb, color: 'bg-yellow-100 text-yellow-600' },
     { id: 2, name: 'Climatiseur', room: 'Chambre', type: 'climat', isOn: false, icon: Thermometer, color: 'bg-blue-100 text-blue-600' },
@@ -68,7 +75,12 @@ const Devices = () => {
           />
         ))}
       </div>
+
+        
+
     </div>
+    
+
   );
 };
 
