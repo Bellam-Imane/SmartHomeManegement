@@ -84,7 +84,7 @@ export default function AddRoomModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            <button className="w-full mt-10 bg-[#1e293b] text-white py-4 rounded-2xl font-bold hover:bg-[#b5b8c4] transition-all shadow-lg shadow-indigo-100">
+            <button className="w-full mt-10 bg-[#1e293b] text-white py-4 rounded-2xl font-bold hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-100">
               Confirmer l'ajout
             </button>
           </motion.div>

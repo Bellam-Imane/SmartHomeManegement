@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Plus, Search, SlidersHorizontal } from 'lucide-react';
+
 import VoiceControlButton from '../components/VoiceControlButton';
 import RoomCard from '../components/RoomCard';
 import AddRoomModal from '../components/AddRoomModal';
-
+import FilterDropdown from '../components/FilterDropDown';
 
 import salonImg from '../assets/images/salonImg.png';
 import chambreImg from '../assets/images/chambreImg.png';
@@ -48,8 +49,21 @@ const Rooms = () => {
     console.log("Action: Supprimer la pièce ID ->", id);
   };
 
+  const [filtrerType, setFiltrerType] = useState("Tous");
+  const [filtrerEtage, setFiltrerEtage] = useState("Tous");
+
+  //fonction pour filtrer les pieces 
+  const filtredRooms = roomsData.filter(room =>{
+    const matchesType = filtrerType === "Tous" || room.type === filtrerType;
+    const matchesEtage = filtrerEtage === "Tous" || room.etage === Number(filtrerEtage) ;
+
+    return matchesType && matchesEtage ;
+  });
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false) ;
+
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-6 min-h-screen relative">
       {/* --- Header --- */}
       <header className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-md rounded-2xl shadow-sm">
         <div>
@@ -69,22 +83,40 @@ const Rooms = () => {
             className="w-full pl-12 pr-5 py-3 bg-white border border-gray-200 rounded-full text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-100 transition-all placeholder:text-gray-400"
           />
         </div>
+        
+        {/*Boutton pour l'ajout d'une piece*/}
+        <div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-3 px-8 py-3 bg-[#1e293b] text-white rounded-full font-semibold shadow-md hover:bg-[#334155] transition-all whitespace-nowrap text-base"
+          >
+            <Plus size={20} />
+            <span>Ajouter une pièce</span>
+          </button>
+          <AddRoomModal 
+            isOpen={isModalOpen} 
+            onClose={() => setIsModalOpen(false)} 
+          />
+        </div>
+        
+        {/*boutton four filtrer les pieces*/}
+        <div className="relative">
+          <button 
+            onClick={ () => setIsFilterOpen(!isFilterOpen)}
+            className="p-3 text-gray-700 hover:bg-gray-200 rounded-full transition-colors shadow-sm bg-white border border-gray-100">
+            <SlidersHorizontal size={24} 
+          />
+          </button>
 
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-3 px-8 py-3 bg-[#1e293b] text-white rounded-full font-semibold shadow-md hover:bg-[#334155] transition-all whitespace-nowrap text-base"
-        >
-          <Plus size={20} />
-          <span>Ajouter une pièce</span>
-        </button>
-        <AddRoomModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-        />
-
-        <button className="p-3 text-gray-700 hover:bg-gray-200 rounded-full transition-colors shadow-sm bg-white border border-gray-100">
-          <SlidersHorizontal size={24} />
-        </button>
+          <FilterDropdown
+            isOpen={isFilterOpen}
+            selectedType={filtrerType}   
+            selectedEtage={filtrerEtage} 
+            onSelectType={(type) => setFiltrerType(type)} 
+            onSelectEtage={(etage) => setFiltrerEtage(etage)} 
+            onClose={() => setIsFilterOpen(false)} 
+          />
+        </div>
       </div>
 
       {/* --- 3. Grille des cartes --- */}

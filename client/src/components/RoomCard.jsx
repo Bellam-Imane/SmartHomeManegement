@@ -51,7 +51,7 @@ const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
           </div>
 
           <div className="flex justify-end mt-4">
-            <button className="flex items-center justify-center gap-2 py-2.5 px-6 bg-white text-gray-900 rounded-full font-bold text-xs shadow-sm hover:bg-[#abb2bf] hover:text-white transition-all duration-300 group/btn border border-gray-100">
+            <button className="flex items-center justify-center gap-2 py-2.5 px-6 bg-white text-gray-900 rounded-full font-bold text-xs shadow-sm hover:bg-indigo-600 hover:text-white transition-all duration-300 group/btn border border-gray-100">
               <span>Contrôler</span>
               <span className="text-sm transition-transform group-hover/btn:translate-x-1">≫</span>
             </button>
