@@ -7,7 +7,7 @@ const VoiceControlButton = ({ onClick, isActive = false }) => {
             onClick={onClick}
             className={`group relative flex items-center justify-center w-14 h-14 rounded-full transition-all duration-300 shadow-lg active:scale-95
               ${isActive   
-                  ? 'bg-red-500 shadow-red-200' 
+                  ? 'bg-[#0f172a] shadow-slate-400' 
                   : 'bg-[#1e293b] hover:bg-[#0f172a] shadow-slate-200'
                 }`}
             title="Contrôle Vocal"
