@@ -144,13 +144,6 @@ const Security = () => {
           <VoiceControlButton />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div 
-              onClick={() => navigate('/home/Notifications')} 
-              style={{ background: 'white', width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer' }}
-            >
-              <Bell size={20} color="#1a1a2e" />
-              <div style={{ position: 'absolute', top: '2px', right: '2px', background: 'white', border: '1.5px solid #f0f2f5', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold' }}>1</div>
-            </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               {usersImages.map((img, i) => (
                 <div key={i} style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2px solid white', overflow: 'hidden', marginLeft: i === 0 ? '0' : '-12px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', zIndex: 3 - i }}>

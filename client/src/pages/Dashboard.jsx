@@ -34,7 +34,7 @@ const Toggle = ({ on, onToggle }) => (
   </div>
 );
 
-export default function Dashboard() {
+export default function Dashboard({ unreadCount }) {
   const [acOn, setAcOn] = useState(true);
   const [lightOn, setLightOn] = useState(true);
   const [vacOn, setVacOn] = useState(true);
@@ -102,11 +102,13 @@ export default function Dashboard() {
             }}
           >
             <Bell size={20} color="#1a1a2e" />
+            {unreadCount > 0 && (
             <div style={{
-              position: 'absolute', top: '2px', right: '2px', background: 'white',
+              position: 'absolute', top: '2px', right: '2px', background: '#ef4444',
               border: '1.5px solid #f0f2f5', borderRadius: '50%', width: '16px', height: '16px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold'
-            }}>1</div>
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: 'white'
+            }}>{unreadCount}</div>
+          )}
           </div>
 
           <div style={{

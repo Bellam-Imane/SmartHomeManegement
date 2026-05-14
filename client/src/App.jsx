@@ -31,7 +31,19 @@ function App() {
       .then(res => setStatus(res.data.message))
       .catch(() => setStatus("Error: Backend is not responding"));
   }, []);
+  const [notifications, setNotifications] = useState([
+  { id: 1, title: "Mouvement Détecté", desc: "Un mouvement a été détecté dans le Salon à 02:30 AM.", type: "danger", isRead: false },
+  { id: 2, title: "Optimisation Énergie", desc: "Voulez-vous fermer les rideaux pour réduire la clim de 15%?", type: "routine", isRead: false },
+  { id: 3, title: "Porte Ouverte", desc: "La porte principale est restée ouverte plus de 5 minutes.", type: "danger", isRead: true },
+  { id: 4, title: "Économie Hebdomadaire", desc: "Votre consommation a baissé de 10%.", type: "eco", isRead: false },
+  { id: 5, title: "Système à jour", desc: "Le système ESP32 a été mis à jour avec succès.", type: "normal", isRead: true }
+  ]);
 
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
   return (
     <Router>
       <Routes>
@@ -52,13 +64,13 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
 
           
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard unreadCount={unreadCount} />} />
           <Route path="rooms" element={<Rooms />} />
           <Route path="devices" element={<Devices />} />
           <Route path="energy" element={<Energy />} />
           <Route path="automation" element={<Automation />} />
           <Route path="security" element={<Security />} />
-          <Route path="notifications" element={<Notifications />} />
+          <Route path="notifications" element={<Notifications notifications={notifications} markAllRead={markAllRead} />} />
           <Route path="settings" element={<Settings />} />
           <Route path="users" element={<Users />} />
           <Route path="rapports" element={<Rapports />} />

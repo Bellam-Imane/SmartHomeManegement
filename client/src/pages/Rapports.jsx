@@ -331,18 +331,6 @@ const Rapports = () => {
 
           {/* ====== VOICE CONTROL BUTTON ====== */}
           <VoiceControlButton />
-
-          <div 
-            onClick={() => navigate('/home/Notifications')}
-            className="bg-white p-2 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 transition border border-gray-100 relative"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1d2e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-            <span className="absolute top-0 right-0 w-4 h-4 bg-white border border-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold text-[#1a1d2e]">1</span>
-          </div>
-
           <div className="flex items-center gap-3">
             <div className="flex items-center">
               {[user1, user2, user3].map((img, i) => (
@@ -416,7 +404,7 @@ const Rapports = () => {
           <BarChart data={view === 'jour' ? dayData : weekData} />
         </div>
 
-        {/* STATS HEBDO — ref زدنا عليها */}
+        {/* STATS HEBDO — ref */}
         <div className="bg-white rounded-[24px] p-6 border border-[#e8ecf4] shadow-sm">
           <h3 className="text-sm font-bold text-[#1a1d2e] mb-1">Statistiques Hebdomadaires</h3>
           <p className="text-[11px] text-[#8892a4] mb-4">Performance vs la semaine dernière</p>
