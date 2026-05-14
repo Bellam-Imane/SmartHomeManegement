@@ -10,6 +10,7 @@ import {
   Check,
 } from "lucide-react";
 
+
 // ─── Toggle Component ─────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
   return (
@@ -90,13 +91,7 @@ export default function Settings() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-[#111827]">paramètres</h1>
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={16} color="#000" />
-            <input
-              placeholder="chercher..."
-              className="pl-9 pr-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm text-sm focus:outline-none focus:ring-2 placeholder-gray-400 text-[#111827]"
-            />
-          </div>
+          
           <button className="relative p-2 bg-white rounded-xl shadow-sm border border-gray-200">
             <Bell size={18} color="#000" />
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold">2</span>
