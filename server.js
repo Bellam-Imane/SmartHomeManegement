@@ -4,6 +4,8 @@ const cors = require('cors');
 
 // Import de la connexion multi-bases (MongoDB, PostgreSQL, InfluxDB)
 const { connectDatabases } = require('./src/config/db');
+const initializePostgres = require('./src/models/initPostgres');
+
 
 const authRoutes = require('./src/routes/authRoutes');
 
@@ -37,14 +39,21 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Erreur interne du serveur", error: err.message });
 });
 // --- Start server after DB connection ---
-connectDatabases()
-  .then(() => {
-    console.log("🚀 All Databases are ready!");
+connectDatabases().then(async () => {
+    
+    // 2. activation des tables PostgreSQL
+    try {
+        await initializePostgres();
+    } catch (err) {
+        console.error("❌ Impossible d'initialiser PostgreSQL:", err.message);
+    }
 
-    app.listen(port, () => {
-      console.log(`✅ Server running on http://localhost:${port}`);
+    
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`✅ Server running on http://localhost:${PORT}`);
+        console.log(`🚀 All Databases are ready and tables are checked!`);
     });
-  })
-  .catch(err => {
-    console.error("❌ Full error:", err);
-  });
+}).catch(err => {
+    console.error("❌ Failed to start the system:", err.message);
+});
