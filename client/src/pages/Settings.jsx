@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Check,
 } from "lucide-react";
+import VoiceControlButton from "../components/VoiceControlButton";
 
 
 // ─── Toggle Component ─────────────────────────────────────────────────────────
