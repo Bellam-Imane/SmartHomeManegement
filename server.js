@@ -7,6 +7,8 @@ const { connectDatabases } = require('./src/config/db');
 const initializePostgres = require('./src/models/initPostgres');
 
 
+
+
 const authRoutes = require('./src/routes/authRoutes');
 
 const app = express();
@@ -53,6 +55,7 @@ connectDatabases().then(async () => {
     app.listen(PORT, () => {
         console.log(`✅ Server running on http://localhost:${PORT}`);
         console.log(`🚀 All Databases are ready and tables are checked!`);
+       
     });
 }).catch(err => {
     console.error("❌ Failed to start the system:", err.message);
