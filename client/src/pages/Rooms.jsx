@@ -26,15 +26,7 @@ const roomImages = {
 };
 
 const Rooms = () => {
-  const testCurtainsData = [
-  { 
-    nomAppareil: "Rideau Motorisé Salon", 
-    status: "ENLIGNE", 
-    marque: "Somfy",
-    pourcentageOuverture: 60, 
-    estVerrouille: false 
-  }
-];
+  
 
   // États pour stocker les données, le chargement et les modaux/filtres
   const [pieces, setPieces] = useState([]); 
@@ -216,7 +208,7 @@ const Rooms = () => {
         />
       )}
 
-      <CurtainsCard curtainsData={testCurtainsData} />
+      
 
     </div>
   );
