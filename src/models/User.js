@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
   },
   motDePasse: {
     type: String,
-    minlenght: 6,
+    minlength: 6,
     required: true
   },
   dateCreation: {
