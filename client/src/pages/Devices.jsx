@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Lightbulb, Thermometer, ShieldCheck, Tv, Zap, Wifi } from 'lucide-react';
 import DeviceCard from '../components/DeviceCard';
 import VoiceControlButton from '../components/VoiceControlButton'; 
-import CameraCard from '../components/CameraCard'; // Import dyal l-bouton
+import CameraCard from '../components/CameraCard'; 
+import MultimediaCard from '../components/MultimediaCard'; 
+
 
 
 
@@ -79,6 +81,8 @@ const Devices = () => {
       </div>
 
         <CameraCard/>
+
+        <MultimediaCard/>
 
     </div>
     

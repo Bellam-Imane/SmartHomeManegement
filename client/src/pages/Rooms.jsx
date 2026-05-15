@@ -6,7 +6,9 @@ import VoiceControlButton from '../components/VoiceControlButton';
 import RoomCard from '../components/RoomCard';
 import AddRoomModal from '../components/AddRoomModal';
 import FilterDropdown from '../components/FilterDropDown';
-import EditRoomModal from '../components/EditRoomModal'; // Importation du modal de modification
+import EditRoomModal from '../components/EditRoomModal'; 
+import  MultimediaCard from '../components/MultimediaCard'; 
+
 
 // Importation des images des pièces depuis les assets
 import salonImg from '../assets/images/salonImg.png';
@@ -24,6 +26,25 @@ const roomImages = {
 };
 
 const Rooms = () => {
+  const testMultimediaData = [
+  {
+    nomAppareil: "Salon Smart TV",
+    status: "ENLIGNE",
+    volume: 65,
+    application: "NETFLIX",
+    chaineActuelle: 5,
+    estMuet: false
+  },
+  {
+    nomAppareil: "Chambre TV",
+    status: "HORSLIGNE",
+    volume: 30,
+    application: "NONE",
+    chaineActuelle: 1,
+    estMuet: false
+  }
+];
+
   // États pour stocker les données, le chargement et les modaux/filtres
   const [pieces, setPieces] = useState([]); 
   const [loading, setLoading] = useState(true);
@@ -203,6 +224,9 @@ const Rooms = () => {
           onRoomUpdated={fetchPieces}
         />
       )}
+
+      <MultimediaCard multimediaData={testMultimediaData} />
+
     </div>
   );
 };
