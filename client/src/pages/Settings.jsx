@@ -9,6 +9,7 @@ import {
   Check,
 } from "lucide-react";
 import VoiceControlButton from "../components/VoiceControlButton";
+import { useNavigate } from 'react-router-dom';
 
 
 // ─── Toggle Component ─────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ export default function Settings() {
   };
 
   const accent = "#252C34";
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen p-6 md:p-8" style={{ background: "#F8FAFC" }}>
@@ -90,12 +92,45 @@ export default function Settings() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-[#111827]">paramètres</h1>
-        <div className="flex items-center gap-3">
-          
-          <button className="relative p-2 bg-white rounded-xl shadow-sm border border-gray-200">
-            <Bell size={18} color="#000" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold">2</span>
-          </button>
+        <div className="flex items-center gap-6">
+        
+    <div 
+      onClick={() => navigate('/home/Notifications')} 
+      style={{
+        background: 'white', 
+        width: '42px', 
+        height: '42px', 
+        borderRadius: '50%',
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        position: 'relative', 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
+        cursor: 'pointer',
+        border: '1px solid #e5e7eb' // زايد شوية باش يبان فوق الخلفية Gris
+      }}
+    >
+      <Bell size={20} color="#1a1a2e" />
+      <div style={{
+        position: 'absolute', 
+        top: '2px', 
+        right: '2px', 
+        background: 'white',
+        border: '1.5px solid #f0f2f5', 
+        borderRadius: '50%', 
+        width: '16px', 
+        height: '16px',
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        fontSize: '9px', 
+        fontWeight: 'bold'
+      }}>
+        2
+      </div>
+    </div>
+        <VoiceControlButton />  
+        
         </div>
       </div>
 
