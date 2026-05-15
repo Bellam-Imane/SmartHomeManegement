@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const pieceController = require('../controllers/pieceController');
-const auth = require('../middleware/authMiddleware'); // Importation du protecteur
+const auth = require('../middleware/authMiddleware');
 
 // --- Routes pour la gestion des pièces ---
 
-// Ajouter une pièce (Protégé : seul l'admin connecté peut ajouter à sa maison)
-router.post('/add', auth, pieceController.createPiece);
+// Route pour récupérer les pièces de l'utilisateur connecté
+router.get('/all', auth, pieceController.getPieces); 
 
-// Récupérer toutes les pièces (Protégé : l'admin ne voit que ses propres pièces)
-router.get('/', auth, pieceController.getAllPieces);
+// Route pour ajouter une piece 
+router.post('/ajouter', auth, pieceController.ajouterPiece); 
 
 // Modifier une pièce spécifique par son ID
 router.put('/:id', auth, pieceController.updatePiece);
