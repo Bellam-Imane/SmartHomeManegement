@@ -107,7 +107,7 @@ export default function Settings() {
         position: 'relative', 
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
         cursor: 'pointer',
-        border: '1px solid #e5e7eb' // زايد شوية باش يبان فوق الخلفية Gris
+        border: '1px solid #e5e7eb' 
       }}
     >
       <Bell size={20} color="#1a1a2e" />
@@ -149,7 +149,7 @@ export default function Settings() {
                 src="/assets/user1.jpg"
                 alt="Profile"
                 className="w-full h-full object-cover"
-                // Au cas où l'image ne charge pas, on affiche un fond gris neutre
+                
                 onError={(e) => {
                   e.currentTarget.src = "https://ui-avatars.com/api/?name=User&background=f3f4f6&color=9ca3af";
                 }}
