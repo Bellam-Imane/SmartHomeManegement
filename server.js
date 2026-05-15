@@ -6,7 +6,7 @@ const cors = require('cors');
 const { connectDatabases } = require('./src/config/db');
 
 const authRoutes = require('./src/routes/authRoutes');
-const securityRoutes = require('./src/routes/securityRoutes');
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -23,7 +23,7 @@ app.use((req, res, next) => {
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/security', securityRoutes);
+
 // --- Health check endpoint ---
 app.get('/test-health', (req, res) => {
   res.json({

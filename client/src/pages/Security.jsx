@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import VoiceControlButton from '../components/VoiceControlButton';
 
@@ -17,14 +17,6 @@ import icon_DEVERROUILLE from '../assets/icon_DÉVERROUILLÉ.png';
 import icon_VERROUILLE from '../assets/icon_VERROUILLÉ.png';
 import icon_start from '../assets/icon_start.png';
 
-// ─── helper API ───────────────────────────────────────────────
-const API = 'http://localhost:5000/api/security';
-const authHeader = () => ({
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('token')}`
-});
-
-// ─── Toggle (identique à l'original) ─────────────────────────
 const Toggle = ({ on, onToggle }) => (
   <div
     onClick={onToggle}
@@ -44,7 +36,6 @@ const Toggle = ({ on, onToggle }) => (
   </div>
 );
 
-// ─── SensorCard (identique à l'original) ─────────────────────
 const SensorCard = ({ img, title, subtitle }) => {
   const [isOn, setIsOn] = useState(true);
   return (
@@ -69,7 +60,6 @@ const SensorCard = ({ img, title, subtitle }) => {
   );
 };
 
-// ─── AirQualityCard — accepte value et score dynamiques ───────
 const AirQualityCard = ({ img, title, subtitle, value, score }) => (
   <div style={{
     background: 'white', borderRadius: '24px', padding: '18px',
@@ -90,167 +80,43 @@ const AirQualityCard = ({ img, title, subtitle, value, score }) => (
   </div>
 );
 
-// ─── LockCard — maintenant connectée au backend ───────────────
-const LockCard = ({ id, name, initialState, onToggle, saving }) => {
+const LockCard = ({ name, initialState }) => {
   const [isLocked, setIsLocked] = useState(initialState);
-
-  const handleToggle = async () => {
-    const newState = !isLocked;
-    setIsLocked(newState); // mise à jour visuelle immédiate
-    if (id && onToggle) onToggle(id, newState); // sync backend
-  };
-
-  // si le parent met à jour initialState depuis l'API, on suit
-  useEffect(() => { setIsLocked(initialState); }, [initialState]);
-
   return (
     <div style={{
       background: 'white', borderRadius: '24px', padding: '18px',
       boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '110px',
-      opacity: saving ? 0.6 : 1, transition: 'opacity 0.2s'
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '110px'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <img src={isLocked ? icon_VERROUILLE : icon_DEVERROUILLE} alt="lock status" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
         <img
-          onClick={handleToggle}
+          onClick={() => setIsLocked(!isLocked)}
           src={icon_start}
           alt="power toggle"
-          style={{ width: '20px', height: '20px', cursor: saving ? 'not-allowed' : 'pointer', objectFit: 'contain' }}
+          style={{ width: '20px', height: '20px', cursor: 'pointer', objectFit: 'contain' }}
         />
       </div>
       <div style={{ marginTop: '10px' }}>
         <div style={{ fontWeight: '700', fontSize: '13px', color: '#1a1a2e' }}>{name}</div>
         <div style={{ fontSize: '9px', color: isLocked ? '#1a1a2e' : '#ef4444', fontWeight: 'bold', textTransform: 'uppercase' }}>
-          {saving ? 'MISE À JOUR...' : (isLocked ? 'VERROUILLÉ' : 'DÉVERROUILLÉ')}
+          {isLocked ? 'VERROUILLÉ' : 'DÉVERROUILLÉ'}
         </div>
       </div>
     </div>
   );
 };
 
-// ─── Modal confirmation — NOUVEAU ────────────────────────────
-const AlarmModal = ({ onConfirm, onCancel }) => (
-  <div style={{
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
-  }}>
-    <div style={{
-      background: 'white', borderRadius: '24px', padding: '32px',
-      maxWidth: '360px', width: '90%', textAlign: 'center',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
-    }}>
-      <div style={{ fontSize: '38px', marginBottom: '12px' }}>⚠️</div>
-      <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#1a1a2e', margin: '0 0 8px 0' }}>
-        Désactiver l'alarme ?
-      </h2>
-      <p style={{ fontSize: '13px', color: '#9ca3af', margin: '0 0 24px 0' }}>
-        Cette action désactivera tous les périmètres de surveillance. Êtes-vous sûr ?
-      </p>
-      <div style={{ display: 'flex', gap: '12px' }}>
-        <button onClick={onCancel} style={{
-          flex: 1, padding: '12px', borderRadius: '14px',
-          border: '1px solid #e5e7eb', background: 'white',
-          fontWeight: '700', cursor: 'pointer', fontSize: '13px'
-        }}>Annuler</button>
-        <button onClick={onConfirm} style={{
-          flex: 1, padding: '12px', borderRadius: '14px',
-          border: 'none', background: '#ef4444', color: 'white',
-          fontWeight: '700', cursor: 'pointer', fontSize: '13px'
-        }}>Désactiver</button>
-      </div>
-    </div>
-  </div>
-);
-
-// ─── Composant principal ──────────────────────────────────────
 const Security = () => {
   const [alarmActive, setAlarmActive] = useState(true);
-  const [showModal, setShowModal] = useState(false);        // NOUVEAU
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const navigate = useNavigate();
-
-  // NOUVEAU — données backend
-  const [doors, setDoors] = useState([]);
-  const [savingDoorId, setSavingDoorId] = useState(null);
-  const [airQuality, setAirQuality] = useState({ value: 'Excellent', score: '98 AQI' });
-
+  const navigate = useNavigate(); 
   const [currentCam, setCurrentCam] = useState({
     img: room,
     name: "Salon Principal",
     desc: "Angle de vue : 120° • 4K HDR"
   });
   const changeCamera = (camData) => setCurrentCam(camData);
-
-  // ── Chargement depuis le backend ──────────────────────────
-  useEffect(() => {
-    const headers = authHeader();
-
-    // Alarme
-    fetch(`${API}/alarm`, { headers })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setAlarmActive(data.active); })
-      .catch(() => {}); // si backend absent, on garde l'état par défaut
-
-    // Portes
-    fetch(`${API}/doors`, { headers })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { if (data.length) setDoors(data); })
-      .catch(() => {});
-
-    // Capteur humidité / qualité d'air
-    fetch(`${API}/sensors`, { headers })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        const h = data.find(s => s.typeCapteur === 'HUMIDITE');
-        if (h) {
-          const v = h.valeurActuelle;
-          setAirQuality({
-            value: v > 100 ? 'Mauvais' : v > 50 ? 'Moyen' : 'Excellent',
-            score: `${v} AQI`
-          });
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // ── Alarme ───────────────────────────────────────────────
-  const handleActivateAlarm = () => {
-    setAlarmActive(true);
-    fetch(`${API}/alarm`, {
-      method: 'PUT', headers: authHeader(),
-      body: JSON.stringify({ active: true })
-    }).catch(() => {});
-  };
-
-  const handleDeactivateAlarm = () => {
-    setAlarmActive(false);
-    setShowModal(false);
-    fetch(`${API}/alarm`, {
-      method: 'PUT', headers: authHeader(),
-      body: JSON.stringify({ active: false })
-    }).catch(() => {});
-  };
-
-  // ── Serrures ─────────────────────────────────────────────
-  const handleToggleDoor = async (id, newLocked) => {
-    setSavingDoorId(id);
-    try {
-      await fetch(`${API}/doors/${id}/lock`, {
-        method: 'PUT', headers: authHeader(),
-        body: JSON.stringify({ locked: newLocked })
-      });
-    } catch {}
-    setSavingDoorId(null);
-  };
-
-  // Portes de fallback si BD encore vide
-  const displayDoors = doors.length ? doors : [
-    { _id: 'd1', nomAppareil: "Porte d'Entrée",  estVerrouillee: true  },
-    { _id: 'd2', nomAppareil: 'Porte de Garage', estVerrouillee: true  },
-    { _id: 'd3', nomAppareil: 'Porte Fenêtre',   estVerrouillee: false },
-    { _id: 'd4', nomAppareil: 'Portail Allée',   estVerrouillee: true  },
-  ];
 
   return (
     <div style={{
@@ -261,19 +127,22 @@ const Security = () => {
 
       <style>{`@keyframes blinker { 50% { opacity: 0; } }`}</style>
 
-      {/* HEADER — identique à l'original */}
+      {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Tableau de bord de sécurité</h1>
           <p style={{ fontSize: 'clamp(11px, 1.5vw, 13px)', color: '#9ca3af', margin: '4px 0 0 0' }}>Gérez la sécurité de votre maison intelligente facilement.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+
           <VoiceControlButton />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}></div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          </div>
         </div>
       </div>
 
-      {/* SYSTÈME D'ALARME — seul changement : bouton Désactiver ouvre le modal */}
+      {/* SYSTÈME D'ALARME */}
       <div style={{ maxWidth: '1100px', width: '100%', margin: '0 auto' }}>
         <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '15px' }}>État du Système</h3>
         <div style={{ background: 'white', borderRadius: '35px', padding: '25px 35px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 15px 45px rgba(0,0,0,0.08)', border: '1px solid #f8f8f8' }}>
@@ -290,21 +159,13 @@ const Security = () => {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
-            {/* bouton Activer — identique */}
-            <button
-              onClick={handleActivateAlarm}
-              style={{ background: alarmActive ? '#FF0000' : '#F2F2F7', color: alarmActive ? 'white' : '#1a1a2e', border: 'none', padding: '14px 45px', borderRadius: '20px', fontWeight: '900', cursor: 'pointer' }}
-            >Active</button>
-            {/* bouton Désactiver — ouvre modal au lieu d'agir directement */}
-            <button
-              onClick={() => setShowModal(true)}
-              style={{ background: !alarmActive ? '#9ca3af' : '#F2F2F7', color: !alarmActive ? 'white' : '#000', border: 'none', padding: '14px 35px', borderRadius: '20px', fontWeight: '700', cursor: 'pointer' }}
-            >Désactiver</button>
+            <button onClick={() => setAlarmActive(true)} style={{ background: alarmActive ? '#FF0000' : '#F2F2F7', color: alarmActive ? 'white' : '#1a1a2e', border: 'none', padding: '14px 45px', borderRadius: '20px', fontWeight: '900', cursor: 'pointer' }}>Active</button>
+            <button onClick={() => setAlarmActive(false)} style={{ background: !alarmActive ? '#9ca3af' : '#F2F2F7', color: !alarmActive ? 'white' : '#000', border: 'none', padding: '14px 35px', borderRadius: '20px', fontWeight: '700', cursor: 'pointer' }}>Désactiver</button>
           </div>
         </div>
       </div>
 
-      {/* MIDDLE SECTION — identique à l'original */}
+      {/* MIDDLE SECTION */}
       <div style={{ width: '100%', maxWidth: '1100px', margin: '0 auto' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -313,12 +174,12 @@ const Security = () => {
               <select
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val === 'salon')    changeCamera({ img: room,      name: 'Salon Principal',  desc: 'Angle de vue : 120° • 4K HDR' });
-                  if (val === 'salon2')   changeCamera({ img: salon2,    name: 'Salon 2',           desc: 'Vue panoramique' });
-                  if (val === 'parent')   changeCamera({ img: romparent, name: 'Chambre Parents',   desc: 'HD Night Vision' });
-                  if (val === 'kids')     changeCamera({ img: roomkids,  name: 'Chambre Enfants',   desc: 'Secure view' });
-                  if (val === 'cuizin')   changeCamera({ img: cuizin,    name: 'Cuisine',           desc: 'Wide angle' });
-                  if (val === 'escalier') changeCamera({ img: Escalier,  name: 'Escalier',          desc: 'Motion detection' });
+                  if (val === 'salon') changeCamera({ img: room, name: 'Salon Principal', desc: 'Angle de vue : 120° • 4K HDR' });
+                  if (val === 'salon2') changeCamera({ img: salon2, name: 'Salon 2', desc: 'Vue panoramique' });
+                  if (val === 'parent') changeCamera({ img: romparent, name: 'Chambre Parents', desc: 'HD Night Vision' });
+                  if (val === 'kids') changeCamera({ img: roomkids, name: 'Chambre Enfants', desc: 'Secure view' });
+                  if (val === 'cuizin') changeCamera({ img: cuizin, name: 'Cuisine', desc: 'Wide angle' });
+                  if (val === 'escalier') changeCamera({ img: Escalier, name: 'Escalier', desc: 'Motion detection' });
                 }}
                 style={{ border: 'none', background: 'none', color: '#9ca3af', fontWeight: '600', cursor: 'pointer' }}
               >
@@ -331,7 +192,7 @@ const Security = () => {
               </select>
             </div>
 
-            {/* CAMERA FEED — identique */}
+            {/* CAMERA FEED */}
             <div style={{
               position: isFullScreen ? 'fixed' : 'relative', top: 0, left: 0,
               width: isFullScreen ? '100vw' : '100%', height: isFullScreen ? '100vh' : 'auto',
@@ -357,44 +218,22 @@ const Security = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <SensorCard img={Capteur_Mouvement} title="Mouvement" subtitle="Cuisine & Entrée" />
               <SensorCard img={Détecteur_Fumée} title="Fumée" subtitle="Étages 1 & 2" />
-              {/* AirQualityCard — الآن تاخد البيانات من الstate */}
-              <AirQualityCard
-                img={Qualité_de_lair}
-                title="Qualité de l'Air"
-                subtitle="CO2 & Particules"
-                value={airQuality.value}
-                score={airQuality.score}
-              />
+              <AirQualityCard img={Qualité_de_lair} title="Qualité de l'Air" subtitle="CO2 & Particules" value="Excellent" score="98 AQI" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* BOTTOM SECTION — LockCard الآن متصلة بالbackend */}
+      {/* BOTTOM SECTION */}
       <div style={{ width: '100%', maxWidth: '1100px', margin: '0 auto 40px auto' }}>
         <h3 style={{ margin: '0 0 20px 0', fontSize: '22px', fontWeight: '700' }}>Accès & Verrouillage</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-          {displayDoors.map(door => (
-            <LockCard
-              key={door._id}
-              id={door._id}
-              name={door.nomAppareil}
-              initialState={door.estVerrouillee}
-              onToggle={handleToggleDoor}
-              saving={savingDoorId === door._id}
-            />
-          ))}
+          <LockCard name="Porte d'Entrée" initialState={true} />
+          <LockCard name="Porte de Garage" initialState={true} />
+          <LockCard name="Porte Fenêtre" initialState={false} />
+          <LockCard name="Portail Allée" initialState={true} />
         </div>
       </div>
-
-      {/* Modal — يظهر فقط عند الضغط على Désactiver */}
-      {showModal && (
-        <AlarmModal
-          onConfirm={handleDeactivateAlarm}
-          onCancel={() => setShowModal(false)}
-        />
-      )}
-
     </div>
   );
 };
