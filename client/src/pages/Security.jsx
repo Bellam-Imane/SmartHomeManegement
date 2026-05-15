@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'; 
 import VoiceControlButton from '../components/VoiceControlButton';
 
 // --- IMPORT DES ASSETS ---
-import user1 from '../assets/profile1.jfif';
-import user2 from '../assets/profile2.jfif';
-import user3 from '../assets/profile3.jfif';
 import room from '../assets/liverom.jpeg';
 import iconsecur from '../assets/sécurisé-removebg-preview.png';
 import salon2 from '../assets/salon2.jfif';
@@ -120,8 +116,6 @@ const Security = () => {
     name: "Salon Principal",
     desc: "Angle de vue : 120° • 4K HDR"
   });
-
-  const usersImages = [user1, user2, user3];
   const changeCamera = (camData) => setCurrentCam(camData);
 
   return (
@@ -144,13 +138,6 @@ const Security = () => {
           <VoiceControlButton />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              {usersImages.map((img, i) => (
-                <div key={i} style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2px solid white', overflow: 'hidden', marginLeft: i === 0 ? '0' : '-12px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', zIndex: 3 - i }}>
-                  <img src={img} alt="user" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>

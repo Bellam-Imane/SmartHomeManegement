@@ -6,9 +6,6 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 
-import user1 from '../assets/profile1.jfif';
-import user2 from '../assets/profile2.jfif';
-import user3 from '../assets/profile3.jfif';
 import Air from '../assets/Air_Cond.png';
 import Consommation_Total from '../assets/Consommation_Total.png';
 import Dispositifs_Actifs from '../assets/Dispositifs_Actifs.png';
@@ -331,21 +328,6 @@ const Rapports = () => {
 
           {/* ====== VOICE CONTROL BUTTON ====== */}
           <VoiceControlButton />
-          <div className="flex items-center gap-3">
-            <div className="flex items-center">
-              {[user1, user2, user3].map((img, i) => (
-                <div key={i} className={`w-9 h-9 rounded-full border-2 border-white overflow-hidden shadow-sm ${i !== 0 ? '-ml-3' : ''}`} style={{ zIndex: 10 - i }}>
-                  <img src={img} alt="user" className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-1 cursor-pointer">
-              <span className="text-sm font-bold text-[#1a1d2e]">Alisha H.</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </div>
-          </div>
         </div>
       </div>
 
