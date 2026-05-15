@@ -6,12 +6,13 @@ import VoiceControlButton from '../components/VoiceControlButton';
 import RoomCard from '../components/RoomCard';
 import AddRoomModal from '../components/AddRoomModal';
 import FilterDropdown from '../components/FilterDropDown';
+import EditRoomModal from '../components/EditRoomModal'; // Importation du modal de modification
 
 // Importation des images des pièces depuis les assets
 import salonImg from '../assets/images/salonImg.png';
 import chambreImg from '../assets/images/chambreImg.png';
 import cuisineImg from '../assets/images/cuisineImg.png';
-import defaultImg from '../assets/images/salonImg.png'; // Image par défaut pour Bureau et Autre
+import defaultImg from '../assets/images/salonImg.png'; 
 
 // Correspondance entre le type de pièce du schéma et l'image correspondante
 const roomImages = {
@@ -32,27 +33,27 @@ const Rooms = () => {
   const [filtrerEtage, setFiltrerEtage] = useState("Tous");
   const [searchQuery, setSearchQuery] = useState(""); 
 
+  // États pour la gestion de la modification de la pièce
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); 
+  const [selectedRoomId, setSelectedRoomId] = useState(null);  
+
   /**
    * Fonction pour récupérer toutes les pièces depuis le backend
    */
   const fetchPieces = async () => {
     try {
-      // Récupération du token d'authentification stocké localement
       const token = localStorage.getItem("token"); 
-      
-      // Appel API GET avec le token dans les headers (requis par le middleware)
       const response = await axios.get("http://localhost:5000/api/pieces/all", {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Si la réponse est positive, mise à jour de l'état avec les pièces reçues
       if (response.data.success) {
         setPieces(response.data.pieces); 
       }
     } catch (err) {
       console.error("Erreur lors de la récupération des pièces:", err.response?.data || err.message);
     } finally {
-      setLoading(false); // Arrêt du cycle de chargement
+      setLoading(false); 
     }
   };
 
@@ -65,12 +66,35 @@ const Rooms = () => {
     console.log("Microphone cliqué");
   };
 
+  /**
+   * Ouvrir le modal de modification et enregistrer l'ID sélectionné
+   */
   const handleEditRoom = (id) => {
-    console.log("Action: Modifier la pièce ID ->", id);
+    setSelectedRoomId(id);
+    setIsEditModalOpen(true); // Active l'affichage du modal
   };
 
-  const handleDeleteRoom = (id) => {
-    console.log("Action: Supprimer la pièce ID ->", id);
+  /**
+   * Supprimer une pièce définitivement après confirmation
+   */
+  const handleDeleteRoom = async (id) => {
+    if (window.confirm("Voulez-vous vraiment supprimer cette pièce définitivement ?")) {
+      try {
+        const token = localStorage.getItem("token");
+        
+        await axios.delete(`http://localhost:5000/api/pieces/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        // Filtrer l'état local pour retirer la pièce supprimée sans refaire d'appel API
+        setPieces(pieces.filter(room => room._id !== id));
+        alert("Pièce supprimée avec succès !");
+        
+      } catch (err) {
+        console.error("Erreur lors de la suppression:", err.response?.data || err.message);
+        alert("Impossible de supprimer la pièce.");
+      }
+    }
   };
 
   /**
@@ -119,7 +143,6 @@ const Rooms = () => {
             <span>Ajouter une pièce</span>
           </button>
           
-          {/* Passage de la fonction fetchPieces en prop pour actualiser la liste automatiquement après ajout */}
           <AddRoomModal 
             isOpen={isModalOpen} 
             onClose={() => setIsModalOpen(false)} 
@@ -155,16 +178,30 @@ const Rooms = () => {
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filtredRooms.map((room) => (
             <RoomCard 
-              key={room._id} // Identifiant unique généré par MongoDB (_id)
+              key={room._id} 
               id={room._id}
-              name={room.nomPiece} // Nom de la pièce provenant de la base de données
-              devices={room.appareils?.length || 0} // Calcul dynamique du nombre d'appareils liés
-              image={roomImages[room.type] || defaultImg} // Attribution automatique de l'image selon le type
+              name={room.nomPiece} 
+              devices={room.appareils?.length || 0} 
+              image={roomImages[room.type] || defaultImg} 
               onEdit={handleEditRoom}
               onDelete={handleDeleteRoom}
             />
           ))}
         </div>
+      )}
+
+      {/* --- ✅ MODAL AVEC RESET AUTOMATIQUE CORRIGÉ --- */}
+      {isEditModalOpen && selectedRoomId && (
+        <EditRoomModal 
+          key={selectedRoomId} 
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedRoomId(null);
+          }}
+          roomId={selectedRoomId}
+          onRoomUpdated={fetchPieces}
+        />
       )}
     </div>
   );

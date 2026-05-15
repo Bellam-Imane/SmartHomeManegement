@@ -25,7 +25,7 @@ const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
 
         {showMenu && (
           <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100 p-2 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-            <button onClick={(e) => { e.stopPropagation(); onEdit(id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-xl">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors duration-150">
               <Edit2 size={16} className="text-indigo-600" />
               <span>Modifier</span>
             </button>

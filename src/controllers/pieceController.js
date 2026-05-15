@@ -109,21 +109,37 @@ exports.deletePiece = async (req, res) => {
     }
 };
 
+
 /**
- * Récupérer les détails d'une pièce et ses appareils
+ * ✅ RÉCUPÉRER LES DÉTAILS D'UNE PIÈCE (100% SÉCURISÉE SANS POPULATE)
+ * Cette fonction est appelée par le modal de modification pour remplir les champs.
  */
 exports.getPieceDetails = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const piece = await Piece.findById(id).populate('appareils');
+        // On cherche la pièce directement par son ID (Pas besoin de populate puisque la liste est vide)
+        const piece = await Piece.findById(id);
         
         if (!piece) {
-            return res.status(404).json({ message: "Pièce non trouvée." });
+            return res.status(404).json({ 
+                success: false, 
+                message: "Pièce non trouvée." 
+            });
         }
 
-        res.status(200).json({ success: true, piece });
+        // Renvoie les infos de la pièce (nom, type, superficie, etage) au Frontend
+        return res.status(200).json({ 
+            success: true, 
+            piece: piece 
+        });
+
     } catch (error) {
-        res.status(500).json({ message: "Erreur lors de la récupération des détails.", error: error.message });
+        console.error("Erreur critique dans getPieceDetails:", error.message);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Erreur lors de la récupération des détails.", 
+            error: error.message 
+        });
     }
 };
