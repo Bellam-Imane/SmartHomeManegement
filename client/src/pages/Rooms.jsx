@@ -7,7 +7,7 @@ import RoomCard from '../components/RoomCard';
 import AddRoomModal from '../components/AddRoomModal';
 import FilterDropdown from '../components/FilterDropDown';
 import EditRoomModal from '../components/EditRoomModal'; 
-import  MultimediaCard from '../components/MultimediaCard'; 
+import  AirConditionerCard from '../components/AirConditionerCard'; 
 
 
 // Importation des images des pièces depuis les assets
@@ -26,23 +26,9 @@ const roomImages = {
 };
 
 const Rooms = () => {
-  const testMultimediaData = [
-  {
-    nomAppareil: "Salon Smart TV",
-    status: "ENLIGNE",
-    volume: 65,
-    application: "NETFLIX",
-    chaineActuelle: 5,
-    estMuet: false
-  },
-  {
-    nomAppareil: "Chambre TV",
-    status: "HORSLIGNE",
-    volume: 30,
-    application: "NONE",
-    chaineActuelle: 1,
-    estMuet: false
-  }
+  const testAcData = [
+  { nomAppareil: "Climatiseur Salon", status: "ENLIGNE", temperature: 22, modeActuel: "refroidissement" },
+  { nomAppareil: "Climatiseur Chambre", status: "HORSLIGNE", temperature: 25, modeActuel: "auto" }
 ];
 
   // États pour stocker les données, le chargement et les modaux/filtres
@@ -225,7 +211,7 @@ const Rooms = () => {
         />
       )}
 
-      <MultimediaCard multimediaData={testMultimediaData} />
+      <AirConditionerCard acData={testAcData} />
 
     </div>
   );
