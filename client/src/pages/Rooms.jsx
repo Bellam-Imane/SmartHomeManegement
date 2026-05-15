@@ -7,7 +7,7 @@ import RoomCard from '../components/RoomCard';
 import AddRoomModal from '../components/AddRoomModal';
 import FilterDropdown from '../components/FilterDropDown';
 import EditRoomModal from '../components/EditRoomModal'; 
-import  AirConditionerCard from '../components/AirConditionerCard'; 
+import CurtainsCard from '../components/CurtainsCard'; 
 
 
 // Importation des images des pièces depuis les assets
@@ -26,9 +26,14 @@ const roomImages = {
 };
 
 const Rooms = () => {
-  const testAcData = [
-  { nomAppareil: "Climatiseur Salon", status: "ENLIGNE", temperature: 22, modeActuel: "refroidissement" },
-  { nomAppareil: "Climatiseur Chambre", status: "HORSLIGNE", temperature: 25, modeActuel: "auto" }
+  const testCurtainsData = [
+  { 
+    nomAppareil: "Rideau Motorisé Salon", 
+    status: "ENLIGNE", 
+    marque: "Somfy",
+    pourcentageOuverture: 60, 
+    estVerrouille: false 
+  }
 ];
 
   // États pour stocker les données, le chargement et les modaux/filtres
@@ -211,7 +216,7 @@ const Rooms = () => {
         />
       )}
 
-      <AirConditionerCard acData={testAcData} />
+      <CurtainsCard curtainsData={testCurtainsData} />
 
     </div>
   );
