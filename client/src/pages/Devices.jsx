@@ -4,11 +4,19 @@ import DeviceCard from '../components/DeviceCard';
 import VoiceControlButton from '../components/VoiceControlButton'; 
 import CameraCard from '../components/CameraCard'; 
 import MultimediaCard from '../components/MultimediaCard'; 
+import VacuumCard from '../components/VacuumCard'; 
 
 
 
 
 const Devices = () => {
+
+  const mockAspirateur = {
+    nomAppareil: "Aspirateur ménager",
+    status: "HORSLIGNE", // أو 'ENLIGNE'
+    chargeBatterie: 69,
+    estEnCharge: false
+  };
 
   const myBulbs = [
     { id: 1, nomAppareil: 'Lampe Bureau', status: 'ENLIGNE', intensite: 80, couleur: '#FFCC00' },
@@ -82,7 +90,7 @@ const Devices = () => {
 
         <CameraCard/>
 
-        <MultimediaCard/>
+        <VacuumCard appareil={mockAspirateur} />
 
     </div>
     
