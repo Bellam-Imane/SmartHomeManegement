@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  Bell,
-  User,
-  Globe,
-  Moon,
-  Sun,
-  AlertTriangle,
-  Check,
-} from "lucide-react";
+import {Bell,User,Globe,Moon,Sun,AlertTriangle,Check} from "lucide-react";
 import VoiceControlButton from "../components/VoiceControlButton";
 import { useNavigate } from 'react-router-dom';
 
