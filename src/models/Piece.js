@@ -10,7 +10,7 @@ const pieceSchema = new mongoose.Schema({
     type:{
         type: String,
         required: true,
-        enum: ['Salon','Chambre à coucher','Cuisine','Toilette','Bureau','Autre'],
+        enum: ['Salon','Chambre à coucher','Cuisine','Bureau','Autre'],
         default:'Salon'
     },
 

@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
 import { Wifi, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+// 1. Importation du hook de navigation de react-router-dom
+import { useNavigate } from 'react-router-dom';
 
 const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
   const [showMenu, setShowMenu] = useState(false);
+  
+  // 2. Initialisation du navigateur de routes
+  const navigate = useNavigate();
+
+  // 3. Fonction déclenchée lors du clic sur "Contrôler"
+  const handleControlClick = (e) => {
+    // Empêche le déclenchement d'autres événements parents si nécessaire
+    e.stopPropagation(); 
+    
+    // REDIRECTION CORRIGÉE : Alignée parfaitement sur le Nested Route de App.jsx (/home/rooms/:id)
+    // Cela évite l'erreur "No routes matched location" et l'écran blanc.
+    navigate(`/home/rooms/${id}`); 
+  };
 
   return (
     <div className="group relative w-full h-[340px] rounded-[45px] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-100 p-0 m-0 display-block">
@@ -25,7 +40,7 @@ const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
 
         {showMenu && (
           <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100 p-2 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-            <button onClick={(e) => { e.stopPropagation(); onEdit(id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-xl">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors duration-150">
               <Edit2 size={16} className="text-indigo-600" />
               <span>Modifier</span>
             </button>
@@ -51,7 +66,11 @@ const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
           </div>
 
           <div className="flex justify-end mt-4">
-            <button className="flex items-center justify-center gap-2 py-2.5 px-6 bg-white text-gray-900 rounded-full font-bold text-xs shadow-sm hover:bg-indigo-600 hover:text-white transition-all duration-300 group/btn border border-gray-100">
+            {/* 4. Liaison du bouton avec la fonction de redirection au clic */}
+            <button 
+              onClick={handleControlClick}
+              className="flex items-center justify-center gap-2 py-2.5 px-6 bg-white text-gray-900 rounded-full font-bold text-xs shadow-sm hover:bg-indigo-600 hover:text-white transition-all duration-300 group/btn border border-gray-100"
+            >
               <span>Contrôler</span>
               <span className="text-sm transition-transform group-hover/btn:translate-x-1">≫</span>
             </button>

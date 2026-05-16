@@ -100,6 +100,16 @@ const Capteur = AppareilSecurite.discriminator('CAPTEUR', new mongoose.Schema({
     valeurActuelle : { type : Number }
 }));
 
+// Appareil Aspirateur Robot
+const Aspirateur = Appareil.discriminator('ASPIRATEUR', new mongoose.Schema({
+    chargeBatterie: { type: Number, min: 0, max: 100, default: 100 },
+    estEnCharge: { type: Boolean, default: false },
+    modeNettoyage: { type: String, enum: ['STANDARD', 'SILENCIEUX', 'TURBO'], default: 'STANDARD' }
+}));
+
+
+
+
 module.exports= {
     Appareil,
     AppareilEclairage,
@@ -109,6 +119,7 @@ module.exports= {
     AppareilSecurite,
     Camera,
     PorteIntelligent,
-    Capteur
+    Capteur,
+    Aspirateur
 };
 

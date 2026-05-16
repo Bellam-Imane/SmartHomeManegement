@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { Lightbulb, Thermometer, ShieldCheck, Tv, Zap, Wifi } from 'lucide-react';
 import DeviceCard from '../components/DeviceCard';
-import VoiceControlButton from '../components/VoiceControlButton'; // Import dyal l-bouton
+import VoiceControlButton from '../components/VoiceControlButton'; 
+import CameraCard from '../components/CameraCard'; 
+import RoomUsersCard from '../components/RoomUsersCard';
+
+
 
 
 const Devices = () => {
+
+
 
   const myBulbs = [
     { id: 1, nomAppareil: 'Lampe Bureau', status: 'ENLIGNE', intensite: 80, couleur: '#FFCC00' },
@@ -76,7 +82,6 @@ const Devices = () => {
         ))}
       </div>
 
-        
 
     </div>
     

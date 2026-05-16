@@ -1,10 +1,9 @@
+const User = require('./User');
 const mongoose = require('mongoose');
 
-const schema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    motDePasse: { type: String, required: true },
-    status: { type: String, default: 'ACTIVE' },
-   
-}, { timestamps: true });
+const Administrateur = User.discriminator(
+   'Administrateur',
+   new mongoose.Schema({}, { timestamps: true })
+);
 
-module.exports = mongoose.model('Administrateur', schema, 'administrateurs');
+module.exports = Administrateur;

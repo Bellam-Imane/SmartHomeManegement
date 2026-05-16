@@ -6,21 +6,19 @@ const userSchema = new mongoose.Schema({
     type : String,
     required: true,
     unique: true,
-    lowercase: true 
+    lowercase: true,
+    trim: true
   },
   motDePasse: {
     type: String,
+    minlength: 6,
     required: true
   },
   dateCreation: {
     type: Date,
     default: Date.now
   },
-  estActif: {
-    type : Boolean,
-    default: false
-  },
-
+  
   //Etat de l'utilisateur (userStatus)
   status: {
     type : String,
@@ -40,8 +38,15 @@ const userSchema = new mongoose.Schema({
   // --- Relation avec la classe Role ---
   role: {
     type: mongoose.Schema.Types.ObjectId ,
-    ref: 'Role' //Lien vers le modèle Role 
+    ref: 'Role' , //Lien vers le modèle Role 
+    required : true 
+  },
+
+  maison: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Maison'
   }
+  
 },{
   timestamps: true, // Pour garder une trace des modifications 
   discriminatorKey: 'userType'
