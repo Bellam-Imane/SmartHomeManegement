@@ -6,11 +6,27 @@ import {
 import acImage from '../assets/images/climatiseur.png';
 
 /**
- * COMPOSANT AIRCONDITIONERCARD : Conforme avec Mongoose AppareilThermique
+ * COMPOSANT AIRCONDITIONERCARD
+ * Je gère ici le contrôle thermique de ma pièce en l'alignant parfaitement sur mes schémas Mongoose.
  */
-const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
+const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
 
-  if (!acData || acData.length === 0) {
+  // Étape 1 : Pour sécuriser mon composant, je crée une liste standardisée.
+  // Si mon parent me passe "appareil" (objet unique via .find), je l'encapsule dans un tableau.
+  // Si mon parent me passe "acData" (tableau), je l'utilise directement.
+  const items = acData || (appareil ? [appareil] : []);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Je réinitialise l'index si la liste change ou devient plus petite pour éviter les erreurs de débordement
+  useEffect(() => {
+    if (currentIndex >= items.length) {
+      setCurrentIndex(0);
+    }
+  }, [items, currentIndex]);
+
+  // Sécurité d'affichage si aucun appareil n'est disponible
+  if (items.length === 0) {
     return (
       <div className="w-full max-w-[850px] h-[220px] rounded-[35px] bg-[#f4ebe1] flex items-center justify-center font-bold italic text-gray-500">
         Chargement des climatiseurs...
@@ -18,31 +34,27 @@ const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
     );
   }
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const currentAc = acData[currentIndex];
+  // Mon appareil actuellement affiché à l'écran
+  const currentAc = items[currentIndex];
 
-  useEffect(() => {
-    if (currentIndex >= acData.length) {
-      setCurrentIndex(0);
-    }
-  }, [acData, currentIndex]);
-
- 
+  // Extraction directe des états depuis les props (Pas de state local isolé ici, je reste "Controlled")
   const isOn = currentAc.status === 'ENLIGNE';
-  
-  
   const temperature = currentAc.temperatureCible || 25;
-  
-  const mode = currentAc.mode || 'AUTO'; 
+  const mode = currentAc.mode || 'AUTO'; // Mes enums Mongoose : ['CHAUD', 'FROID', 'AUTO']
 
+  // Navigation vers l'appareil suivant (Actif seulement si j'ai plusieurs climatiseurs)
   const nextAc = () => {
-    setCurrentIndex((prev) => (prev === acData.length - 1 ? 0 : prev + 1));
+    if (items.length <= 1) return;
+    setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
   };
 
+  // Navigation vers l'appareil précédent
   const prevAc = () => {
-    setCurrentIndex((prev) => (prev === 0 ? acData.length - 1 : prev - 1));
+    if (items.length <= 1) return;
+    setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
+  // Ma fonction centrale pour notifier mon parent "RoomDetails" de toute modification en direct
   const updateAcProperty = (property, value) => {
     if (onUpdateAppareil) {
       onUpdateAppareil(currentAc._id || currentAc.id, {
@@ -52,23 +64,27 @@ const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
     }
   };
 
+  // Gestion du Switch ON / OFF lié à mon enum de statut 'ENLIGNE' / 'HORSLIGNE'
   const togglePower = () => {
-    const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE'; // Correction ici
+    const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE';
     updateAcProperty('status', nextStatus);
   };
 
+  // J'augmente la température cible sans dépasser la limite supérieure de 30°C
   const incrementTemp = () => {
     if (temperature < 30) {
-      updateAcProperty('temperatureCible', temperature + 1); // Correction ici
+      updateAcProperty('temperatureCible', temperature + 1);
     }
   };
 
+  // Je baisse la température cible sans descendre en dessous de la limite inférieure de 16°C
   const decrementTemp = () => {
     if (temperature > 16) {
-      updateAcProperty('temperatureCible', temperature - 1); // Correction ici
+      updateAcProperty('temperatureCible', temperature - 1);
     }
   };
 
+  // Modification du mode de fonctionnement de mon climatiseur
   const changeMode = (newMode) => {
     updateAcProperty('mode', newMode); 
   };
@@ -76,19 +92,22 @@ const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
   return (
     <div className="relative w-full max-w-[880px] bg-[#f4ebe1] rounded-[40px] p-6 shadow-lg flex flex-col justify-between min-h-[240px] transition-all duration-500 select-none">
       
-      {/* HEADER */}
+      {/* ================= SECTION HEADER ================= */}
       <div className="flex justify-between items-center w-full px-2">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <Wind size={22} className="text-gray-700" />
-            <h3 className="text-xl font-bold text-gray-800">{currentAc.nomAppareil || 'Climatiseur'}</h3>
+            <h3 className="text-xl font-bold text-gray-800">
+              {currentAc.nomAppareil || 'Climatiseur'}
+            </h3>
           </div>
           <span className="text-xs text-gray-400 font-medium ml-8">
-            {acData.length} appareils disponibles
+            {items.length} appareil(s) disponible(s)
           </span>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Switch de mise sous tension */}
           <button 
             onClick={togglePower}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${isOn ? 'bg-gray-800' : 'bg-gray-400'}`}
@@ -101,15 +120,19 @@ const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
         </div>
       </div>
 
-      {/* CONTENU */}
+      {/* ================= SECTION CENTRALE CONTENU ================= */}
       <div className="flex items-center justify-between w-full mt-4 relative px-2">
-        <button onClick={prevAc} className="p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0">
+        {/* Flèche gauche visible ou grisée selon le nombre d'appareils */}
+        <button 
+          onClick={prevAc} 
+          className={`p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}
+        >
           <ChevronLeft size={24} className="text-gray-600" />
         </button>
 
         <div className="flex-1 grid grid-cols-3 items-center justify-items-center gap-4 px-4">
           
-          {/* Colonne 1 : Image */}
+          {/* Colonne 1 : Visuel de l'appareil */}
           <div className="relative w-full max-w-[180px] flex items-center justify-center">
             <img 
               src={acImage} 
@@ -118,12 +141,12 @@ const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
             />
             {isOn && (
               <span className="absolute top-[38%] text-[10px] font-bold text-white/80 tracking-tighter animate-pulse">
-                {temperature}
+                {temperature}°C
               </span>
             )}
           </div>
 
-          {/* Colonne 2 : Thermostat */}
+          {/* Colonne 2 : Thermostat Interactif */}
           <div className={`relative w-36 h-36 flex items-center justify-center transition-opacity duration-300 ${!isOn && 'opacity-30 pointer-events-none'}`}>
             <div className="absolute inset-0 rounded-full border-4 border-gray-300/40 flex items-center justify-center">
               <div 
@@ -148,7 +171,7 @@ const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
             </div>
           </div>
 
-          {/* Colonne 3 : Modes (AUTO, FROID, CHAUD) */}
+          {/* Colonne 3 : Les boutons de modes reliés à mes Enums Mongoose */}
           <div className={`flex flex-col gap-3 w-full max-w-[160px] transition-opacity duration-300 ${!isOn && 'opacity-30 pointer-events-none'}`}>
             
             <button 
@@ -193,7 +216,11 @@ const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
           </div>
         </div>
 
-        <button onClick={nextAc} className="p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0">
+        {/* Flèche droite */}
+        <button 
+          onClick={nextAc} 
+          className={`p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}
+        >
           <ChevronRight size={24} className="text-gray-600" />
         </button>
       </div>
