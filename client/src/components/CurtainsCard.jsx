@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Blinds, MoreVertical, ChevronLeft, ChevronRight, Moon, Sun, 
   ShieldCheck, Clapperboard, Sparkles
 } from 'lucide-react';
 
 /**
- * COMPOSANT CURTAINSCARD : Contrôle des rideaux aligné sur pourcentageOuverture (Version épurée)
+ * COMPOSANT CURTAINSCARD : Alignisé 100% avec le modèle Mongoose AppareilMotorise
  */
-const CurtainsCard = ({ curtainsData }) => {
+const CurtainsCard = ({ curtainsData, onUpdateAppareil }) => {
 
   // 1. SÉCURITÉ : Gestion des données si la liste est vide
   if (!curtainsData || curtainsData.length === 0) {
@@ -22,9 +22,18 @@ const CurtainsCard = ({ curtainsData }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentCurtain = curtainsData[currentIndex];
 
-  // 3. ÉTATS LOCAUX (status et pourcentageOuverture du schéma Mongoose)
-  const [isOn, setIsOn] = useState(currentCurtain.status === 'ENLIGNE');
-  const [pourcentage, setPourcentage] = useState(currentCurtain.pourcentageOuverture || 0); 
+  // Force le retour à l'index 0 si les rideaux changent ou diminuent
+  useEffect(() => {
+    if (currentIndex >= curtainsData.length) {
+      setCurrentIndex(0);
+    }
+  }, [curtainsData, currentIndex]);
+
+  // 3. EXTRACT EXTRACTION LIVE DES DONNÉES (Plus de conflits de States locaux)
+  const isOn = currentCurtain.status === 'ENLIGNE';
+  const pourcentage = currentCurtain.pourcentageOuverture || 0;
+  
+ 
   const [activeMode, setActiveMode] = useState('Ombrage automatique');
 
   const nextCurtain = () => {
@@ -35,16 +44,36 @@ const CurtainsCard = ({ curtainsData }) => {
     setCurrentIndex((prev) => (prev === 0 ? curtainsData.length - 1 : prev - 1));
   };
 
-  // Gestion interactive des modes (Ajuste le pourcentage en Front-end)
+  
+  const updateCurtainProperty = (property, value) => {
+    if (onUpdateAppareil) {
+      onUpdateAppareil(currentCurtain._id || currentCurtain.id, {
+        ...currentCurtain,
+        [property]: value
+      });
+    }
+  };
+
+  const togglePower = () => {
+    const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE';
+    updateCurtainProperty('status', nextStatus);
+  };
+
+  const handleSliderChange = (e) => {
+    const value = parseInt(e.target.value, 10);
+    updateCurtainProperty('pourcentageOuverture', value);
+  };
+
+  // Gestion interactive des modes (Ajuste le pourcentage en direct dans la DB)
   const handleModeChange = (modeId) => {
     setActiveMode(modeId);
     if (!isOn) return;
     
     switch(modeId) {
-      case 'Veille': setPourcentage(0); break;
-      case 'Réveil': setPourcentage(100); break;
-      case 'Cinema': setPourcentage(20); break;
-      case 'Ombrage automatique': setPourcentage(60); break;
+      case 'Veille': updateCurtainProperty('pourcentageOuverture', 0); break;
+      case 'Réveil': updateCurtainProperty('pourcentageOuverture', 100); break;
+      case 'Cinema': updateCurtainProperty('pourcentageOuverture', 20); break;
+      case 'Ombrage automatique': updateCurtainProperty('pourcentageOuverture', 60); break;
       default: break;
     }
   };
@@ -69,7 +98,7 @@ const CurtainsCard = ({ curtainsData }) => {
         <div className="flex items-center gap-3">
           {/* Interrupteur principal ON/OFF */}
           <button 
-            onClick={() => setIsOn(!isOn)}
+            onClick={togglePower}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${isOn ? 'bg-gray-800' : 'bg-gray-400'}`}
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-1' : 'left-1'}`} />
@@ -107,7 +136,7 @@ const CurtainsCard = ({ curtainsData }) => {
                 min="0"
                 max="100"
                 value={pourcentage}
-                onChange={(e) => setPourcentage(parseInt(e.target.value))}
+                onChange={handleSliderChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <div 
