@@ -1,14 +1,8 @@
 import { useState } from "react";
-import {
-  Search,
-  Bell,
-  User,
-  Globe,
-  Moon,
-  Sun,
-  AlertTriangle,
-  Check,
-} from "lucide-react";
+import {Bell,User,Globe,Moon,Sun,AlertTriangle,Check} from "lucide-react";
+import VoiceControlButton from "../components/VoiceControlButton";
+import { useNavigate } from 'react-router-dom';
+
 
 // ─── Toggle Component ─────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
@@ -82,6 +76,7 @@ export default function Settings() {
   };
 
   const accent = "#252C34";
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen p-6 md:p-8" style={{ background: "#F8FAFC" }}>
@@ -89,18 +84,45 @@ export default function Settings() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-[#111827]">paramètres</h1>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2" size={16} color="#000" />
-            <input
-              placeholder="chercher..."
-              className="pl-9 pr-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm text-sm focus:outline-none focus:ring-2 placeholder-gray-400 text-[#111827]"
-            />
-          </div>
-          <button className="relative p-2 bg-white rounded-xl shadow-sm border border-gray-200">
-            <Bell size={18} color="#000" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold">2</span>
-          </button>
+        <div className="flex items-center gap-6">
+        
+    <div 
+      onClick={() => navigate('/home/Notifications')} 
+      style={{
+        background: 'white', 
+        width: '42px', 
+        height: '42px', 
+        borderRadius: '50%',
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        position: 'relative', 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
+        cursor: 'pointer',
+        border: '1px solid #e5e7eb' 
+      }}
+    >
+      <Bell size={20} color="#1a1a2e" />
+      <div style={{
+        position: 'absolute', 
+        top: '2px', 
+        right: '2px', 
+        background: 'white',
+        border: '1.5px solid #f0f2f5', 
+        borderRadius: '50%', 
+        width: '16px', 
+        height: '16px',
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        fontSize: '9px', 
+        fontWeight: 'bold'
+      }}>
+        2
+      </div>
+    </div>
+        <VoiceControlButton />  
+        
         </div>
       </div>
 
@@ -119,7 +141,7 @@ export default function Settings() {
                 src="/assets/user1.jpg"
                 alt="Profile"
                 className="w-full h-full object-cover"
-                // Au cas où l'image ne charge pas, on affiche un fond gris neutre
+                
                 onError={(e) => {
                   e.currentTarget.src = "https://ui-avatars.com/api/?name=User&background=f3f4f6&color=9ca3af";
                 }}

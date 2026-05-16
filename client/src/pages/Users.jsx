@@ -1,22 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  ArrowLeft,
-  Search,
-  Bell,
-  Mic,
-  Pencil,
-  Trash2,
-  Lock,
-  Lightbulb,
-  Thermometer,
-  Video,
-  ShieldCheck,
-  User,
-  Users,
-  UserPlus,
-  RefreshCw,
-} from "lucide-react";
+import {ArrowLeft,Bell,Mic,Pencil,Trash2,Lock,Lightbulb,Thermometer,Video,ShieldCheck,User,Users,UserPlus,RefreshCw,} from "lucide-react";
 import VoiceControlButton from "../components/VoiceControlButton";
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -320,6 +305,7 @@ export default function UsersPage() {
   const [devices, setDevices] = useState(INITIAL_DEVICES);
   const [modalStep, setModalStep] = useState(null);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const navigate = useNavigate();
 
   const openModal = () => setModalStep("role");
   const closeModal = () => setModalStep(null);
@@ -347,34 +333,58 @@ export default function UsersPage() {
       <div className="min-h-screen font-sans text-gray-900" style={{ backgroundColor: "#ffffff" }}>
         {/* Header Section */}
         <div className="flex items-center justify-between border-b border-gray-100 bg-white px-8 py-5">
-          <div className="flex items-center gap-4">
-            <button className="text-gray-500 hover:text-gray-900 transition-colors"><ArrowLeft size={20} /></button>
-            <div className="h-9 w-px bg-gray-200" />
+          <div className="flex items-center gap-6">
+            
+            
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900">Membres et famille</h1>
-              <p className="mt-0.5 text-xs text-gray-400">10 membres au total dans le foyer</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-sm">
-              <Search size={14} className="text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="rechercher..." 
-                value={search} 
-                onChange={(e) => setSearch(e.target.value)} 
-                className="w-52 bg-transparent text-sm outline-none" 
-              />
-            </div>
-            <button className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm hover:bg-gray-50">
-              <Bell size={17} />
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-400 text-[9px] font-bold text-white">1</span>
-            </button>
-            <VoiceControlButton 
-              isActive={isVoiceActive} 
-              onClick={() => setIsVoiceActive(!isVoiceActive)} 
-            />
+          <div className="flex items-center gap-6">
+            
+           
+      <div 
+  onClick={() => navigate('/home/Notifications')} 
+  style={{
+    background: 'white', 
+    width: '42px', 
+    height: '42px', 
+    borderRadius: '50%',
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    position: 'relative', 
+    boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
+    cursor: 'pointer',
+    border: '1px solid #e5e7eb'
+  }}
+>
+  <Bell size={20} color="#1a1a2e" />
+  <div style={{
+    position: 'absolute', 
+    top: '2px', 
+    right: '2px', 
+    background: 'white',
+    border: '1.5px solid #f0f2f5', 
+    borderRadius: '50%', 
+    width: '16px', 
+    height: '16px',
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    fontSize: '9px', 
+    fontWeight: 'bold'
+  }}>
+    2
+  </div>
+</div>
+
+
+<VoiceControlButton 
+  isActive={isVoiceActive} 
+  onClick={() => setIsVoiceActive(!isVoiceActive)} 
+/>
           </div>
         </div>
 
