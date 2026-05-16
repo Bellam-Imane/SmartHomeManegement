@@ -14,6 +14,7 @@ import MainLayout from './layouts/MainLayout';
 // Dashboard pages
 import Dashboard from './pages/Dashboard';
 import Rooms from './pages/Rooms';
+import RoomDetails from './pages/RoomDetails'; // 1. IMPORTATION: Ajout de la nouvelle page de détails
 import Devices from './pages/Devices';
 import Energy from './pages/Energy';
 import Security from './pages/Security';
@@ -31,12 +32,13 @@ function App() {
       .then(res => setStatus(res.data.message))
       .catch(() => setStatus("Error: Backend is not responding"));
   }, []);
+
   const [notifications, setNotifications] = useState([
-  { id: 1, title: "Mouvement Détecté", desc: "Un mouvement a été détecté dans le Salon à 02:30 AM.", type: "danger", isRead: false },
-  { id: 2, title: "Optimisation Énergie", desc: "Voulez-vous fermer les rideaux pour réduire la clim de 15%?", type: "routine", isRead: false },
-  { id: 3, title: "Porte Ouverte", desc: "La porte principale est restée ouverte plus de 5 minutes.", type: "danger", isRead: true },
-  { id: 4, title: "Économie Hebdomadaire", desc: "Votre consommation a baissé de 10%.", type: "eco", isRead: false },
-  { id: 5, title: "Système à jour", desc: "Le système ESP32 a été mis à jour avec succès.", type: "normal", isRead: true }
+    { id: 1, title: "Mouvement Détecté", desc: "Un mouvement a été détecté dans le Salon à 02:30 AM.", type: "danger", isRead: false },
+    { id: 2, title: "Optimisation Énergie", desc: "Voulez-vous fermer les rideaux pour réduire la clim de 15%?", type: "routine", isRead: false },
+    { id: 3, title: "Porte Ouverte", desc: "La porte principale est restée ouverte plus de 5 minutes.", type: "danger", isRead: true },
+    { id: 4, title: "Économie Hebdomadaire", desc: "Votre consommation a baissé de 10%.", type: "eco", isRead: false },
+    { id: 5, title: "Système à jour", desc: "Le système ESP32 a été mis à jour avec succès.", type: "normal", isRead: true }
   ]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -44,6 +46,7 @@ function App() {
   const markAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
   };
+
   return (
     <Router>
       <Routes>
@@ -60,12 +63,17 @@ function App() {
         {/* Protected layout routes */}
         <Route path="/home" element={<MainLayout />}>
 
-          
           <Route index element={<Navigate to="dashboard" replace />} />
 
-          
           <Route path="dashboard" element={<Dashboard unreadCount={unreadCount} />} />
+          
+          {/* Liste de toutes les pièces */}
           <Route path="rooms" element={<Rooms />} />
+          
+          {/* 2. ROUTE DYNAMIQUE: Vue détaillée d'une pièce spécifique grâce au paramètre ':id' */}
+          {/* URL d'accès finale : /home/rooms/ID_DE_LA_PIECE */}
+          <Route path="rooms/:id" element={<RoomDetails />} />
+
           <Route path="devices" element={<Devices />} />
           <Route path="energy" element={<Energy />} />
           <Route path="automation" element={<Automation />} />
