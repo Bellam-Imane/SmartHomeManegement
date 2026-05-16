@@ -1,23 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lightbulb, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import lampe from '../assets/images/lampe.png';
 
-const EclairageCard = ({ bulbsData }) => {
-  // Vérification de la présence des données
+/**
+ * COMPOSANT ECLAIRAGECARD : Alignisé 100% avec le modèle Mongoose AppareilEclairage
+ */
+const EclairageCard = ({ bulbsData, onUpdateAppareil }) => {
+  
+  // 1. SÉCURITÉ : Gestion des données si la liste est vide
   if (!bulbsData || bulbsData.length === 0) {
-    return <div className="p-8 bg-gray-200 rounded-[45px]">Chargement des lampes...</div>;
+    return <div className="p-8 bg-gray-200 rounded-[45px] font-bold italic text-gray-500">Chargement des lampes...</div>;
   }
 
-  // État pour gérer l'index de la lampe actuelle
+  // 2. GESTION DE LA NAVIGATION
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentBulb = bulbsData[currentIndex];
-  
-  // États pour l'allumage et l'intensité
-  const [isOn, setIsOn] = useState(currentBulb.status === 'ENLIGNE');
-  const [intensity, setIntensity] = useState(currentBulb.intensite || 50);
 
-  // Fonctions de navigation entre les appareils
+  // Force le retour à l'index 0 si les données changent
+  useEffect(() => {
+    if (currentIndex >= bulbsData.length) {
+      setCurrentIndex(0);
+    }
+  }, [bulbsData, currentIndex]);
+
+  // 3. EXTRACTION EN DIRECT DE LA BASE DE DONNÉES
+  const isOn = currentBulb.status === 'ENLIGNE';
+  const intensity = currentBulb.intensite !== undefined ? currentBulb.intensite : 100;
+
   const nextBulb = () => {
     setCurrentIndex((prev) => (prev === bulbsData.length - 1 ? 0 : prev + 1));
   };
@@ -26,8 +36,37 @@ const EclairageCard = ({ bulbsData }) => {
     setCurrentIndex((prev) => (prev === 0 ? bulbsData.length - 1 : prev - 1));
   };
 
+
+  const updateBulbProperty = (updates) => {
+    if (onUpdateAppareil) {
+      onUpdateAppareil(currentBulb._id || currentBulb.id, {
+        ...currentBulb,
+        ...updates
+      });
+    }
+  };
+
+  const togglePower = () => {
+    const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE';
+    updateBulbProperty({ status: nextStatus });
+  };
+
+  const handleSliderChange = (e) => {
+    const val = parseInt(e.target.value, 10);
+    
+    
+    let nextStatus = currentBulb.status;
+    if (val === 0) nextStatus = 'HORSLIGNE';
+    else if (val > 0 && !isOn) nextStatus = 'ENLIGNE';
+
+    updateBulbProperty({
+      intensite: val,
+      status: nextStatus
+    });
+  };
+
   return (
-    <div className="relative w-full max-w-[350px] bg-[#B5B8C4] rounded-[45px] p-8 shadow-xl overflow-hidden min-h-[480px] flex flex-col justify-between transition-all duration-500">
+    <div className="relative w-full max-w-[350px] bg-[#B5B8C4] rounded-[45px] p-8 shadow-xl overflow-hidden min-h-[480px] flex flex-col justify-between transition-all duration-500 select-none">
       
       {/* 1. SECTION HEADER : Nom et Switch */}
       <div className="flex justify-between items-start z-10">
@@ -45,7 +84,7 @@ const EclairageCard = ({ bulbsData }) => {
         
         <div className="flex items-center">
           <button 
-            onClick={() => setIsOn(!isOn)}
+            onClick={togglePower}
             className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${isOn ? 'bg-gray-800' : 'bg-gray-400'}`}
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-1' : 'left-1'}`} />
@@ -53,7 +92,6 @@ const EclairageCard = ({ bulbsData }) => {
         </div>
       </div>
 
-      
       {/* 2. SECTION CENTRALE : Navigation et Visuel */}
       <div className="flex items-center justify-between my-4 relative h-56">
         <button onClick={prevBulb} className="p-2 hover:bg-black/5 rounded-full transition-colors z-20">
@@ -61,7 +99,7 @@ const EclairageCard = ({ bulbsData }) => {
         </button>
 
         <div className="relative flex justify-center items-center w-full">
-          {/* Halo lumineux dynamique */}
+          {/* Halo lumineux dynamique basé sur 'couleur' et 'intensite' du modèle */}
           {isOn && (
             <div 
               className="absolute w-32 h-32 rounded-full blur-[50px] transition-all duration-500"
@@ -74,10 +112,8 @@ const EclairageCard = ({ bulbsData }) => {
           <img 
             src={lampe} 
             alt="Lamp"
-            // Opacity reste élevée (0.9) même à l'arrêt pour que l'objet soit visible
             className={`w-40 h-auto object-contain z-10 transition-all duration-500 ${isOn ? 'opacity-100' : 'opacity-90'}`}
             style={{ 
-              // Luminosité ajustée : minimum 0.7 au lieu de 0.4 pour éviter l'effet "trou noir"
               filter: isOn 
                 ? `brightness(${0.7 + (intensity / 100) * 0.3})` 
                 : 'brightness(0.7)'
@@ -90,7 +126,7 @@ const EclairageCard = ({ bulbsData }) => {
         </button>
       </div>
 
-      {/* 3. SECTION FOOTER : Slider d'intensité (Glassmorphism) */}
+      {/* 3. SECTION FOOTER : Slider d'intensité (Glassmorphism préservé) */}
       <div style={{ 
         width: '100%', 
         background: 'rgba(255, 255, 255, 0.2)', 
@@ -140,19 +176,13 @@ const EclairageCard = ({ bulbsData }) => {
           {intensity}%
         </span>
 
-        {/* Input natif invisible pour le contrôle */}
+        {/* Input natif invisible pour le contrôle connecté */}
         <input 
           type="range" 
           min="0" 
           max="100" 
           value={intensity} 
-          onChange={(e) => {
-            const val = parseInt(e.target.value);
-            setIntensity(val);
-            // Gestion automatique de l'état On/Off selon l'intensité
-            if (val === 0) setIsOn(false);
-            else if (val > 0 && !isOn) setIsOn(true);
-          }} 
+          onChange={handleSliderChange} 
           style={{ 
             position: 'absolute', 
             top: 0, left: 0, 
