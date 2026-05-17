@@ -14,9 +14,12 @@ const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
     // Empêche le déclenchement d'autres événements parents si nécessaire
     e.stopPropagation(); 
     
+    // 🚨 تـأكـيـد إرسـال الـ ID الـصـحـيـح كـيـفـمـا كـان
+    // Si l'id passé est un objet ou s'il y a une divergence, on s'assure d'envoyer la string brute
+    const finalId = id?._id || id?.id || id;
+
     // REDIRECTION CORRIGÉE : Alignée parfaitement sur le Nested Route de App.jsx (/home/rooms/:id)
-    // Cela évite l'erreur "No routes matched location" et l'écran blanc.
-    navigate(`/home/rooms/${id}`); 
+    navigate(`/home/rooms/${finalId}`); 
   };
 
   return (
@@ -40,11 +43,11 @@ const RoomCard = ({ id, name, devices, image, onEdit, onDelete }) => {
 
         {showMenu && (
           <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100 p-2 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-            <button onClick={(e) => { e.stopPropagation(); onEdit(id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors duration-150">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(id?._id || id?.id || id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors duration-150">
               <Edit2 size={16} className="text-indigo-600" />
               <span>Modifier</span>
             </button>
-            <button onClick={(e) => { e.stopPropagation(); onDelete(id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-xl">
+            <button onClick={(e) => { e.stopPropagation(); onDelete(id?._id || id?.id || id); }} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-xl">
               <Trash2 size={16} />
               <span>Supprimer</span>
             </button>

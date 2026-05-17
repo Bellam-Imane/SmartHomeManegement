@@ -7,25 +7,22 @@ import acImage from '../assets/images/climatiseur.png';
 
 /**
  * COMPOSANT AIRCONDITIONERCARD
- * Je gère ici le contrôle thermique de ma pièce en l'alignant parfaitement sur mes schémas Mongoose.
  */
-const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
+const AirConditionerCard = ({ acData, onUpdateAppareil }) => {
 
-  // Étape 1 : Pour sécuriser mon composant, je crée une liste standardisée.
-  // Si mon parent me passe "appareil" (objet unique via .find), je l'encapsule dans un tableau.
-  // Si mon parent me passe "acData" (tableau), je l'utilise directement.
-  const items = acData || (appareil ? [appareil] : []);
+  // Assurer que les donnees sont sous forme de tableau
+  const items = Array.isArray(acData) ? acData : [];
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Je réinitialise l'index si la liste change ou devient plus petite pour éviter les erreurs de débordement
+  // Reinitialisation de l'index en cas de modification de la liste
   useEffect(() => {
     if (currentIndex >= items.length) {
       setCurrentIndex(0);
     }
   }, [items, currentIndex]);
 
-  // Sécurité d'affichage si aucun appareil n'est disponible
+  // Affichage temporaire si aucun appareil n'est trouve
   if (items.length === 0) {
     return (
       <div className="w-full max-w-[850px] h-[220px] rounded-[35px] bg-[#f4ebe1] flex items-center justify-center font-bold italic text-gray-500">
@@ -34,27 +31,27 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
     );
   }
 
-  // Mon appareil actuellement affiché à l'écran
+  // Selection de l'appareil courant
   const currentAc = items[currentIndex];
 
-  // Extraction directe des états depuis les props (Pas de state local isolé ici, je reste "Controlled")
+  // Extraction des proprietes de l'appareil selectionne
   const isOn = currentAc.status === 'ENLIGNE';
   const temperature = currentAc.temperatureCible || 25;
-  const mode = currentAc.mode || 'AUTO'; // Mes enums Mongoose : ['CHAUD', 'FROID', 'AUTO']
+  const mode = currentAc.mode || 'AUTO'; 
 
-  // Navigation vers l'appareil suivant (Actif seulement si j'ai plusieurs climatiseurs)
+  // Passage au climatiseur suivant
   const nextAc = () => {
     if (items.length <= 1) return;
     setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
   };
 
-  // Navigation vers l'appareil précédent
+  // Retour au climatiseur precedent
   const prevAc = () => {
     if (items.length <= 1) return;
     setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
-  // Ma fonction centrale pour notifier mon parent "RoomDetails" de toute modification en direct
+  // Notification des changements au composant parent
   const updateAcProperty = (property, value) => {
     if (onUpdateAppareil) {
       onUpdateAppareil(currentAc._id || currentAc.id, {
@@ -64,27 +61,27 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
     }
   };
 
-  // Gestion du Switch ON / OFF lié à mon enum de statut 'ENLIGNE' / 'HORSLIGNE'
+  // Alternance entre ENLIGNE et HORSLIGNE
   const togglePower = () => {
     const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE';
     updateAcProperty('status', nextStatus);
   };
 
-  // J'augmente la température cible sans dépasser la limite supérieure de 30°C
+  // Augmentation de la temperature (max 30)
   const incrementTemp = () => {
     if (temperature < 30) {
       updateAcProperty('temperatureCible', temperature + 1);
     }
   };
 
-  // Je baisse la température cible sans descendre en dessous de la limite inférieure de 16°C
+  // Diminution de la temperature (min 16)
   const decrementTemp = () => {
     if (temperature > 16) {
       updateAcProperty('temperatureCible', temperature - 1);
     }
   };
 
-  // Modification du mode de fonctionnement de mon climatiseur
+  // Modification du mode de fonctionnement
   const changeMode = (newMode) => {
     updateAcProperty('mode', newMode); 
   };
@@ -101,13 +98,13 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
               {currentAc.nomAppareil || 'Climatiseur'}
             </h3>
           </div>
-          <span className="text-xs text-gray-400 font-medium ml-8">
-            {items.length} appareil(s) disponible(s)
+          {/* Modification du texte ici pour afficher connectes */}
+          <span className="text-[11px] text-gray-500 font-bold tracking-tight mt-0.5 ml-8 text-left">
+            {items.length} appareils connectés
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Switch de mise sous tension */}
           <button 
             onClick={togglePower}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${isOn ? 'bg-gray-800' : 'bg-gray-400'}`}
@@ -122,7 +119,6 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
 
       {/* ================= SECTION CENTRALE CONTENU ================= */}
       <div className="flex items-center justify-between w-full mt-4 relative px-2">
-        {/* Flèche gauche visible ou grisée selon le nombre d'appareils */}
         <button 
           onClick={prevAc} 
           className={`p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}
@@ -132,7 +128,7 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
 
         <div className="flex-1 grid grid-cols-3 items-center justify-items-center gap-4 px-4">
           
-          {/* Colonne 1 : Visuel de l'appareil */}
+          {/* Colonne 1 : Image de l'appareil */}
           <div className="relative w-full max-w-[180px] flex items-center justify-center">
             <img 
               src={acImage} 
@@ -146,7 +142,7 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
             )}
           </div>
 
-          {/* Colonne 2 : Thermostat Interactif */}
+          {/* Colonne 2 : Interface Thermostat */}
           <div className={`relative w-36 h-36 flex items-center justify-center transition-opacity duration-300 ${!isOn && 'opacity-30 pointer-events-none'}`}>
             <div className="absolute inset-0 rounded-full border-4 border-gray-300/40 flex items-center justify-center">
               <div 
@@ -171,7 +167,7 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
             </div>
           </div>
 
-          {/* Colonne 3 : Les boutons de modes reliés à mes Enums Mongoose */}
+          {/* Colonne 3 : Modes de fonctionnement */}
           <div className={`flex flex-col gap-3 w-full max-w-[160px] transition-opacity duration-300 ${!isOn && 'opacity-30 pointer-events-none'}`}>
             
             <button 
@@ -216,7 +212,6 @@ const AirConditionerCard = ({ appareil, acData, onUpdateAppareil }) => {
           </div>
         </div>
 
-        {/* Flèche droite */}
         <button 
           onClick={nextAc} 
           className={`p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}

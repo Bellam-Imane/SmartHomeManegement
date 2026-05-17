@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, Thermometer, Zap } from 'lucide-react';
-import axios from 'axios'; // Importation d'axios pour les requêtes HTTP
+import axios from 'axios'; 
 
-// ================= IMPORTATION DES COMPOSANTS =================
+// Importation des composants de l'application
 import RoomUsersCard from '../components/RoomUsersCard';
 import VoiceControlButton from '../components/VoiceControlButton';
 import AirConditionerCard from '../components/AirConditionerCard';
@@ -12,11 +12,8 @@ import CurtainsCard from '../components/CurtainsCard';
 import EclairageCard from '../components/EclairageCard';
 import MultimediaCard from '../components/MultimediaCard';
 import VacuumCard from '../components/VacuumCard';
+import AddAppareilModal from '../components/AddAppareilModal'; 
 
-/**
- * COMPOSANTE ROOMDETAILS : Structure en 3 colonnes fixes.
- * Gère l'affichage et la mise à jour des appareils d'une pièce via le serveur.
- */
 const RoomDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,51 +21,106 @@ const RoomDetails = () => {
   const [pieceData, setPieceData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Récupération des détails de la pièce depuis le backend
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    nomAppareil: '',
+    typeAppareil: 'ECLAIRAGE',
+    marque: ''
+  });
+
+  // Chargement des donnees de la piece et des appareils associes
   useEffect(() => {
     const fetchRoomDetails = async () => {
       setLoading(true);
       try {
-        // Remplacement du mockResponse par un appel API réel vers le serveur Node.js
-        // Ajustez l'URL globale selon la configuration de votre serveur
-        const response = await axios.get(`http://localhost:5000/api/pieces/${id}`);
+        const token = localStorage.getItem('token'); 
+        const response = await axios.get(`http://localhost:5000/api/pieces/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         
-        if (response.data && response.data.data) {
-          setPieceData(response.data.data);
+        let data = response.data && response.data.data ? response.data.data : response.data;
+        
+        // CORRECTION ICI: Hydratation robuste et securisee des appareils
+        if (data && Array.isArray(data.appareils) && data.appareils.length > 0) {
+          // On verifie si le premier element est un ID (string) pour lancer le chargement complet
+          if (typeof data.appareils[0] === 'string') {
+            const requests = data.appareils.map(appId => 
+              axios.get(`http://localhost:5000/api/appareils/${appId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+              .then(res => res.data.data || res.data)
+              .catch((err) => {
+                console.error(`Erreur chargement appareil ${appId}:`, err);
+                return null;
+              })
+            );
+            
+            const fullAppareils = await Promise.all(requests);
+            // On ne garde que les appareils qui ont ete recuperes avec succes
+            data.appareils = fullAppareils.filter(app => app !== null);
+          }
         } else {
-          setPieceData(response.data); // Cas où la data est renvoyée directement
+          // Securite au cas ou appareils est undefined ou null
+          data.appareils = [];
         }
+
+        setPieceData(data);
       } catch (error) {
-        console.error("Erreur lors du chargement des détails depuis le serveur:", error);
+        console.error("Erreur lors du chargement des details de la piece:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRoomDetails();
+    if (id) {
+      fetchRoomDetails();
+    }
   }, [id]);
 
-  // Fonction centrale pour modifier l'état d'un appareil connecté (Clim, Rideau, Caméra...)
+  // Mise a jour d'un appareil et synchronisation avec le backend
   const handleUpdateAppareil = async (appareilId, updatedAppareilData) => {
     try {
-      // 1. Mise à jour optimiste de l'interface en local pour éviter les latences visuelles
       setPieceData((prevData) => {
         if (!prevData) return prevData;
-        
-        const updatedAppareils = prevData.appareils.map((app) => 
+        const updatedAppareils = (prevData.appareils || []).map((app) => 
           (app._id === appareilId || app.id === appareilId) ? { ...app, ...updatedAppareilData } : app
         );
-        
         return { ...prevData, appareils: updatedAppareils };
       });
 
-      // 2. Envoi de la modification vers la route PUT du serveur (Option 1 qu'on a créée)
-      await axios.put(`http://localhost:5000/api/appareils/${appareilId}`, updatedAppareilData);
-      console.log(`Appareil [${appareilId}] synchronisé avec succès dans la base de données.`);
-
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:5000/api/appareils/${appareilId}`, updatedAppareilData, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
     } catch (error) {
-      console.error("Erreur lors de la synchronisation avec le serveur:", error);
-      // En cas d'erreur réseau, il est possible de rafraîchir la page pour restaurer l'ancien état
+      console.error("Erreur de synchronisation de l'appareil:", error);
+    }
+  };
+
+  // Creation d'un nouvel appareil via le formulaire modal
+  const handleCreateAppareil = async (e) => {
+    e.preventDefault(); 
+    try {
+      const payload = { ...formData, piece: id };
+      const token = localStorage.getItem('token');
+      const response = await axios.post('http://localhost:5000/api/appareils', payload, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.data && response.data.success) {
+        setPieceData((prevData) => {
+          if (!prevData) return prevData;
+          const appareilsActuels = Array.isArray(prevData.appareils) ? prevData.appareils : [];
+          return {
+            ...prevData,
+            appareils: [...appareilsActuels, response.data.data]
+          };
+        });
+        setIsModalOpen(false);
+        setFormData({ nomAppareil: '', typeAppareil: 'ECLAIRAGE', marque: '' });
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de l'appareil:", error);
     }
   };
 
@@ -76,127 +128,98 @@ const RoomDetails = () => {
     return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Chargement...</div>;
   }
 
-  // Extraction et filtrage des appareils pour les distribuer proprement dans les colonnes
-  const camera = pieceData?.appareils?.find(a => a.typeAppareil === 'CAMERA');
-  const eclairage = pieceData?.appareils?.find(a => a.typeAppareil === 'ECLAIRAGE');
-  const multimedia = pieceData?.appareils?.find(a => a.typeAppareil === 'MULTIMEDIA');
-  const thermique = pieceData?.appareils?.find(a => a.typeAppareil === 'THERMIQUE');
-  const motorise = pieceData?.appareils?.find(a => a.typeAppareil === 'MOTORISE');
-  const aspirateur = pieceData?.appareils?.find(a => a.typeAppareil === 'ASPIRATEUR');
+  const appareilsList = Array.isArray(pieceData?.appareils) ? pieceData.appareils : [];
+
+  // Filtrage des appareils par type (securise avec optionnel chaining)
+  const visas = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'CAMERA');
+  const eclairages = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ECLAIRAGE');
+  const multimedias = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MULTIMEDIA');
+  const thermiques = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'THERMIQUE');
+  const motorises = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MOTORISE');
+  const aspirateurs = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ASPIRATEUR');
 
   return (
-    <div className="min-h-screen bg-[#f4f5f7] p-6 font-sans select-none">
+    <div className="min-h-screen bg-[#f4f5f7] p-6 font-sans select-none relative">
       
-      {/* ================= HEADER PRINCIPAL ================= */}
+      {/* Header de la page */}
       <header className="flex justify-between items-center w-full max-w-[1340px] mx-auto mb-8">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/home/rooms')} 
-            className="p-2.5 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={() => navigate('/home/rooms')} className="p-2.5 bg-white rounded-full shadow-sm hover:bg-gray-100 cursor-pointer">
             <ChevronLeft size={22} className="text-gray-700" />
           </button>
           <div className="flex flex-col text-left">
             <h1 className="text-3xl font-black text-gray-800 tracking-tight">
-              {pieceData?.nomPiece}
+              {pieceData?.nomPiece || pieceData?.nom || "Salon"}
             </h1>
             <span className="text-sm font-semibold text-gray-400 mt-0.5">
-              {pieceData?.appareils?.length || 0} appareils connectés
+              {appareilsList.length} appareils connectés
             </span>
           </div>
         </div>
-
-        <div>
-          <VoiceControlButton />
-        </div>
+        <VoiceControlButton />
       </header>
 
-      {/* ================= SUB-HEADER (STATS) ================= */}
+      {/* Informations globales de la piece */}
       <section className="flex justify-between items-center w-full max-w-[1340px] mx-auto mb-8">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl shadow-xs border border-gray-100">
             <Thermometer size={18} className="text-orange-500" />
             <span className="text-xs font-bold text-gray-400 flex flex-col items-start leading-none">
-              Température intérieure
-              <strong className="text-sm font-extrabold text-gray-800 mt-1">24°C</strong>
+              Température intérieure <strong className="text-sm font-extrabold text-gray-800 mt-1">24°C</strong>
             </span>
           </div>
           <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl shadow-xs border border-gray-100">
             <Zap size={18} className="text-amber-500" />
             <span className="text-xs font-bold text-gray-400 flex flex-col items-start leading-none">
-              Énergie consommée
-              <strong className="text-sm font-extrabold text-gray-800 mt-1">13 kwh</strong>
+              Énergie consommée <strong className="text-sm font-extrabold text-gray-800 mt-1">13 kwh</strong>
             </span>
           </div>
         </div>
-
-        <button className="bg-[#20242c] hover:bg-[#2c323d] text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2.5 shadow-md active:scale-[0.98] transition-all">
-          <Plus size={16} />
-          <span>Ajouter un appareil</span>
+        <button onClick={() => setIsModalOpen(true)} className="bg-[#20242c] hover:bg-[#2c323d] text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2.5 shadow-md transition-all cursor-pointer">
+          <Plus size={16} /> <span>Ajouter un appareil</span>
         </button>
       </section>
 
-      {/* ================= LAYOUT MAÎTRISÉ : 3 COLONNES DISTINCTES ================= */}
+      {/* Grid principal contenant les colonnes de cartes */}
       <main className="w-full max-w-[1340px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start w-full">
           
-          {/* COLONNE 1 : Caméra (Live) en haut + Éclairage (Lampes) en bas */}
-          <div className="flex flex-col gap-6 w-full">
-            {camera && (
-              <CameraCard 
-                appareil={camera} 
-                imageSrc="https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80"
-                onUpdateAppareil={handleUpdateAppareil} 
-              />
+          {/* Colonne 1 : Caméras et Éclairages */}
+          <div className="flex flex-col gap-6 w-full text-left">
+            {visas.length > 0 && (
+              <CameraCard cameraData={visas} imageSrc="https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80" onUpdateAppareil={handleUpdateAppareil} />
             )}
-            {eclairage && (
-              <EclairageCard 
-                appareil={eclairage} 
-                onUpdateAppareil={handleUpdateAppareil} 
-              />
+            {eclairages.length > 0 && (
+              <EclairageCard bulbsData={eclairages} onUpdateAppareil={handleUpdateAppareil} />
             )}
           </div>
 
-          {/* COLONNE 2 : Télévision (Multimédia) + Climatiseur + Rideaux */}
-          <div className="flex flex-col gap-6 w-full">
-            {multimedia && (
-              <MultimediaCard 
-                appareil={multimedia} 
-                onUpdateAppareil={handleUpdateAppareil} 
-              />
+          {/* Colonne 2 : Multimedia, Climatisation et Volets */}
+          <div className="flex flex-col gap-6 w-full text-left">
+            {multimedias.length > 0 && (
+              <MultimediaCard multimediaData={multimedias} onUpdateAppareil={handleUpdateAppareil} />
             )}
-            {thermique && (
-              <AirConditionerCard 
-                appareil={thermique} 
-                onUpdateAppareil={handleUpdateAppareil} 
-              />
+            {thermiques.length > 0 && (
+              <AirConditionerCard acData={thermiques} onUpdateAppareil={handleUpdateAppareil} />
             )}
-            {motorise && (
-              <CurtainsCard 
-                appareil={motorise} 
-                onUpdateAppareil={handleUpdateAppareil} 
-              />
+            {motorises.length > 0 && (
+              <CurtainsCard curtainsData={motorises} onUpdateAppareil={handleUpdateAppareil} />
             )}
           </div>
 
-          {/* COLONNE 3 : FIXE & ANCRÉE - Utilisateurs en haut + Aspirateur juste en bas */}
-          <div className="flex flex-col gap-6 w-full">
-            <RoomUsersCard 
-              utilisateurs={pieceData?.utilisateurs}
-              onAddUser={() => console.log("Ajouter utilisateur")}
-              onEditUser={(u) => console.log("Modifier", u._id)}
-              onDeleteUser={(u) => console.log("Supprimer", u._id)}
-            />
-            {aspirateur && (
-              <VacuumCard 
-                appareil={aspirateur} 
-                onUpdateAppareil={handleUpdateAppareil} 
-              />
+          {/* Colonne 3 : Utilisateurs et Aspirateurs */}
+          <div className="flex flex-col gap-6 w-full text-left">
+            <RoomUsersCard utilisateurs={pieceData?.utilisateurs} onAddUser={() => {}} onEditUser={() => {}} onDeleteUser={() => {}} />
+            {aspirateurs.length > 0 && (
+              <VacuumCard vacuumData={aspirateurs} onUpdateAppareil={handleUpdateAppareil} />
             )}
           </div>
 
         </div>
       </main>
+
+      {/* Modal d'ajout d'appareil */}
+      <AddAppareilModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleCreateAppareil} formData={formData} setFormData={setFormData} />
     </div>
   );
 };

@@ -3,6 +3,7 @@ const Maison = require('../models/Maison');
 
 /**
  * Récupérer toutes les pièces de la maison de l'utilisateur connecté
+ * @route GET /api/pieces/all
  */
 exports.getPieces = async (req, res) => {
     try {
@@ -15,10 +16,10 @@ exports.getPieces = async (req, res) => {
             return res.status(404).json({ message: "Aucune maison trouvée pour cet utilisateur." });
         }
 
-        // 2. Récupérer toutes les pièces associées à cette maison
-        const pieces = await Piece.find({ maison: maison._id });
+        // 2. Récupérer toutes les pièces associées à cette maison avec leurs appareils peuplés
+        const pieces = await Piece.find({ maison: maison._id }).populate('appareils');
 
-        // 3. Envoyer la liste des pièces au Frontend
+        // 3. Envoyer la liste des pièces au Frontend avec une structure compatible
         res.status(200).json({
             success: true,
             count: pieces.length,
@@ -33,33 +34,40 @@ exports.getPieces = async (req, res) => {
 
 /**
  * Ajouter une nouvelle pièce liée à la maison de l'utilisateur connecté
+ * @route POST /api/pieces
  */
 exports.ajouterPiece = async (req, res) => {
     try {
         const { nomPiece, type, superficie, etage } = req.body;
         const userId = req.user.id; 
 
+        // Validation des champs obligatoires
         if (!nomPiece || !type || !superficie) {
             return res.status(400).json({ message: "Le nom, le type et la superficie sont obligatoires." });
         }
 
+        // Vérification de l'existence de la maison
         const maison = await Maison.findOne({ proprietaire: userId });
         if (!maison) {
             return res.status(404).json({ message: "Aucune maison trouvée pour cet utilisateur." });
         }
 
+        // Création de l'instance de la nouvelle pièce
         const nouvellePiece = new Piece({
             nomPiece,
             type,
             superficie,
             etage: etage || 0,
             maison: maison._id,
-            appareils: []
+            appareils: [] // Initialisation avec un tableau d'appareils vide
         });
 
+        // Sauvegarde dans la base de données
         await nouvellePiece.save();
 
+        // Envoi de la réponse avec l'attribut 'success' requis par le Frontend
         res.status(201).json({
+            success: true,
             message: "Pièce ajoutée avec succès !",
             piece: nouvellePiece
         });
@@ -72,26 +80,33 @@ exports.ajouterPiece = async (req, res) => {
 
 /**
  * Modifier les informations d'une pièce spécifique
+ * @route PUT /api/pieces/:id
  */
 exports.updatePiece = async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
 
-        const pieceModifiee = await Piece.findByIdAndUpdate(id, updates, { new: true });
+        // Mise à jour de la pièce et population directe des appareils
+        const pieceModifiee = await Piece.findByIdAndUpdate(id, updates, { new: true }).populate('appareils');
         
         if (!pieceModifiee) {
             return res.status(404).json({ message: "Pièce non trouvée." });
         }
 
-        res.status(200).json({ message: "Pièce modifiée !", piece: pieceModifiee });
+        res.status(200).json({ 
+            success: true, 
+            message: "Pièce modifiée !", 
+            piece: pieceModifiee 
+        });
     } catch (error) {
         res.status(500).json({ message: "Erreur lors de la modification.", error: error.message });
     }
 };
 
 /**
- * Supprimer une pièce définitivement
+ * Supprimer une pièce définitivement de la base de données
+ * @route DELETE /api/pieces/:id
  */
 exports.deletePiece = async (req, res) => {
     try {
@@ -103,23 +118,25 @@ exports.deletePiece = async (req, res) => {
             return res.status(404).json({ message: "Pièce non trouvée." });
         }
 
-        res.status(200).json({ message: "Pièce supprimée avec succès !" });
+        res.status(200).json({ 
+            success: true, 
+            message: "Pièce supprimée avec succès !" 
+        });
     } catch (error) {
         res.status(500).json({ message: "Erreur lors de la suppression.", error: error.message });
     }
 };
 
-
 /**
- * ✅ RÉCUPÉRER LES DÉTAILS D'UNE PIÈCE (100% SÉCURISÉE SANS POPULATE)
- * Cette fonction est appelée par le modal de modification pour remplir les champs.
+ * Récupérer les détails complets d'une pièce spécifique avec ses appareils (Résolution du bug d'affichage)
+ * @route GET /api/pieces/:id
  */
 exports.getPieceDetails = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // On cherche la pièce directement par son ID (Pas besoin de populate puisque la liste est vide)
-        const piece = await Piece.findById(id);
+        // CORRECTION MAJEURE : Ajout du .populate('appareils') pour charger les objets complets des appareils
+        const piece = await Piece.findById(id).populate('appareils');
         
         if (!piece) {
             return res.status(404).json({ 
@@ -128,9 +145,10 @@ exports.getPieceDetails = async (req, res) => {
             });
         }
 
-        // Renvoie les infos de la pièce (nom, type, superficie, etage) au Frontend
+        // ALIGNEMENT FRONTEND : Envoi de l'objet sous les clés 'data' et 'piece' pour satisfaire tous les hooks du Frontend
         return res.status(200).json({ 
             success: true, 
+            data: piece, 
             piece: piece 
         });
 

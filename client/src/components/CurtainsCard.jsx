@@ -1,31 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Blinds, MoreVertical, ChevronLeft, ChevronRight, Moon, Sun, 
-  ShieldCheck, Clapperboard, Sparkles
+  ShieldCheck, Clapperboard
 } from 'lucide-react';
 
 /**
  * COMPOSANT CURTAINSCARD
- * Je gère ici l'ouverture motorisée de mes rideaux en assurant une synchronisation totale avec mon parent.
  */
-const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
+const CurtainsCard = ({ curtainsData, onUpdateAppareil }) => {
 
-  // Étape 1 : Sécurisation de la structure des données.
-  // Si mon parent me passe un "appareil" unique, je le transforme en tableau pour ne pas casser mes flèches.
-  // Sinon, j'utilise directement le tableau "curtainsData".
-  const items = curtainsData || (appareil ? [appareil] : []);
+  // Assurer que les donnees reçues sont sous forme de tableau
+  const items = Array.isArray(curtainsData) ? curtainsData : [];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeMode, setActiveMode] = useState('Ombrage automatique');
 
-  // Je surveille mon index pour éviter tout débordement hors du tableau si les données changent
+  // Securisation de l'index en cas de changement dynamique des donnees
   useEffect(() => {
     if (currentIndex >= items.length) {
       setCurrentIndex(0);
     }
   }, [items, currentIndex]);
 
-  // Si aucun appareil n'est chargé, j'affiche mon écran de sécurité
+  // Rendu temporaire si aucun appareil n'est disponible
   if (items.length === 0) {
     return (
       <div className="w-full max-w-[880px] min-h-[260px] rounded-[40px] bg-[#e6f2fe] flex items-center justify-center font-bold italic text-gray-500">
@@ -34,25 +31,26 @@ const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
     );
   }
 
-  // Sélection de mon rideau actuellement affiché
+  // Selection du rideau courant
   const currentCurtain = items[currentIndex];
 
-  // Extraction directe des valeurs sans state local pour rester parfaitement "Controlled"
+  // Recuperation des proprietes de l'appareil selectionne
   const isOn = currentCurtain.status === 'ENLIGNE';
-  const pourcentage = currentCurtain.pourcentageOuverture || 0; // Aligné sur mon schéma Mongoose [0 à 100]
+  const pourcentage = currentCurtain.pourcentageOuverture || 0; 
 
-  // Fonctions de navigation entre mes différents rideaux
+  // Passage au rideau suivant
   const nextCurtain = () => {
     if (items.length <= 1) return;
     setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
   };
 
+  // Retour au rideau precedent
   const prevCurtain = () => {
     if (items.length <= 1) return;
     setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
-  // Ma fonction de notification pour envoyer toutes les modifications en direct à "RoomDetails"
+  // Notification des changements au composant parent
   const updateCurtainProperty = (property, value) => {
     if (onUpdateAppareil) {
       onUpdateAppareil(currentCurtain._id || currentCurtain.id, {
@@ -62,22 +60,22 @@ const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
     }
   };
 
-  // Switch d'alimentation principale (status: 'ENLIGNE' / 'HORSLIGNE')
+  // Alternance de l'etat d'alimentation
   const togglePower = () => {
     const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE';
     updateCurtainProperty('status', nextStatus);
   };
 
-  // Capture des mouvements de mon slider personnalisé
+  // Gestion de la modification via le slider
   const handleSliderChange = (e) => {
     const value = parseInt(e.target.value, 10);
     updateCurtainProperty('pourcentageOuverture', value);
   };
 
-  // Gestion des modes intelligents : j'applique les pourcentages prédéfinis directement en base de données
+  // Application des configurations predefinies pour les modes
   const handleModeChange = (modeId) => {
     setActiveMode(modeId);
-    if (!isOn) return; // Bloqué si l'appareil est hors ligne
+    if (!isOn) return; 
     
     switch(modeId) {
       case 'Veille': updateCurtainProperty('pourcentageOuverture', 0); break;
@@ -96,17 +94,21 @@ const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
   ];
 
   return (
-    <div className="relative w-full max-w-[880px] bg-[#ebf5ff] rounded-[40px] p-6 shadow-lg flex flex-col justify-between min-h-[280px] transition-all duration-500 select-none">
+    <div className="relative w-full max-w-[880px] bg-[#ebf5ff] rounded-[40px] p-6 shadow-lg flex flex-col justify-between min-h-[240px] transition-all duration-500 select-none">
       
       {/* ================= SECTION HEADER ================= */}
       <div className="flex justify-between items-center w-full px-2">
-        <div className="flex items-center gap-2">
-          <Blinds size={22} className="text-gray-700" />
-          <h3 className="text-xl font-bold text-gray-800">Rideaux</h3>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <Blinds size={22} className="text-gray-700" />
+            <h3 className="text-xl font-bold text-gray-800">Rideaux</h3>
+          </div>
+          <span className="text-[11px] text-gray-500 font-bold tracking-tight mt-0.5 ml-8 text-left">
+            {items.length} appareils connectés
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Interrupteur principal ON/OFF */}
           <button 
             onClick={togglePower}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${isOn ? 'bg-gray-800' : 'bg-gray-400'}`}
@@ -121,12 +123,11 @@ const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
 
       {/* ================= SECTION CONTENU CENTRAL : TITRE & SLIDER ================= */}
       <div className={`w-full flex flex-col mt-3 px-2 transition-opacity duration-300 ${!isOn && 'opacity-40 pointer-events-none'}`}>
-        <h4 className="text-base font-bold text-gray-800 mb-1 ml-10">
+        <h4 className="text-base font-bold text-gray-800 mb-1 ml-10 text-left">
           {currentCurtain.nomAppareil || `Rideau ${currentIndex + 1}`}
         </h4>
 
         <div className="flex items-center justify-between w-full relative">
-          {/* Flèche gauche masquée s'il n'y a qu'un seul rideau */}
           <button 
             onClick={prevCurtain} 
             className={`p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}
@@ -134,7 +135,6 @@ const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
             <ChevronLeft size={24} className="text-gray-600" />
           </button>
 
-          {/* Zone du Slider de pourcentage */}
           <div className="flex-1 flex flex-col items-center px-6 relative">
             <span className="text-xs font-black text-gray-700 mb-1">
               Ouverture : {pourcentage}%
@@ -160,7 +160,6 @@ const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
             </div>
           </div>
 
-          {/* Flèche droite */}
           <button 
             onClick={nextCurtain} 
             className={`p-2 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}
@@ -187,14 +186,6 @@ const CurtainsCard = ({ appareil, curtainsData, onUpdateAppareil }) => {
             </div>
           </button>
         ))}
-      </div>
-
-      {/* ================= SECTION FOOTER : SUGGESTION IA ================= */}
-      <div className="w-full mt-5 pt-2 border-t border-gray-200/50 flex items-center gap-2 px-10 text-gray-700">
-        <Sparkles size={14} className="text-blue-500 shrink-0" />
-        <p className="text-[11px] font-semibold text-gray-600 tracking-wide">
-          Suggestion IA : Ajuster l'ouverture pour optimiser la luminosité et économiser de l'énergie.
-        </p>
       </div>
       
     </div>
