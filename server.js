@@ -9,6 +9,7 @@ const initializePostgres = require('./src/models/initPostgres');
 // Importation des routes de l'application
 const authRoutes = require('./src/routes/authRoutes');
 const pieceRoutes = require('./src/routes/pieceRoutes'); // ✅ Ajout de la route des pièces pour corriger l'erreur 404
+const appareilRoutes = require('./src/routes/appareilRoutes');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -26,6 +27,7 @@ app.use((req, res, next) => {
 // --- Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/pieces', pieceRoutes); // ✅ Activation officielle du préfixe /api/pieces pour le backend
+app.use('/api/appareils', appareilRoutes);
 
 // --- Health check endpoint ---
 app.get('/test-health', (req, res) => {
