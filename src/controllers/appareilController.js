@@ -1,9 +1,20 @@
-// Importation du modèle racine Appareil en utilisant le destructuring { Appareil }
-// Cela résout définitivement l'erreur "Appareil is not a constructor"
-const { Appareil } = require('../models/Appareil'); 
+const { 
+    Appareil, 
+    AppareilEclairage, 
+    AppareilThermique, 
+    AppareilMultimedia, 
+    AppareilMotorise, 
+    Camera, 
+    PorteIntelligent, 
+    Capteur, 
+    Aspirateur 
+} = require('../models/Appareil'); 
 
 // Importation du modèle Piece pour l'association et la mise à jour de la chambre
 const Piece = require('../models/Piece'); 
+
+// 🔌 INTEGRATION MQTT : Importation de la fonction pour envoyer des messages à Wokwi
+const { publishMessage } = require('../config/mqttService');
 
 /**
  * ---------------------------------------------------------------------------------
@@ -91,7 +102,7 @@ exports.createAppareil = async (req, res) => {
 
 /**
  * ---------------------------------------------------------------------------------
- * CONTROLLER : MISE À JOUR DES PROPRIÉTÉS D'UN APPAREIL CONSECTÉ EXISTANT
+ * CONTROLLER : MISE À JOUR DES PROPRIÉTÉS D'UN APPAREIL CONNECTÉ EXISTANT
  * ---------------------------------------------------------------------------------
  */
 exports.updateAppareil = async (req, res) => {
@@ -99,22 +110,54 @@ exports.updateAppareil = async (req, res) => {
     const { id } = req.params; // Récupération de l'ID passé dans l'URL
     const updateData = req.body; // Récupération des modifications à appliquer
 
-    // Recherche de l'appareil par ID et application des modifications via MongoDB
-    const appareilModifie = await Appareil.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true } // {new: true} renvoie l'objet après modification
-    );
-
-    // Vérification de l'existence de l'appareil avant de confirmer
-    if (!appareilModifie) {
+    // 1. Recherche préalable de l'appareil pour identifier son type réel (Discriminator Key)
+    const appareilExiste = await Appareil.findById(id);
+    if (!appareilExiste) {
       return res.status(404).json({ 
         success: false, 
         message: "L'appareil demandé est introuvable." 
       });
     }
 
-    // Réponse de succès avec l'appareil synchronisé
+    // 2. Sélection dynamique du modèle enfant approprié
+    // Mongoose nécessite le modèle spécifique (ex: AppareilEclairage) pour ne pas filtrer les champs spécifiques comme 'intensite'
+    let ModelCible = Appareil; // Modèle parent par défaut
+    const type = appareilExiste.typeAppareil?.toUpperCase();
+
+    if (type === 'ECLAIRAGE') ModelCible = AppareilEclairage;
+    else if (type === 'THERMIQUE') ModelCible = AppareilThermique;
+    else if (type === 'MULTIMEDIA') ModelCible = AppareilMultimedia;
+    else if (type === 'MOTORISE') ModelCible = AppareilMotorise;
+    else if (type === 'ASPIRATEUR') ModelCible = Aspirateur;
+    else if (type === 'CAMERA') ModelCible = Camera;
+    else if (type === 'PORTE') ModelCible = PorteIntelligent;
+    else if (type === 'CAPTEUR') ModelCible = Capteur;
+
+    // 3. Application des modifications sur le modèle cible identifié
+    // Remplacement de { new: true } par { returnDocument: 'after' } pour supprimer définitivement le Warning de Mongoose
+    const appareilModifie = await ModelCible.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { returnDocument: 'after', runValidators: true } 
+    );
+
+    // 4. 🔌 INTEGRATION MQTT DYNAMIQUE : On envoie l'état à l'appareil réel sur Wokwi
+    // Le topic contient l'ID de l'appareil pour éviter les mélanges entre pièces
+    const deviceTopic = `smart/home/appareil/${id}`;
+    
+    // On analyse les modifications de l'éclairage pour envoyer le statut et l'intensité ensemble
+    if (appareilModifie.typeAppareil === 'ECLAIRAGE') {
+      // Format du message combiné : "STATUS:INTENSITE" (Exemple: "ON:75" ou "OFF:0")
+      const statusPayload = appareilModifie.status === 'ENLIGNE' ? 'ON' : 'OFF';
+      const intensityPayload = appareilModifie.intensite !== undefined ? appareilModifie.intensite : 100;
+      
+      const finalPayload = `${statusPayload}:${intensityPayload}`;
+      
+      // Publication du message combiné vers le broker MQTT
+      publishMessage(deviceTopic, finalPayload);
+    }
+
+    // Réponse de succès avec l'appareil synchronisé et persisté en base de données
     return res.status(200).json({
       success: true,
       message: "Appareil mis à jour avec succès !",

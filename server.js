@@ -6,6 +6,9 @@ const cors = require('cors');
 const { connectDatabases } = require('./src/config/db');
 const initializePostgres = require('./src/models/initPostgres');
 
+// 🔌 INTEGRATION MQTT : Importation du service de messagerie IoT
+const { initializeMqtt } = require('./src/config/mqttService');
+
 // Importation des routes de l'application
 const authRoutes = require('./src/routes/authRoutes');
 const pieceRoutes = require('./src/routes/pieceRoutes'); // ✅ Ajout de la route des pièces pour corriger l'erreur 404
@@ -58,6 +61,11 @@ connectDatabases().then(async () => {
     app.listen(PORT, () => {
         console.log(`✅ Server running on http://localhost:${PORT}`);
         console.log(`🚀 All Databases are ready and tables are checked!`);
+        
+        // 🔌 INTEGRATION MQTT SECURISEE : On lance le MQTT uniquement APRES que le serveur soit 100% prêt
+        // Cela évite de bloquer les requêtes d'authentification (Login) au démarrage
+        console.log("⚡ Démarrage du service MQTT...");
+        initializeMqtt();
     });
 }).catch(err => {
     console.error("❌ Failed to start the system:", err.message);

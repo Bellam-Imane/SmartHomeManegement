@@ -69,22 +69,38 @@ const RoomDetails = () => {
     if (id) fetchRoomDetails();
   }, [id]);
 
+  /**
+   * 🔄 FONCTION : Mise à jour et synchronisation d'un appareil
+   */
   const handleUpdateAppareil = async (appareilId, updatedAppareilData) => {
     try {
+      // 1. Mise à jour de l'état local en fusionnant proprement TOUTES les anciennes propriétés
       setPieceData((prevData) => {
         if (!prevData) return prevData;
         const updatedAppareils = (prevData.appareils || []).map((app) =>
           (app._id === appareilId || app.id === appareilId)
-            ? { ...app, ...updatedAppareilData }
+            ? { ...app, ...updatedAppareilData } // Fusion locale de sécurité
             : app
         );
         return { ...prevData, appareils: updatedAppareils };
       });
 
+      // 2. Récupération de l'appareil actuel complet depuis notre State pour ne perdre aucun champ (comme typeAppareil)
+      const currentAppareilComplet = pieceData.appareils.find(app => (app._id === appareilId || app.id === appareilId));
+      
+      // Envoi du payload complet fusionné au serveur pour garantir les validations de type
+      const finalPayload = {
+        ...currentAppareilComplet,
+        ...updatedAppareilData
+      };
+
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/appareils/${appareilId}`, updatedAppareilData, {
+      
+      // 3. Envoi de la requête PUT avec les données complètes
+      await axios.put(`http://localhost:5000/api/appareils/${appareilId}`, finalPayload, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
     } catch (error) {
       console.error("Erreur de synchronisation réseau de l'appareil:", error);
     }
@@ -207,14 +223,11 @@ const RoomDetails = () => {
         </button>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          LAYOUT DYNAMIQUE DE LA GRID
-         ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── LAYOUT DYNAMIQUE DE LA GRID ── */}
       <main className="w-full max-w-[1340px] mx-auto">
-        {/* Grid principale de 3 colonnes sur PC, s'adapte automatiquement */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-auto items-stretch justify-center w-full text-left">
 
-          {/* 1. CAMERA CARD */}
+          {/* CAMERA CARD */}
           {visas.length > 0 && (
             <div className="h-[530px] flex w-full">
               <CameraCard
@@ -226,7 +239,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 2. ECLAIRAGE CARD */}
+          {/* ECLAIRAGE CARD */}
           {eclairages.length > 0 && (
             <div className="h-[530px] flex w-full">
               <EclairageCard
@@ -237,7 +250,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 3. VACUUM (ASPIRATEUR) CARD */}
+          {/* VACUUM (ASPIRATEUR) CARD */}
           {aspirateurs.length > 0 && (
             <div className="h-[530px] flex w-full">
               <VacuumCard
@@ -248,7 +261,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 4. MULTIMEDIA CARD */}
+          {/* MULTIMEDIA CARD */}
           {multimedias.length > 0 && (
             <div className="h-[530px] flex w-full">
               <MultimediaCard
@@ -259,7 +272,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 5. AIR CONDITIONER CARD (تاخذ سطر عريض col-span) */}
+          {/* AIR CONDITIONER CARD */}
           {thermiques.length > 0 && (
             <div className="h-[230px] flex w-full md:col-span-2 lg:col-span-2">
               <AirConditionerCard
@@ -270,7 +283,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 6. CURTAINS CARD (تاخذ سطر عريض col-span) */}
+          {/* CURTAINS CARD */}
           {motorises.length > 0 && (
             <div className="h-[230px] flex w-full md:col-span-2 lg:col-span-2">
               <CurtainsCard
