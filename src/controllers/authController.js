@@ -1,5 +1,6 @@
 const Administrateur = require('../models/Administrateur');
-const Maison = require('../models/Maison'); // Pour créer la maison automatiquement
+const User = require('../models/User'); // Import du modèle de base
+const Maison = require('../models/Maison'); 
 const Role = require('../models/Role');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
@@ -12,8 +13,8 @@ exports.registerAdmin = async (req, res) => {
     try {
         const { email, motDePasse, nom, prenom, telephone } = req.body;
         
-        // 1. Vérifier si l'utilisateur existe déjà
-        const userExists = await Administrateur.findOne({ email: email.toLowerCase().trim() });
+        // 1. Vérifier si l'utilisateur existe déjà (on cherche dans User pour être sûr)
+        const userExists = await User.findOne({ email: email.toLowerCase().trim() });
         if (userExists) {
             return res.status(400).json({ message: "Email déjà utilisé" });
         }
@@ -22,45 +23,47 @@ exports.registerAdmin = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(motDePasse, salt);
 
-        // 3. Récupérer le rôle 'ADMIN' (Adapté EXACTEMENT à votre schéma Role)
+        // 3. Récupérer ou créer le rôle 'ADMIN'
         let adminRole = await Role.findOne({ nomRole: 'ADMIN' });
         if (!adminRole) {
-            // Création propre avec uniquement les champs de votre schéma
-            adminRole = await Role.create({ 
+            adminRole = new Role({ 
                 nomRole: 'ADMIN',
-                permissions: [] // Initialisé à vide
-            }); 
+                permissions: [] 
+            });
+            await adminRole.save();
         }
 
-        // 4. Créer le nouvel Administrateur
+        // 4. Créer le nouvel Administrateur (Respecte la structure de ton schéma)
         const newAdmin = new Administrateur({
             email: email.toLowerCase().trim(),
             motDePasse: hashedPassword,
             status: 'ACTIVE',
             estActif: true,
-            profile: { nom, prenom, telephone },
-            role: adminRole._id // Association du rôle
+            profile: { 
+                nom: nom, 
+                prenom: prenom, 
+                telephone: telephone 
+                // La photo sera vide par défaut au début
+            },
+            role: adminRole._id 
         });
 
         const savedAdmin = await newAdmin.save();
-        console.log("✅ Administrateur créé avec succès ! ID:", savedAdmin._id);
 
-        // 5. 🔥 Créer la Maison automatiquement (Adapté EXACTEMENT à votre schéma Maison)
+        // 5. Créer la Maison automatiquement
         const newMaison = new Maison({
             nomMaison: `Maison de ${nom}`,
-            adresse: "Adresse par défaut", // Requis par votre schéma
-            proprietaire: savedAdmin._id,  // Référence vers l'ID de l'User (ref: 'User' est correct ici)
+            adresse: "Adresse par défaut", 
+            proprietaire: savedAdmin._id, 
             membres: [],
             invites: []
         });
 
         const savedMaison = await newMaison.save();
-        console.log("✅ Maison créée et liée à l'admin ! ID Maison:", savedMaison._id);
 
-        // 6. Mettre à jour l'Admin avec la référence de sa maison
+        // 6. Mettre à jour l'Admin avec l'ID de sa maison
         await Administrateur.findByIdAndUpdate(savedAdmin._id, { maison: savedMaison._id });
 
-        // 7. Retourner la réponse réussie (201 Created)
         res.status(201).json({ 
             message: "Administrateur et Maison créés avec succès !", 
             userId: savedAdmin._id,
@@ -80,30 +83,37 @@ exports.login = async (req, res) => {
     try {
         const { email, motDePasse } = req.body;
 
-        // 1. Chercher l'administrateur par son email
-        const user = await Administrateur.findOne({ email: email.toLowerCase().trim() });
+        // On cherche dans Administrateur
+        const user = await Administrateur.findOne({ email: email.toLowerCase().trim() }).populate('role');
+        
         if (!user) {
             return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
 
-        // 2. Vérifier et comparer le mot de passe
+        // Vérification du mot de passe
         const isMatch = await bcrypt.compare(motDePasse, user.motDePasse);
         if (!isMatch) {
             return res.status(400).json({ message: "Mot de passe incorrect" });
         }
 
-        // 3. Générer le Token JWT contenant l'ID et le rôle
+        // Génération du Token JWT
         const token = jwt.sign(
-            { id: user._id, role: user.role },
+            { id: user._id, role: user.role ? user.role.nomRole : 'ADMIN' },
             process.env.JWT_SECRET, 
             { expiresIn: '1h' }
         );
 
-        // 4. Retourner le token au Frontend
+        // Retourner les infos (On accède bien à user.profile.nom)
         res.status(200).json({
             message: "Connexion réussie !",
             token,
-            user: { id: user._id, email: user.email }
+            user: { 
+                id: user._id, 
+                email: user.email, 
+                nom: user.profile.nom, 
+                prenom: user.profile.prenom, 
+                photo: user.profile.photo 
+            }
         });
     } catch (error) {
         res.status(500).json({ message: "Erreur serveur", error: error.message });
@@ -111,38 +121,38 @@ exports.login = async (req, res) => {
 };
 
 /**
- * Demande de réinitialisation du mot de passe (Forgot Password)
+ * Mot de passe oublié
  */
 exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
     try {
-        const user = await Administrateur.findOne({ email: email.trim() });
+        const user = await User.findOne({ email: email.trim() });
         if (!user) return res.status(404).json({ error: "Utilisateur non trouvé" });
+        
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
         
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
         });
         
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-        const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
-        
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: user.email,
             subject: 'Réinitialisation de votre mot de passe',
-            text: `Bonjour, Cliquez sur ce lien : ${resetLink}`
+            html: `<p>Bonjour, Cliquez ici pour réinitialiser : <a href="${resetLink}">${resetLink}</a></p>`
         };
         
         await transporter.sendMail(mailOptions);
         return res.status(200).json({ message: "Lien envoyé !" });
     } catch (err) {
-        res.status(500).json({ error: "Erreur email" });
+        res.status(500).json({ error: "Erreur lors de l'envoi de l'email" });
     }
 };
 
 /**
- * Confirmer la réinitialisation du mot de passe (Reset Password)
+ * Reset Password
  */
 exports.resetPassword = async (req, res) => {
     const { token } = req.params;
@@ -151,9 +161,10 @@ exports.resetPassword = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        await Administrateur.findByIdAndUpdate(decoded.id, { motDePasse: hashedPassword });
-        res.status(200).json({ message: "Mot de passe modifié !" });
+        
+        await User.findByIdAndUpdate(decoded.id, { motDePasse: hashedPassword });
+        res.status(200).json({ message: "Mot de passe modifié avec succès !" });
     } catch (error) {
-        res.status(400).json({ error: "Lien invalide." });
+        res.status(400).json({ error: "Lien invalide ou expiré." });
     }
 };

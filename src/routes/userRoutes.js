@@ -1,13 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const verifyToken = require('../middleware/authMiddleware');   
+const userController = require('../controllers/userController');
+const verifyToken = require('../middleware/authMiddleware');
 
-
-router.get('/', verifyToken, (req, res) => {
-    res.json({ 
-        message: "Liste des utilisateurs récupérée avec succès !",
-        userConnected: req.user  
-    });
-});
+// verifyToken
+router.get('/profile', verifyToken, userController.getUserProfile);
+router.put('/profile', verifyToken, userController.updateUserProfile);
 
 module.exports = router;
