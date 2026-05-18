@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Plus, Thermometer, Zap } from 'lucide-react';
+import { ChevronLeft, Plus, Thermometer, Zap, ChevronDown } from 'lucide-react';
 import axios from 'axios'; 
 
-// Importation des composants de l'application
+// Importation des composants de l'interface utilisateur
 import RoomUsersCard from '../components/RoomUsersCard';
 import VoiceControlButton from '../components/VoiceControlButton';
 import AirConditionerCard from '../components/AirConditionerCard';
@@ -14,21 +14,44 @@ import MultimediaCard from '../components/MultimediaCard';
 import VacuumCard from '../components/VacuumCard';
 import AddAppareilModal from '../components/AddAppareilModal'; 
 
+// ─── Constantes de dimensionnement du layout ──────────────────────────────────
+// CARD_H : hauteur commune pour caméra, lampe, tv, aspirateur.
+// GAP    : gap-6 = 24px entre les cartes.
+//
+// Règle de composition verticale :
+//   • Colonne gauche  : caméra (CARD_H) + GAP + lampe (CARD_H)  = 2×CARD_H + GAP
+//   • Colonne droite  :
+//       - Ligne haute : tv + aspirateur côte à côte              → CARD_H
+//       - Ligne basse : climatiseur + rideaux empilés             → hauteur restante
+//         ↳ hauteur restante = (2×CARD_H + GAP) - CARD_H - GAP  = CARD_H
+//         ↳ chaque carte     = (CARD_H - GAP) / 2               = LOWER_H
+//   ↳ Les deux colonnes ont la même hauteur totale : 2×CARD_H + GAP ✓
+//
+// Règle de composition horizontale :
+//   • Climatiseur & rideaux : w-full sur flex-1 → même largeur que tv + aspirateur
+// ──────────────────────────────────────────────────────────────────────────────
+const CARD_H  = 530;  // px — caméra, lampe, tv, aspirateur
+const GAP     = 24;   // px — gap-6
+const LOWER_H = Math.round((CARD_H - GAP) / 2); // 253 px — climatiseur & rideaux
+
 const RoomDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // États pour la gestion des données, du chargement et des modaux
   const [pieceData, setPieceData] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showUsersDropdown, setShowUsersDropdown] = useState(false);
+
+  // État du formulaire pour l'ajout d'un nouvel appareil
   const [formData, setFormData] = useState({
     nomAppareil: '',
     typeAppareil: 'ECLAIRAGE',
     marque: ''
   });
 
-  // Chargement des donnees de la piece et des appareils associes
+  // Effet pour charger les détails de la pièce et hydrater les appareils liés
   useEffect(() => {
     const fetchRoomDetails = async () => {
       setLoading(true);
@@ -40,9 +63,8 @@ const RoomDetails = () => {
         
         let data = response.data && response.data.data ? response.data.data : response.data;
         
-        // CORRECTION ICI: Hydratation robuste et securisee des appareils
+        // Si les appareils sont reçus sous forme d'IDs (chaînes), on effectue des requêtes parallèles pour récupérer les objets complets
         if (data && Array.isArray(data.appareils) && data.appareils.length > 0) {
-          // On verifie si le premier element est un ID (string) pour lancer le chargement complet
           if (typeof data.appareils[0] === 'string') {
             const requests = data.appareils.map(appId => 
               axios.get(`http://localhost:5000/api/appareils/${appId}`, {
@@ -50,23 +72,21 @@ const RoomDetails = () => {
               })
               .then(res => res.data.data || res.data)
               .catch((err) => {
-                console.error(`Erreur chargement appareil ${appId}:`, err);
+                console.error(`Erreur lors du chargement de l'appareil ${appId}:`, err);
                 return null;
               })
             );
             
             const fullAppareils = await Promise.all(requests);
-            // On ne garde que les appareils qui ont ete recuperes avec succes
             data.appareils = fullAppareils.filter(app => app !== null);
           }
         } else {
-          // Securite au cas ou appareils est undefined ou null
           data.appareils = [];
         }
 
         setPieceData(data);
       } catch (error) {
-        console.error("Erreur lors du chargement des details de la piece:", error);
+        console.error("Erreur générale de chargement du composant:", error);
       } finally {
         setLoading(false);
       }
@@ -77,7 +97,7 @@ const RoomDetails = () => {
     }
   }, [id]);
 
-  // Mise a jour d'un appareil et synchronisation avec le backend
+  // Fonction pour mettre à jour l'état local et synchroniser les modifications avec l'API backend
   const handleUpdateAppareil = async (appareilId, updatedAppareilData) => {
     try {
       setPieceData((prevData) => {
@@ -93,11 +113,11 @@ const RoomDetails = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
     } catch (error) {
-      console.error("Erreur de synchronisation de l'appareil:", error);
+      console.error("Erreur de synchronisation réseau de l'appareil:", error);
     }
   };
 
-  // Creation d'un nouvel appareil via le formulaire modal
+  // Fonction pour créer un nouvel appareil et l'ajouter dynamiquement à la pièce
   const handleCreateAppareil = async (e) => {
     e.preventDefault(); 
     try {
@@ -120,7 +140,7 @@ const RoomDetails = () => {
         setFormData({ nomAppareil: '', typeAppareil: 'ECLAIRAGE', marque: '' });
       }
     } catch (error) {
-      console.error("Erreur lors de l'ajout de l'appareil:", error);
+      console.error("Erreur d'ajout réseau de l'appareil:", error);
     }
   };
 
@@ -130,19 +150,19 @@ const RoomDetails = () => {
 
   const appareilsList = Array.isArray(pieceData?.appareils) ? pieceData.appareils : [];
 
-  // Filtrage des appareils par type (securise avec optionnel chaining)
-  const visas = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'CAMERA');
+  // Filtrage des appareils par type (conversion en majuscules pour éviter les conflits de casse)
+  const visas      = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'CAMERA');
   const eclairages = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ECLAIRAGE');
   const multimedias = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MULTIMEDIA');
   const thermiques = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'THERMIQUE');
-  const motorises = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MOTORISE');
+  const motorises  = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MOTORISE');
   const aspirateurs = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ASPIRATEUR');
 
   return (
     <div className="min-h-screen bg-[#f4f5f7] p-6 font-sans select-none relative">
       
-      {/* Header de la page */}
-      <header className="flex justify-between items-center w-full max-w-[1340px] mx-auto mb-8">
+      {/* Entête globale de la page domotique */}
+      <header className="flex justify-between items-center w-full max-w-[1340px] mx-auto mb-8 relative">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/home/rooms')} className="p-2.5 bg-white rounded-full shadow-sm hover:bg-gray-100 cursor-pointer">
             <ChevronLeft size={22} className="text-gray-700" />
@@ -156,10 +176,33 @@ const RoomDetails = () => {
             </span>
           </div>
         </div>
-        <VoiceControlButton />
+        
+        {/* Contrôles d'accès et profils utilisateurs (Dropdown/Popover) */}
+        <div className="flex items-center gap-6 relative">
+          <VoiceControlButton />
+
+          <div 
+            onClick={() => setShowUsersDropdown(!showUsersDropdown)}
+            className="flex items-center gap-3 bg-white pl-4 pr-3 py-2 rounded-full shadow-xs border border-gray-100 cursor-pointer hover:bg-gray-50 transition-all select-none"
+          >
+            <div className="flex -space-x-2.5 overflow-hidden">
+              <img className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt="Avatar" />
+              <img className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="Avatar" />
+              <img className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80" alt="Avatar" />
+            </div>
+            <span className="text-sm font-bold text-gray-700">Alisha H.</span>
+            <ChevronDown size={16} className={`text-gray-400 transition-transform ${showUsersDropdown ? 'rotate-180' : ''}`} />
+          </div>
+
+          {showUsersDropdown && (
+            <div className="absolute top-full right-0 mt-2 w-[340px] bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
+              <RoomUsersCard utilisateurs={pieceData?.utilisateurs || []} onAddUser={() => {}} onEditUser={() => {}} onDeleteUser={() => {}} />
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* Informations globales de la piece */}
+      {/* Widgets de synthèse de l'état global de l'environnement */}
       <section className="flex justify-between items-center w-full max-w-[1340px] mx-auto mb-8">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl shadow-xs border border-gray-100">
@@ -180,45 +223,98 @@ const RoomDetails = () => {
         </button>
       </section>
 
-      {/* Grid principal contenant les colonnes de cartes */}
+      {/* ─── Layout principal ────────────────────────────────────────────────────
+           Structure asymétrique en deux colonnes :
+           • Colonne gauche  (lg:w-[420px]) : caméra + lampe, chacune à CARD_H px
+           • Colonne droite  (flex-1)       :
+               - Ligne haute  : tv + aspirateur côte à côte, hauteur = CARD_H px
+               - Ligne basse  : climatiseur + rideaux empilés
+                   ↳ hauteur totale = CARD_H px (= tv + GAP + aspirateur n'est
+                     pas le cas ici car tv et aspirateur sont côte-à-côte et non
+                     empilés ; la hauteur totale de la ligne basse doit simplement
+                     correspondre à CARD_H pour aligner les deux colonnes)
+                   ↳ chaque carte = LOWER_H = (CARD_H - GAP) / 2 px
+      ─────────────────────────────────────────────────────────────────────────── */}
       <main className="w-full max-w-[1340px] mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start w-full">
+        <div className="flex flex-col lg:flex-row gap-6 items-start justify-center w-full">
           
-          {/* Colonne 1 : Caméras et Éclairages */}
-          <div className="flex flex-col gap-6 w-full text-left">
+          {/* ═══════════════════════════════════════════════════════════════════
+               COLONNE GAUCHE — Caméra et Éclairage, hauteur uniforme CARD_H px
+          ═══════════════════════════════════════════════════════════════════ */}
+          <div className="flex flex-col justify-start gap-6 w-full lg:w-[420px] shrink-0 text-left h-auto">
+
+            {/* Carte Caméra — hauteur identique aux cartes tv et aspirateur */}
             {visas.length > 0 && (
-              <CameraCard cameraData={visas} imageSrc="https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80" onUpdateAppareil={handleUpdateAppareil} />
+              <div style={{ height: `${CARD_H}px` }} className="w-full">
+                <CameraCard 
+                  cameraData={visas} 
+                  imageSrc="https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80" 
+                  onUpdateAppareil={handleUpdateAppareil} 
+                  className="h-full w-full" 
+                />
+              </div>
             )}
+
+            {/* Carte Éclairage — même hauteur que la caméra */}
             {eclairages.length > 0 && (
-              <EclairageCard bulbsData={eclairages} onUpdateAppareil={handleUpdateAppareil} />
+              <div style={{ height: `${CARD_H}px` }} className="w-full">
+                <EclairageCard 
+                  bulbsData={eclairages} 
+                  onUpdateAppareil={handleUpdateAppareil} 
+                  className="h-full w-full" 
+                />
+              </div>
             )}
           </div>
 
-          {/* Colonne 2 : Multimedia, Climatisation et Volets */}
-          <div className="flex flex-col gap-6 w-full text-left">
-            {multimedias.length > 0 && (
-              <MultimediaCard multimediaData={multimedias} onUpdateAppareil={handleUpdateAppareil} />
-            )}
-            {thermiques.length > 0 && (
-              <AirConditionerCard acData={thermiques} onUpdateAppareil={handleUpdateAppareil} />
-            )}
-            {motorises.length > 0 && (
-              <CurtainsCard curtainsData={motorises} onUpdateAppareil={handleUpdateAppareil} />
-            )}
-          </div>
+          {/* ═══════════════════════════════════════════════════════════════════
+               COLONNE DROITE — Grille multimédia/aspirateur + commandes basses
+          ═══════════════════════════════════════════════════════════════════ */}
+          <div className="flex-1 min-w-0 flex flex-col gap-6 text-left">
+            
+            {/* ── Ligne haute : Multimédia (TV) et Aspirateur côte à côte ────
+                 Hauteur = CARD_H px pour aligner avec les cartes de la colonne gauche
+            ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+              {multimedias.length > 0 && (
+                <div style={{ height: `${CARD_H}px` }} className="w-full flex">
+                  <MultimediaCard multimediaData={multimedias} onUpdateAppareil={handleUpdateAppareil} className="h-full w-full" />
+                </div>
+              )}
+              {aspirateurs.length > 0 && (
+                <div style={{ height: `${CARD_H}px` }} className="w-full flex">
+                  <VacuumCard vacuumData={aspirateurs} onUpdateAppareil={handleUpdateAppareil} className="h-full w-full" />
+                </div>
+              )}
+            </div>
 
-          {/* Colonne 3 : Utilisateurs et Aspirateurs */}
-          <div className="flex flex-col gap-6 w-full text-left">
-            <RoomUsersCard utilisateurs={pieceData?.utilisateurs} onAddUser={() => {}} onEditUser={() => {}} onDeleteUser={() => {}} />
-            {aspirateurs.length > 0 && (
-              <VacuumCard vacuumData={aspirateurs} onUpdateAppareil={handleUpdateAppareil} />
-            )}
+            {/* ── Ligne basse : Climatiseur et Rideaux empilés verticalement ──
+                 Règle hauteur : LOWER_H = (CARD_H - GAP) / 2 = 253 px chacun
+                   ↳ clim (253) + GAP (24) + rideaux (253) = 530 = CARD_H ✓
+                   ↳ total colonne droite  = CARD_H + GAP + LOWER_H + GAP + LOWER_H
+                                          = CARD_H + GAP + CARD_H = 2×CARD_H + GAP ✓
+                   ↳ total colonne gauche  = CARD_H + GAP + CARD_H = 2×CARD_H + GAP ✓
+                 Règle largeur : w-full sur flex-1 = même largeur que tv + aspirateur
+            ── */}
+            <div className="flex flex-col gap-6 w-full">
+              {thermiques.length > 0 && (
+                <div style={{ height: `${LOWER_H}px` }} className="w-full flex">
+                  <AirConditionerCard acData={thermiques} onUpdateAppareil={handleUpdateAppareil} className="h-full w-full" />
+                </div>
+              )}
+              {motorises.length > 0 && (
+                <div style={{ height: `${LOWER_H}px` }} className="w-full flex">
+                  <CurtainsCard curtainsData={motorises} onUpdateAppareil={handleUpdateAppareil} className="h-full w-full" />
+                </div>
+              )}
+            </div>
+
           </div>
 
         </div>
       </main>
 
-      {/* Modal d'ajout d'appareil */}
+      {/* Boîte de dialogue modale pour la création d'équipements */}
       <AddAppareilModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleCreateAppareil} formData={formData} setFormData={setFormData} />
     </div>
   );

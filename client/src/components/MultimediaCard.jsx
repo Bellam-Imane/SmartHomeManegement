@@ -8,29 +8,26 @@ import tvImage from '../assets/images/tv_image.png';
 /**
  * COMPOSANT MULTIMEDIACARD 
  */
-const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
+// CORRECTION : Ajout de la prop className et h-full pour s'aligner avec le parent
+const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) => {
   
-  // Verification de la presence des donnees
   if (!multimediaData || multimediaData.length === 0) {
     return (
-      <div className="w-full max-w-[400px] aspect-square rounded-[45px] bg-[#e2e8f0] flex items-center justify-center font-bold italic text-gray-500">
+      <div className="w-full max-w-[400px] h-full rounded-[45px] bg-[#e2e8f0] flex items-center justify-center font-bold italic text-gray-500">
         Chargement des appareils multimédia...
       </div>
     );
   }
 
-  // State pour la navigation entre les differents appareils
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentTv = multimediaData[currentIndex];
 
-  // Securite pour reinitialiser l'index si la liste change
   useEffect(() => {
     if (currentIndex >= multimediaData.length) {
       setCurrentIndex(0);
     }
   }, [multimediaData, currentIndex]);
 
-  // Recuperation des attributs de l'appareil courant
   const isOn = currentTv.status === 'ENLIGNE';
   const volume = currentTv.volume !== undefined ? currentTv.volume : 50;
   const estMuet = currentTv.estMuet || false;
@@ -39,17 +36,14 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
 
   const [isMovieMode, setIsMovieMode] = useState(false);
 
-  // Passage a l'appareil suivant
   const nextTv = () => {
     setCurrentIndex((prev) => (prev === multimediaData.length - 1 ? 0 : prev + 1));
   };
 
-  // Retour a l'appareil precedent
   const prevTv = () => {
     setCurrentIndex((prev) => (prev === 0 ? multimediaData.length - 1 : prev - 1));
   };
 
-  // Fonction generique pour mettre a jour une propriete
   const updateTvProperty = (updates) => {
     if (onUpdateAppareil) {
       onUpdateAppareil(currentTv._id || currentTv.id, {
@@ -59,13 +53,11 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
     }
   };
 
-  // Gestion du bouton Power
   const togglePower = () => {
     const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE';
     updateTvProperty({ status: nextStatus });
   };
 
-  // Gestion du changement de volume via le slider
   const handleVolumeChange = (e) => {
     const val = parseInt(e.target.value, 10);
     updateTvProperty({
@@ -74,25 +66,23 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
     });
   };
 
-  // Gestion du mode muet
   const toggleMute = () => {
     updateTvProperty({ estMuet: !estMuet });
   };
 
-  // Changement d'application active (TV, YouTube, Netflix)
   const handleAppChange = (appName) => {
     const nextApp = appActive === appName ? 'NONE' : appName;
     updateTvProperty({ application: nextApp });
   };
 
-  // Incrémentation ou decrementation des chaines
   const changeChannel = (direction) => {
     const nextChannel = direction === 'UP' ? channel + 1 : Math.max(1, channel - 1);
     updateTvProperty({ chaineActuelle: nextChannel });
   };
 
   return (
-    <div className="relative w-full max-w-[420px] bg-[#e2ecf6] rounded-[45px] p-6 shadow-xl flex flex-col justify-between min-h-[520px] transition-all duration-500 select-none">
+    /* CORRECTION : Remplacement de min-h-[520px] par h-full et ajout de ${className} */
+    <div className={`relative w-full max-w-[420px] bg-[#e2ecf6] rounded-[45px] p-6 shadow-xl flex flex-col justify-between h-full transition-all duration-500 select-none ${className}`}>
       
       {/* HEADER : Titre et nombre d'appareils */}
       <div className="flex justify-between items-center px-2">
@@ -260,5 +250,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
     </div>
   );
 };
+
 
 export default MultimediaCard;

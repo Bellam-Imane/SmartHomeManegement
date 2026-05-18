@@ -5,7 +5,8 @@ import vacuumImage from '../assets/images/aspirateur.png';
 /**
  * COMPOSANT VACUUMCARD : Contrôle des aspirateurs robots avec système de navigation
  */
-const VacuumCard = ({ vacuumData, onUpdateAppareil }) => {
+// CORRECTION : Ajout de la prop className pour recevoir les styles d'alignement du parent (h-full)
+const VacuumCard = ({ vacuumData, onUpdateAppareil, className = '' }) => {
 
   // 1. SÉCURITÉ : Vérification si la liste des aspirateurs est vide
   if (!vacuumData || vacuumData.length === 0) {
@@ -63,7 +64,8 @@ const VacuumCard = ({ vacuumData, onUpdateAppareil }) => {
   };
 
   return (
-    <div className="relative w-full max-w-[340px] bg-[#e5e5e5]/60 backdrop-blur-md rounded-[45px] p-6 shadow-xl flex flex-col justify-between min-h-[460px] transition-all duration-500 select-none">
+    /* CORRECTION ICI : Remplacement de min-h-[460px] par h-full et intégration dynamique de ${className} */
+    <div className={`relative w-full max-w-[340px] bg-[#e5e5e5]/60 backdrop-blur-md rounded-[45px] p-6 shadow-xl flex flex-col justify-between h-full transition-all duration-500 select-none ${className}`}>
       
       {/* ================= SECTION HEADER ================= */}
       <div className="flex justify-between items-center px-2 z-10">
@@ -152,7 +154,7 @@ const VacuumCard = ({ vacuumData, onUpdateAppareil }) => {
             {isCharging ? 'En cours de charge...' : isOn ? 'Nettoyage en cours' : 'Sur sa station de charge'}
           </span>
         </div>
-      </div>
+      </div> 
       
     </div>
   );
