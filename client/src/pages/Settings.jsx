@@ -1,8 +1,8 @@
-import { useState } from "react";
-import {Bell,User,Globe,Moon,Sun,AlertTriangle,Check} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Bell, Globe, Moon, Sun, AlertTriangle, Check, Camera } from "lucide-react";
 import VoiceControlButton from "../components/VoiceControlButton";
 import { useNavigate } from 'react-router-dom';
-
+import axios from 'axios';
 
 // ─── Toggle Component ─────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
@@ -28,34 +28,100 @@ function Toggle({ checked, onChange }) {
 
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 export default function Settings() {
-  // Profile
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  const accent = "#252C34";
+
   const [profile, setProfile] = useState({
     name: "",
+    prenom: "",
     email: "",
     phone: "",
-    region: "",
+    photo: "",
   });
-  const [saved, setSaved] = useState(false);
 
-  // Security
+  const [saved, setSaved] = useState(false);
   const [twoFactor, setTwoFactor] = useState(false);
   const [emergencyContact, setEmergencyContact] = useState("");
-
-  // Display
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState("Français");
   const [langOpen, setLangOpen] = useState(false);
 
-  // Notifications
   const [notifications, setNotifications] = useState({
-    security: { mobile: true,  email: true,  desktop: true  },
-    system:   { mobile: true,  email: true,  desktop: false },
-    energy:   { mobile: true,  email: false, desktop: false },
-    device:   { mobile: true,  email: true,  desktop: false },
+    security: { mobile: true, email: true, desktop: true },
+    system: { mobile: true, email: true, desktop: false },
+    energy: { mobile: true, email: false, desktop: false },
+    device: { mobile: true, email: true, desktop: false },
   });
 
-  const languages = ["Français", "English", "العربية"];
+  // 1. جلب البيانات الحقيقية من السيرفر عند فتح الصفحة
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('http://localhost:5000/api/users/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.data) {
+          setProfile({
+            name: res.data.nom || "",
+            prenom: res.data.prenom || "",
+            email: res.data.email || "",
+            phone: res.data.telephone || "",
+            photo: res.data.photo || "/assets/user1.jpg",
+          });
+        }
+      } catch (err) {
+        console.error("Erreur chargement profil", err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
+  // 2. حفظ البيانات في قاعدة البيانات (MongoDB)
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const updatedData = {
+        nom: profile.name,
+        prenom: profile.prenom,
+        email: profile.email,
+        telephone: profile.phone,
+        photo: profile.photo,
+      };
+
+      const res = await axios.put('http://localhost:5000/api/users/profile', updatedData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status === 200) {
+        // تحديث التخزين المحلي أيضاً
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+        
+        // إشعار باقي الصفحات (مثل Dashboard) بالتغيير
+        window.dispatchEvent(new Event("storage"));
+      }
+    } catch (err) {
+      console.error("Erreur save profile", err);
+      alert("Erreur lors de l'enregistrement");
+    }
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile({ ...profile, photo: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const languages = ["Français", "English", "العربية"];
   const notifRows = [
     { key: "security", label: "Alertes de Sécurité", desc: "Intrusions, détection de fumée ou fuite de gaz." },
     { key: "system", label: "Mises à jour Système", desc: "Nouvelles fonctionnalités et correctifs de sécurité." },
@@ -70,174 +136,97 @@ export default function Settings() {
     }));
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const accent = "#252C34";
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen p-6 md:p-8" style={{ background: "#F8FAFC" }}>
-
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-[#111827]">paramètres</h1>
+        <h1 className="text-2xl font-bold text-[#111827]">Paramètres</h1>
         <div className="flex items-center gap-6">
-        
-    <div 
-      onClick={() => navigate('/home/Notifications')} 
-      style={{
-        background: 'white', 
-        width: '42px', 
-        height: '42px', 
-        borderRadius: '50%',
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        position: 'relative', 
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
-        cursor: 'pointer',
-        border: '1px solid #e5e7eb' 
-      }}
-    >
-      <Bell size={20} color="#1a1a2e" />
-      <div style={{
-        position: 'absolute', 
-        top: '2px', 
-        right: '2px', 
-        background: 'white',
-        border: '1.5px solid #f0f2f5', 
-        borderRadius: '50%', 
-        width: '16px', 
-        height: '16px',
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        fontSize: '9px', 
-        fontWeight: 'bold'
-      }}>
-        2
-      </div>
-    </div>
-        <VoiceControlButton />  
-        
+          <div onClick={() => navigate('/home/Notifications')} className="w-10 h-10 bg-white rounded-full flex items-center justify-center relative shadow-sm border border-gray-200 cursor-pointer">
+            <Bell size={20} color="#1a1a2e" />
+            <div className="absolute top-1 right-1 bg-white border border-gray-100 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">2</div>
+          </div>
+          <VoiceControlButton />  
         </div>
       </div>
 
-      {/* ── Profile (SECTION MODIFIÉE) ────────────────────────────────────────── */}
+      {/* Profile Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
         <h2 className="text-base font-bold mb-1 text-[#111827]">Profile</h2>
-        <p className="text-xs mb-5 text-[#6b7280]">
-          Gérez votre identité personnelle et vos identifiants d'accès à l'écosystème domotique
-        </p>
+        <p className="text-xs mb-5 text-[#6b7280]">Gérez votre identité personnelle et vos identifiants d'accès.</p>
 
-        <div className="flex items-start gap-5 mb-5">
-          {/* Avatar Area - Juste la photo */}
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-5">
           <div className="flex flex-col items-center gap-3 flex-shrink-0">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 shadow-sm bg-gray-50">
-              <img
-                src="/assets/user1.jpg"
-                alt="Profile"
-                className="w-full h-full object-cover"
-                
-                onError={(e) => {
-                  e.currentTarget.src = "https://ui-avatars.com/api/?name=User&background=f3f4f6&color=9ca3af";
-                }}
-              />
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gray-50 shadow-md">
+                <img src={profile.photo} alt="Profile" className="w-full h-full object-cover" 
+                     onError={(e) => e.currentTarget.src = "https://ui-avatars.com/api/?name=User"} />
+              </div>
+              <button onClick={() => fileInputRef.current.click()} className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg border border-gray-100"><Camera size={16} /></button>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoChange} />
             </div>
-            <button className="text-xs font-bold text-[#252C34] hover:underline">
-              Changer la photo
-            </button>
           </div>
 
-          {/* Inputs Grid */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { key: "name", label: "Nom complet", placeholder: "Entrer votre nom" },
-              { key: "email", label: "Email", placeholder: "Entrer votre email" },
-              { key: "phone", label: "Téléphone", placeholder: "Entrer votre téléphone" },
-              { key: "region", label: "Région", placeholder: "Entrer votre région" },
-            ].map(({ key, label, placeholder }) => (
-              <div key={key}>
-                <label className="block text-xs font-semibold mb-1 text-[#374151]">{label}</label>
-                <input
-                  value={profile[key]}
-                  onChange={(e) => setProfile({ ...profile, [key]: e.target.value })}
-                  placeholder={placeholder}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 placeholder-gray-300 text-[#111827]"
-                />
-              </div>
-            ))}
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+            <div>
+              <label className="block text-xs font-semibold mb-1">Nom</label>
+              <input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className="w-full px-4 py-2 text-sm border rounded-xl" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1">Prénom</label>
+              <input value={profile.prenom} onChange={(e) => setProfile({ ...profile, prenom: e.target.value })} className="w-full px-4 py-2 text-sm border rounded-xl" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1">Email</label>
+              <input value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="w-full px-4 py-2 text-sm border rounded-xl" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1">Téléphone</label>
+              <input value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className="w-full px-4 py-2 text-sm border rounded-xl" />
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <button
-            onClick={handleSave}
-            className="px-6 py-2 rounded-xl text-sm font-bold transition-all duration-200 flex items-center gap-2 text-white"
-            style={{ background: accent }}
-          >
-            {saved ? <><Check size={14} /> Enregistré</> : "Enregistrer"}
+        <div className="flex justify-end pt-4">
+          <button onClick={handleSave} className="px-8 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2" style={{ background: accent }}>
+            {saved ? <><Check size={16} /> Enregistré</> : "Enregistrer"}
           </button>
         </div>
       </div>
 
-      {/* ── Security ────────────────────────────────────────────────────────── */}
+      {/* Security Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
-        <h2 className="text-base font-bold mb-1 text-[#111827]">Sécurité et Confidentialité</h2>
-        <p className="text-xs mb-4 text-[#6b7280]">Gérez la sécurité de votre compte...</p>
-        <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-5">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={16} color="#ef4444" />
-            <span className="text-xs font-medium text-[#dc2626]">Votre compte n'est pas encore sécurisé...</span>
-          </div>
-          <button className="text-xs font-bold text-[#dc2626] hover:opacity-70">Update now</button>
-        </div>
+        <h2 className="text-base font-bold mb-4 text-[#111827]">Sécurité</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-[#111827]">Authentification à deux facteurs</p>
-              <p className="text-xs mt-1 text-[#6b7280]">Ajoutez une couche de sécurité...</p>
+              <p className="text-sm font-bold">Double authentification</p>
+              <p className="text-xs text-[#6b7280]">Protéger votre compte.</p>
             </div>
             <Toggle checked={twoFactor} onChange={setTwoFactor} />
           </div>
-          <div>
-            <p className="text-sm font-bold mb-1 text-[#111827]">Numéro de contact d'urgence</p>
-            <input
-              value={emergencyContact}
-              onChange={(e) => setEmergencyContact(e.target.value)}
-              placeholder="Entrer un numéro"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 placeholder-gray-300 text-[#111827]"
-            />
-          </div>
+          <input value={emergencyContact} onChange={(e) => setEmergencyContact(e.target.value)} placeholder="Contact d'urgence" className="px-4 py-2 text-sm border rounded-xl" />
         </div>
       </div>
 
-      {/* ── Notifications ───────────────────────────────────────────────────── */}
+      {/* Notifications Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
-        <h2 className="text-base font-bold mb-1 text-[#111827]">Préférences de Notification</h2>
-        <div className="overflow-x-auto mt-5">
+        <h2 className="text-base font-bold mb-4">Notifications</h2>
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-[#374151]">
-                <th className="text-left pb-4 font-bold">Type de notification</th>
-                <th className="text-center pb-4 font-bold px-6">Mobile Push</th>
-                <th className="text-center pb-4 font-bold px-6">E-mail</th>
-                <th className="text-center pb-4 font-bold px-6">Desktop</th>
+              <tr className="border-b text-gray-500">
+                <th className="text-left pb-4">Type</th>
+                <th className="text-center pb-4">Mobile</th>
+                <th className="text-center pb-4">Email</th>
               </tr>
             </thead>
             <tbody>
               {notifRows.map((row) => (
                 <tr key={row.key} className="border-b border-gray-50">
-                  <td className="py-5 pr-4">
-                    <p className="font-bold text-sm text-[#111827]">{row.label}</p>
-                    <p className="text-xs mt-0.5 text-[#9ca3af]">{row.desc}</p>
-                  </td>
-                  <td className="py-5 px-6"><div className="flex justify-center"><Toggle checked={notifications[row.key].mobile} onChange={() => toggleNotif(row.key, "mobile")} /></div></td>
-                  <td className="py-5 px-6"><div className="flex justify-center"><Toggle checked={notifications[row.key].email} onChange={() => toggleNotif(row.key, "email")} /></div></td>
-                  <td className="py-5 px-6"><div className="flex justify-center"><Toggle checked={notifications[row.key].desktop} onChange={() => toggleNotif(row.key, "desktop")} /></div></td>
+                  <td className="py-4"><p className="font-bold">{row.label}</p><p className="text-[10px] text-gray-400">{row.desc}</p></td>
+                  <td className="py-4 text-center"><Toggle checked={notifications[row.key].mobile} onChange={() => toggleNotif(row.key, "mobile")} /></td>
+                  <td className="py-4 text-center"><Toggle checked={notifications[row.key].email} onChange={() => toggleNotif(row.key, "email")} /></td>
                 </tr>
               ))}
             </tbody>
@@ -245,35 +234,23 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ── Display & Language ──────────────────────────────────────────────── */}
+      {/* Display & Language */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-base font-bold mb-4 text-[#111827]">Préférences d'affichage et langue</h2>
+        <h2 className="text-base font-bold mb-4">Affichage</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <label className="block text-xs font-bold mb-2 text-[#374151]">Choisir la langue</label>
-            <div className="relative">
-              <button onClick={() => setLangOpen(!langOpen)} className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white text-[#252C34] font-semibold">
-                <span>{language}</span>
-                <Globe size={14} color="#000" />
-              </button>
-              {langOpen && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
-                  {languages.map((lang) => (
-                    <button key={lang} onClick={() => { setLanguage(lang); setLangOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50" style={{ color: language === lang ? accent : "#374151", fontWeight: language === lang ? 700 : 400 }}>{lang}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold mb-2 text-[#374151]">Mode sombre</label>
-            <div className="flex items-center justify-between p-3 border border-gray-200 rounded-xl">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#374151]">
-                {darkMode ? <Moon size={16} /> : <Sun size={16} />}
-                <span>{darkMode ? "Mode sombre activé" : "Mode clair activé"}</span>
+          <div className="relative">
+            <button onClick={() => setLangOpen(!langOpen)} className="w-full flex items-center justify-between px-4 py-2 border rounded-xl">
+              <span>{language}</span><Globe size={14} />
+            </button>
+            {langOpen && (
+              <div className="absolute w-full bg-white border rounded-xl mt-1 shadow-lg z-20">
+                {languages.map(l => <button key={l} onClick={() => {setLanguage(l); setLangOpen(false)}} className="w-full text-left px-4 py-2 hover:bg-gray-50">{l}</button>)}
               </div>
-              <Toggle checked={darkMode} onChange={setDarkMode} />
-            </div>
+            )}
+          </div>
+          <div className="flex items-center justify-between border rounded-xl p-2">
+            <span className="text-sm font-semibold">{darkMode ? "Mode sombre" : "Mode clair"}</span>
+            <Toggle checked={darkMode} onChange={setDarkMode} />
           </div>
         </div>
       </div>
