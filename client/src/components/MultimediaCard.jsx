@@ -8,36 +8,32 @@ import tvImage from '../assets/images/tv_image.png';
 /**
  * COMPOSANT MULTIMEDIACARD 
  */
-const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
+// CORRECTION : Ajout de la prop className et h-full pour s'aligner avec le parent
+const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) => {
   
-  // 1. SÉCURITÉ : Vérification des données
   if (!multimediaData || multimediaData.length === 0) {
     return (
-      <div className="w-full max-w-[400px] aspect-square rounded-[45px] bg-[#e2e8f0] flex items-center justify-center font-bold italic text-gray-500">
+      <div className="w-full max-w-[400px] h-full rounded-[45px] bg-[#e2e8f0] flex items-center justify-center font-bold italic text-gray-500">
         Chargement des appareils multimédia...
       </div>
     );
   }
 
-  // 2. GESTION DE LA NAVIGATION
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentTv = multimediaData[currentIndex];
 
-  // Force le retour à l'index 0 si les données changent
   useEffect(() => {
     if (currentIndex >= multimediaData.length) {
       setCurrentIndex(0);
     }
   }, [multimediaData, currentIndex]);
 
-  // 3. EXTRACTION EN DIRECT DE LA BASE DE DONNÉES (Conforme Mongoose)
   const isOn = currentTv.status === 'ENLIGNE';
   const volume = currentTv.volume !== undefined ? currentTv.volume : 50;
   const estMuet = currentTv.estMuet || false;
-  const appActive = currentTv.application || 'NONE'; // TV, YOUTOUB, NETFLIX, SPOTIFY, NONE
+  const appActive = currentTv.application || 'NONE'; 
   const channel = currentTv.chaineActuelle || 1;
 
-  
   const [isMovieMode, setIsMovieMode] = useState(false);
 
   const nextTv = () => {
@@ -48,7 +44,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
     setCurrentIndex((prev) => (prev === 0 ? multimediaData.length - 1 : prev - 1));
   };
 
-  
   const updateTvProperty = (updates) => {
     if (onUpdateAppareil) {
       onUpdateAppareil(currentTv._id || currentTv.id, {
@@ -76,7 +71,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
   };
 
   const handleAppChange = (appName) => {
-    
     const nextApp = appActive === appName ? 'NONE' : appName;
     updateTvProperty({ application: nextApp });
   };
@@ -87,16 +81,21 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
   };
 
   return (
-    <div className="relative w-full max-w-[420px] bg-[#e2ecf6] rounded-[45px] p-6 shadow-xl flex flex-col justify-between min-h-[520px] transition-all duration-500 select-none">
+    /* CORRECTION : Remplacement de min-h-[520px] par h-full et ajout de ${className} */
+    <div className={`relative w-full max-w-[420px] bg-[#e2ecf6] rounded-[45px] p-6 shadow-xl flex flex-col justify-between h-full transition-all duration-500 select-none ${className}`}>
       
-      {/* ================= SECTION HEADER ================= */}
+      {/* HEADER : Titre et nombre d'appareils */}
       <div className="flex justify-between items-center px-2">
         <div className="flex items-center gap-3">
           <Tv size={24} className="text-gray-700" />
-          <h3 className="text-xl font-bold text-gray-800">{currentTv.nomAppareil}</h3>
+          <div className="flex flex-col text-left">
+            <h3 className="text-xl font-bold text-gray-800 leading-tight">{currentTv.nomAppareil}</h3>
+            <span className="text-[11px] text-gray-500 font-bold tracking-tight mt-0.5">
+              {multimediaData.length} appareils connectés
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Switch On/Off */}
           <button 
             onClick={togglePower}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${isOn ? 'bg-gray-800' : 'bg-gray-400'}`}
@@ -109,7 +108,7 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
         </div>
       </div>
 
-      {/* ================= SECTION CENTRALE ================= */}
+      {/* SECTION CENTRALE : Navigation et affichage ecran / volume */}
       <div className="flex items-center justify-between my-4 relative h-48 px-1">
         
         <button onClick={prevTv} className="p-2 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0">
@@ -118,7 +117,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
 
         <div className="relative flex items-center justify-center w-full gap-4 px-2">
           
-          {/* Écran de la télévision */}
           <div className="relative flex-1 max-w-[320px] flex items-center justify-center">
             <img 
               src={tvImage} 
@@ -134,7 +132,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
             )}
           </div>
 
-          {/* Slider de volume vertical */}
           <div className="relative w-12 h-36 bg-white/60 backdrop-blur-md rounded-3xl border border-white/40 flex flex-col justify-between items-center py-3 shrink-0">
             <span className="text-[11px] font-black text-gray-700">{estMuet ? '0%' : `${volume}%`}</span>
             <div className="w-6 h-16 bg-gray-200 rounded-full relative overflow-hidden">
@@ -167,10 +164,10 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
         </button>
       </div>
 
-      {/* ================= SECTION FOOTER : TÉLÉCOMMANDE ================= */}
+      {/* FOOTER : Interface telecommande */}
       <div className={`w-full bg-white/90 backdrop-blur-xl rounded-[35px] p-4 shadow-inner border border-white/60 grid grid-cols-2 gap-4 transition-opacity duration-300 ${!isOn && 'opacity-40 pointer-events-none'}`}>
         
-        {/* Côté Gauche : Pavé Directionnel (D-Pad) */}
+        {/* Pad directionnel gauche */}
         <div className="flex flex-col items-center justify-center">
           <button onClick={() => changeChannel('UP')} className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 transition-colors">
             <ChevronUp size={18} />
@@ -191,10 +188,9 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
           </button>
         </div>
 
-        {/* Côté Droit : Chaînes, Applications & Stats */}
+        {/* Chaines et applications droite */}
         <div className="flex flex-col justify-between space-y-2">
           
-          {/* Sélecteur de Chaînes */}
           <div className="flex items-center justify-between bg-gray-100/80 rounded-xl px-2 py-1">
             <button onClick={() => changeChannel('UP')} className="p-1 text-gray-500 hover:text-gray-800 transition-colors">
               <ChevronUp size={16} />
@@ -206,7 +202,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
           </div>
 
           <div className="flex items-center justify-start gap-3">
-            {/* 1. Bouton TV */}
             <button 
               onClick={() => handleAppChange('TV')} 
               className={`w-7 h-7 rounded-full bg-[#3a6351] flex items-center justify-center text-white border shadow-sm transition-transform hover:scale-110 active:scale-95 ${appActive === 'TV' ? 'border-white ring-2 ring-emerald-600/20' : 'border-transparent'}`}
@@ -214,7 +209,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
               <Radio size={12} />
             </button>
 
-            {/* 2. Bouton YouTube */}
             <button 
               onClick={() => handleAppChange('YOUTOUB')}
               className={`w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-white text-xs border shadow-sm transition-transform hover:scale-110 active:scale-95 ${appActive === 'YOUTOUB' ? 'border-white ring-2 ring-red-600/20' : 'border-transparent'}`}
@@ -222,7 +216,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
               ▶
             </button>
 
-            {/* 3. Bouton Netflix */}
             <button 
               onClick={() => handleAppChange('NETFLIX')}
               className={`w-7 h-7 rounded-full bg-black flex items-center justify-center font-black text-[9px] text-red-600 border shadow-sm transition-transform hover:scale-110 active:scale-95 ${appActive === 'NETFLIX' ? 'border-red-500 ring-2 ring-red-500/20' : 'border-transparent'}`}
@@ -231,7 +224,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
             </button>
           </div>
 
-          {/* Statistiques (Movie Mode) */}
           <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-2">
             <button 
               onClick={() => setIsMovieMode(!isMovieMode)}
@@ -258,5 +250,6 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil }) => {
     </div>
   );
 };
+
 
 export default MultimediaCard;

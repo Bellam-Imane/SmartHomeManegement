@@ -25,7 +25,7 @@ const verifyToken = async (req, res, next) => {
             return res.status(401).json({ message: "Utilisateur introuvable. Accès refusé." });
         }
 
-        if (currentUser.status !== 'ACTIVE') {
+        if (currentUser.status && currentUser.status.toUpperCase() !== 'ACTIVE') {
             return res.status(401).json({ message: "Accès refusé. Ce compte est inactif ou bloqué." });
         }
 
