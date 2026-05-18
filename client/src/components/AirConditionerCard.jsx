@@ -20,8 +20,9 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
   }, [items, currentIndex]);
 
   if (items.length === 0) {
+    /* CORRECTION : Remplacement de max-w-[860px] par w-full */
     return (
-      <div className="w-full max-w-[860px] h-[230px] rounded-[45px] bg-[#f4ebe1] flex items-center justify-center font-bold italic text-gray-500">
+      <div className="w-full h-[230px] rounded-[45px] bg-[#f4ebe1] flex items-center justify-center font-bold italic text-gray-500">
         Chargement des climatiseurs...
       </div>
     );
@@ -69,7 +70,8 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
   };
 
   return (
-    <div className={`relative w-full max-w-[860px] h-[230px] bg-[#f4ebe1] rounded-[45px] p-6 shadow-xl flex flex-col justify-between transition-all duration-500 select-none ${className}`}>
+    /* CORRECTION FINALE : Suppression de max-w-[860px] pour permettre à la carte de s'étirer sur toute la largeur disponible du parent */
+    <div className={`relative w-full h-[230px] bg-[#f4ebe1] rounded-[45px] p-6 shadow-xl flex flex-col justify-between transition-all duration-500 select-none ${className}`}>
       
       {/* HEADER */}
       <div className="flex justify-between items-center w-full">
@@ -134,7 +136,7 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
               <div className="flex items-center gap-2 mt-1">
                 <button onClick={decrementTemp} className="p-0.5 bg-white hover:bg-gray-100 rounded shadow-sm border border-gray-200 text-gray-600 active:scale-90 transition-all">
                   <Minus size={10} />
-                </button>
+                </                button>
                 <button onClick={incrementTemp} className="p-0.5 bg-white hover:bg-gray-100 rounded shadow-sm border border-gray-200 text-gray-600 active:scale-90 transition-all">
                   <Plus size={10} />
                 </button>

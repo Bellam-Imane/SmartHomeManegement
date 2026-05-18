@@ -20,8 +20,9 @@ const CurtainsCard = ({ curtainsData, onUpdateAppareil, className = '' }) => {
   }, [items, currentIndex]);
 
   if (items.length === 0) {
+    /* CORRECTION : Remplacement de max-w-[860px] par w-full */
     return (
-      <div className="w-full max-w-[860px] h-[230px] rounded-[45px] bg-[#ebf5ff] flex items-center justify-center font-bold italic text-gray-500">
+      <div className="w-full h-[230px] rounded-[45px] bg-[#ebf5ff] flex items-center justify-center font-bold italic text-gray-500">
         Chargement des rideaux...
       </div>
     );
@@ -81,7 +82,8 @@ const CurtainsCard = ({ curtainsData, onUpdateAppareil, className = '' }) => {
   ];
 
   return (
-    <div className={`relative w-full max-w-[860px] h-[230px] bg-[#ebf5ff] rounded-[45px] p-5 shadow-xl flex flex-col justify-between transition-all duration-500 select-none ${className}`}>
+    /* CORRECTION FINALE : Suppression de max-w-[860px] pour permettre à la carte de s'étirer sur toute la largeur disponible du parent */
+    <div className={`relative w-full h-[230px] bg-[#ebf5ff] rounded-[45px] p-5 shadow-xl flex flex-col justify-between transition-all duration-500 select-none ${className}`}>
       
       {/* HEADER */}
       <div className="flex justify-between items-center w-full px-1">
@@ -156,7 +158,6 @@ const CurtainsCard = ({ curtainsData, onUpdateAppareil, className = '' }) => {
         </button>
       </div>
 
-      
       <div className="text-left px-2 pt-1 border-t border-black/5 text-[10px] text-gray-500 italic font-medium">
         Suggestion IA : Fermer les rideaux à 14h00 pour économiser 15% sur la facture de climatisation.
       </div>
