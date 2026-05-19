@@ -107,50 +107,11 @@ const Energy = () => {
       {/* ─── 1. SECTION EN-TÊTE (Titre, Notifications et Contrôle Vocal) ─── */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-xl md:text-2xl font-black text-black">Consommation d'Énergie</h1>
-        
-        <div className="flex items-center gap-4">
-          {/* Badge de la cloche de notification stylisé */}
-          <div 
-            onClick={() => navigate('/home/Notifications')} 
-            style={{
-              background: 'white', 
-              width: '42px', 
-              height: '42px', 
-              borderRadius: '50%',
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              position: 'relative', 
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
-              cursor: 'pointer',
-              border: '1px solid #e5e7eb'
-            }}
-          >
-            <Bell size={20} color="#1a1a2e" />
-            <div style={{
-              position: 'absolute', 
-              top: '2px', 
-              right: '2px', 
-              background: 'white',
-              border: '1.5px solid #f0f2f5', 
-              borderRadius: '50%', 
-              width: '16px', 
-              height: '16px',
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              fontSize: '9px', 
-              fontWeight: 'bold'
-            }}>
-              2
-            </div>
-          </div>
 
           <VoiceControlButton 
             isActive={isVoiceActive} 
             onClick={() => setIsVoiceActive(!isVoiceActive)} 
           />
-        </div>
       </div>
 
       {/* ─── 2. MISE EN PAGE DU CONTENU PRINCIPAL ─── */}
@@ -163,7 +124,7 @@ const Energy = () => {
             <StatCard label="Consommation Actuelle" value="12 kWh" />
             <StatCard label="Consommation Aujourd'hui" value="12 kWh" />
             <StatCard label="Consommation Mensuelle" value="240 kWh" />
-            <StatCard label="Coût Estimé" value="18 $" />
+            <StatCard label="Coût Estimé" value="240 DH" />
           </div>
 
           <div style={{ ...cardStyle, padding: "24px" }} className="w-full overflow-hidden">
@@ -217,14 +178,14 @@ const Energy = () => {
                 <Zap size={18} color={BLACK} />
               </div>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Votre estimation des dépenses d'énergie ce mois-ci est de <span className="font-bold text-black">154,99 €</span>
+                Votre estimation des dépenses d'énergie ce mois-ci est de <span className="font-bold text-black">154,99 DH</span>
               </p>
             </div>
             <div className="flex items-center gap-3">
                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-black w-[65%]" />
                </div>
-               <span className="font-bold text-sm text-black">240 €</span>
+               <span className="font-bold text-sm text-black">240 DH</span>
             </div>
           </div>
 

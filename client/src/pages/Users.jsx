@@ -344,41 +344,7 @@ export default function UsersPage() {
           <div className="flex items-center gap-6">
             
            
-      <div 
-  onClick={() => navigate('/home/Notifications')} 
-  style={{
-    background: 'white', 
-    width: '42px', 
-    height: '42px', 
-    borderRadius: '50%',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    position: 'relative', 
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
-    cursor: 'pointer',
-    border: '1px solid #e5e7eb'
-  }}
->
-  <Bell size={20} color="#1a1a2e" />
-  <div style={{
-    position: 'absolute', 
-    top: '2px', 
-    right: '2px', 
-    background: 'white',
-    border: '1.5px solid #f0f2f5', 
-    borderRadius: '50%', 
-    width: '16px', 
-    height: '16px',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    fontSize: '9px', 
-    fontWeight: 'bold'
-  }}>
-    2
-  </div>
-</div>
+      
 
 
 <VoiceControlButton 

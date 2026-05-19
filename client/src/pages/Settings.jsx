@@ -54,7 +54,7 @@ export default function Settings() {
     device: { mobile: true, email: true, desktop: false },
   });
 
-  // 1. جلب البيانات الحقيقية من السيرفر عند فتح الصفحة
+   
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -79,7 +79,7 @@ export default function Settings() {
     fetchProfile();
   }, []);
 
-  // 2. حفظ البيانات في قاعدة البيانات (MongoDB)
+  
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -96,12 +96,12 @@ export default function Settings() {
       });
 
       if (res.status === 200) {
-        // تحديث التخزين المحلي أيضاً
+        
         localStorage.setItem("user", JSON.stringify(res.data.user));
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
         
-        // إشعار باقي الصفحات (مثل Dashboard) بالتغيير
+        
         window.dispatchEvent(new Event("storage"));
       }
     } catch (err) {
@@ -142,10 +142,7 @@ export default function Settings() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-[#111827]">Paramètres</h1>
         <div className="flex items-center gap-6">
-          <div onClick={() => navigate('/home/Notifications')} className="w-10 h-10 bg-white rounded-full flex items-center justify-center relative shadow-sm border border-gray-200 cursor-pointer">
-            <Bell size={20} color="#1a1a2e" />
-            <div className="absolute top-1 right-1 bg-white border border-gray-100 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">2</div>
-          </div>
+          
           <VoiceControlButton />  
         </div>
       </div>
