@@ -2,7 +2,7 @@
  * initPostgres.js
  * Ce script initialise toutes les tables nécessaires pour le suivi historique et l'automatisation
  */
-const { pool } = require('../config/db'); 
+const { pgPool } = require('../config/db'); // ✅ pgPool بدل pool
 
 const initializePostgres = async () => {
   const createTablesQuery = `
@@ -41,12 +41,12 @@ const initializePostgres = async () => {
         mongo_device_id VARCHAR(24) NOT NULL, -- ID de l'appareil concerné
         consommation_kwh DECIMAL(10, 4),      -- La valeur consommée (ex: 0.520 kWh)
         puissance_watt INTEGER,               -- Puissance instantanée en Watts
-        date_mesure TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Moment de la mesure
+        date_mesure TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
 
   try {
-    const client = await pool.connect();
+    const client = await pgPool.connect(); // ✅ pgPool بدل pool
     await client.query(createTablesQuery);
     console.log("✅ PostgreSQL: Toutes les tables (Historique, Logs, Notifications) sont prêtes !");
     client.release();

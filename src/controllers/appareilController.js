@@ -98,7 +98,7 @@ exports.createAppareil = async (req, res) => {
 
 /**
  * ---------------------------------------------------------------------------------
- * CONTROLLER : MISE À ZONE DES PROPRIÉTÉS D'UN APPAREIL CONNECTÉ EXISTANT
+ * CONTROLLER : MISE À JOUR DES PROPRIÉTÉS D'UN APPAREIL CONNECTÉ EXISTANT
  * ---------------------------------------------------------------------------------
  */
 exports.updateAppareil = async (req, res) => {
@@ -190,6 +190,23 @@ exports.updateAppareil = async (req, res) => {
       console.log(`📡 [MQTT SUCCESS - ASPIRATEUR] Topic: ${deviceTopic} | Payload: ${vacuumPayload}`);
       
       publishMessage(deviceTopic, vacuumPayload);
+    }
+
+    // --- 🌟 INTEGRATION MQTT POUR LE CLIMATISEUR (THERMIQUE) ---
+    if (typeReel === 'THERMIQUE') {
+      const currentStatus = updateData.status || appareilModifie.status;
+      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      
+      const currentMode = appareilModifie.mode || 'AUTO';
+      const modePayload = currentMode.toUpperCase(); // AUTO, FROID, CHAUD, MANUEL
+      
+      const currentCible = appareilModifie.temperatureCible || 24;
+
+      // Payload envoyé sous format -> STATUS:MODE:TEMPERATURE (Ex: ON:FROID:18)
+      const climaPayload = `${statusPayload}:${modePayload}:${currentCible}`;
+      console.log(`📡 [MQTT SUCCESS - THERMIQUE] Topic: ${deviceTopic} | Payload: ${climaPayload}`);
+      
+      publishMessage(deviceTopic, climaPayload);
     }
 
     // Réponse de succès avec l'appareil synchronisé et persisté en base de données
