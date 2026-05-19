@@ -1,42 +1,52 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User'); // Import du modèle principal pour la vérification en base de données
+const User = require('../models/User'); 
 
 /**
- * Middleware pour vérifier la validité du Token JWT et s'assurer que l'utilisateur est actif
+ * Middleware pour vérifier la validité du Token JWT
  */
 const verifyToken = async (req, res, next) => {
-    // 1. Récupérer le token du header Authorization (Format: Bearer <token>)
+    // 1. Récupérer le token du header Authorization
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    // 2. Vérifier si le token existe dans la requête
+    // 2. Vérifier si le token existe
     if (!token) {
         return res.status(403).json({ message: "Accès refusé. Token manquant." });
     }
 
     try {
-        // 3. VÉRIFICATION : Vérifier la signature du token avec le secret du fichier .env
+        // 3. VÉRIFICATION du Token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // 4. SÉCURITÉ : Vérifier si l'utilisateur existe toujours en base de données et s'il est actif
+        // 4. SÉCURITÉ : Chercher l'utilisateur dans la base de données
+        // On utilise User.findById car c'est le modèle parent
         const currentUser = await User.findById(decoded.id);
         
         if (!currentUser) {
             return res.status(401).json({ message: "Utilisateur introuvable. Accès refusé." });
         }
 
+        // 5. Vérifier le status (Optionnel mais recommandé)
         if (currentUser.status && currentUser.status.toUpperCase() !== 'ACTIVE') {
-            return res.status(401).json({ message: "Accès refusé. Ce compte est inactif ou bloqué." });
+            return res.status(401).json({ message: "Accès refusé. Compte inactif." });
         }
 
-        // 5. Associer les données décodées du token à l'objet 'req' pour les utiliser dans les contrôleurs suivants
-        req.user = decoded;
+        /**
+         * 6. IMPORTANT : On stocke les infos importantes dans req.user
+         * req.user.id permettra de chercher l'utilisateur dans les autres contrôleurs
+         */
+        req.user = {
+            id: currentUser._id,
+            role: currentUser.role,
+            email: currentUser.email
+        };
         
-        // 6. Passer au middleware ou contrôleur suivant (la route protégée)
         next();
     } catch (err) {
-        // En cas de token invalide, modifié falsifié ou expiré
-        return res.status(401).json({ message: "Token invalide ou expiré.", error: err.message });
+        return res.status(401).json({ 
+            message: "Token invalide ou expiré.", 
+            error: err.message 
+        });
     }
 };
 

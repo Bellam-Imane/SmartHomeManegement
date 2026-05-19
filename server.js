@@ -13,7 +13,8 @@ const { initializeMqtt } = require('./src/config/mqttService');
 const authRoutes = require('./src/routes/authRoutes');
 const pieceRoutes = require('./src/routes/pieceRoutes'); // ✅ Ajout de la route des pièces pour corriger l'erreur 404
 const appareilRoutes = require('./src/routes/appareilRoutes');
-
+const securityRoutes = require('./src/routes/securityRoutes');
+const userRoutes = require('./src/routes/userRoutes');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -31,7 +32,8 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/pieces', pieceRoutes); // ✅ Activation officielle du préfixe /api/pieces pour le backend
 app.use('/api/appareils', appareilRoutes);
-
+app.use('/api/security', securityRoutes);
+app.use('/api/users', userRoutes);
 // --- Health check endpoint ---
 app.get('/test-health', (req, res) => {
   res.json({
