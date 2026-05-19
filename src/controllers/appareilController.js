@@ -44,7 +44,6 @@ exports.createAppareil = async (req, res) => {
     };
 
     // 3. Injection des valeurs par défaut spécifiques à chaque type (Mécanisme de Discrimination Mongoose)
-    // Cela évite les erreurs de validation du schéma (500 Internal Server Error)
     if (typeAppareil === 'ECLAIRAGE') {
       appareilData.intensite = 100;
       appareilData.couleur = '#FFFFFF';
@@ -88,10 +87,7 @@ exports.createAppareil = async (req, res) => {
     });
 
   } catch (error) {
-    // Capture et affichage de l'erreur exacte dans le terminal du serveur pour le débogage
     console.error("Erreur dans fonction [createAppareil]:", error);
-    
-    // Réponse d'erreur renvoyée au client en cas d'échec de la base de données
     return res.status(500).json({
       success: false,
       message: "Une erreur est survenue lors de l'ajout de l'appareil.",
@@ -102,15 +98,18 @@ exports.createAppareil = async (req, res) => {
 
 /**
  * ---------------------------------------------------------------------------------
- * CONTROLLER : MISE À JOUR DES PROPRIÉTÉS D'UN APPAREIL CONNECTÉ EXISTANT
+ * CONTROLLER : MISE À ZONE DES PROPRIÉTÉS D'UN APPAREIL CONNECTÉ EXISTANT
  * ---------------------------------------------------------------------------------
  */
 exports.updateAppareil = async (req, res) => {
   try {
     const { id } = req.params; // Récupération de l'ID passé dans l'URL
-    const updateData = req.body; // Récupération des modifications à appliquer
+    
+    // ⚠️ CRUCIAL : Clonage profond du body et suppression de la clé discriminator pour éviter le blocage Mongoose
+    const updateData = { ...req.body };
+    delete updateData.typeAppareil;
 
-    // 1. Recherche préalable de l'appareil pour identifier son type réel (Discriminator Key)
+    // 1. Recherche préalable pour sécuriser et obtenir le type avant modification
     const appareilExiste = await Appareil.findById(id);
     if (!appareilExiste) {
       return res.status(404).json({ 
@@ -119,42 +118,78 @@ exports.updateAppareil = async (req, res) => {
       });
     }
 
-    // 2. Sélection dynamique du modèle enfant approprié
-    // Mongoose nécessite le modèle spécifique (ex: AppareilEclairage) pour ne pas filtrer les champs spécifiques comme 'intensite'
-    let ModelCible = Appareil; // Modèle parent par défaut
-    const type = appareilExiste.typeAppareil?.toUpperCase();
+    // Extraction sécurisée du type d'appareil depuis la base de données
+    const typeReel = appareilExiste.typeAppareil?.toUpperCase();
 
-    if (type === 'ECLAIRAGE') ModelCible = AppareilEclairage;
-    else if (type === 'THERMIQUE') ModelCible = AppareilThermique;
-    else if (type === 'MULTIMEDIA') ModelCible = AppareilMultimedia;
-    else if (type === 'MOTORISE') ModelCible = AppareilMotorise;
-    else if (type === 'ASPIRATEUR') ModelCible = Aspirateur;
-    else if (type === 'CAMERA') ModelCible = Camera;
-    else if (type === 'PORTE') ModelCible = PorteIntelligent;
-    else if (type === 'CAPTEUR') ModelCible = Capteur;
+    // 2. CORRECTION CRUCIAL DISCRIMINATOR : Choix du modèle dynamique pour le save Mongoose
+    let appareilModifie;
+    if (typeReel === 'ASPIRATEUR') {
+      // Si c'est un aspirateur, on force l'utilisation du sous-modèle Aspirateur pour ne pas perdre les champs spécifiques
+      appareilModifie = await Aspirateur.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true, runValidators: false }
+      );
+    } else {
+      // Pour les autres appareils, on garde le modèle générique
+      appareilModifie = await Appareil.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true, runValidators: false }
+      );
+    }
 
-    // 3. Application des modifications sur le modèle cible identifié
-    // Remplacement de { new: true } par { returnDocument: 'after' } pour supprimer définitivement le Warning de Mongoose
-    const appareilModifie = await ModelCible.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { returnDocument: 'after', runValidators: true } 
-    );
+    if (!appareilModifie) {
+      return res.status(400).json({
+        success: false,
+        message: "Échec de la mise à jour de l'appareil dans la base de données."
+      });
+    }
 
-    // 4. 🔌 INTEGRATION MQTT DYNAMIQUE : On envoie l'état à l'appareil réel sur Wokwi
-    // Le topic contient l'ID de l'appareil pour éviter les mélanges entre pièces
+    // 3. Configuration du Topic MQTT pour cet appareil spécifiquement
     const deviceTopic = `smart/home/appareil/${id}`;
     
-    // On analyse les modifications de l'éclairage pour envoyer le statut et l'intensité ensemble
-    if (appareilModifie.typeAppareil === 'ECLAIRAGE') {
-      // Format du message combiné : "STATUS:INTENSITE" (Exemple: "ON:75" ou "OFF:0")
+    // --- INTEGRATION MQTT POUR L'ECLAIRAGE ---
+    if (typeReel === 'ECLAIRAGE') {
       const statusPayload = appareilModifie.status === 'ENLIGNE' ? 'ON' : 'OFF';
       const intensityPayload = appareilModifie.intensite !== undefined ? appareilModifie.intensite : 100;
       
       const finalPayload = `${statusPayload}:${intensityPayload}`;
-      
-      // Publication du message combiné vers le broker MQTT
+      console.log(`📡 [MQTT SUCCESS - ECLAIRAGE] Topic: ${deviceTopic} | Payload: ${finalPayload}`);
       publishMessage(deviceTopic, finalPayload);
+    }
+
+    // --- INTEGRATION MQTT POUR LA CAMERA ---
+    if (typeReel === 'CAMERA') {
+      const currentStatus = updateData.status || appareilModifie.status;
+      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      
+      const isRecordingActive = 
+        updateData.estEnregistrement === true || 
+        appareilModifie.estEnregistrement === true ||
+        updateData.isRecording === true ||
+        appareilModifie.isRecording === true;
+
+      const recPayload = isRecordingActive ? 'REC' : 'NO_REC';
+      const cameraPayload = `${statusPayload}:${recPayload}`;
+      
+      console.log(`📡 [MQTT SUCCESS - CAMERA] Topic: ${deviceTopic} | Payload: ${cameraPayload}`);
+      publishMessage(deviceTopic, cameraPayload);
+    }
+
+    // --- INTEGRATION MQTT POUR L'ASPIRATEUR ---
+    if (typeReel === 'ASPIRATEUR') {
+      const currentStatus = updateData.status || appareilModifie.status;
+      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      
+      // Récupération sécurisée du mode depuis l'objet final modifié
+      const currentMode = appareilModifie.modeNettoyage || 'STANDARD';
+      const modePayload = currentMode.toUpperCase();
+      
+      const vacuumPayload = `${statusPayload}:${modePayload}`;
+      console.log(`📡 [MQTT SUCCESS - ASPIRATEUR] Topic: ${deviceTopic} | Payload: ${vacuumPayload}`);
+      
+      publishMessage(deviceTopic, vacuumPayload);
     }
 
     // Réponse de succès avec l'appareil synchronisé et persisté en base de données

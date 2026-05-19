@@ -81,6 +81,7 @@ const RoomDetails = () => {
   // ─────────────────────────────────────────────────────────────────
   const handleUpdateAppareil = async (appareilId, updatedAppareilData) => {
     try {
+      // 1. Mise à jour optimiste de l'interface (Reste intacte)
       setPieceData(prevData => {
         if (!prevData) return prevData;
         const updatedAppareils = (prevData.appareils ?? []).map(app =>
@@ -91,19 +92,12 @@ const RoomDetails = () => {
         return { ...prevData, appareils: updatedAppareils };
       });
 
-      const currentAppareilComplet = pieceData.appareils.find(
-        app => app._id === appareilId || app.id === appareilId
-      );
-
-      const finalPayload = {
-        ...currentAppareilComplet,
-        ...updatedAppareilData
-      };
-
       const token = localStorage.getItem('token');
+      
+      
       await axios.put(
         `http://localhost:5000/api/appareils/${appareilId}`,
-        finalPayload,
+        updatedAppareilData, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

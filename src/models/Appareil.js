@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const baseOptions = {
     discriminatorKey: 'typeAppareil', // La clé qui permet de distinguer le type d'appareil dans MongoDB
     collection: 'appareils',
-    timestamps: true
+    timestamps: true,
+    strict: false // 🌟 SOLUTION CRUCIALE : Permet de sauvegarder les champs des sous-modèles lors d'un update via le modèle parent
 };
 
 // Schéma parent pour tous les appareils de la maison
