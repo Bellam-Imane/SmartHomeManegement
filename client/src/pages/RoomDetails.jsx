@@ -81,25 +81,24 @@ const RoomDetails = () => {
   // ─────────────────────────────────────────────────────────────────
   const handleUpdateAppareil = async (appareilId, updatedAppareilData) => {
     try {
-      // 1. Mise à jour optimiste de l'interface (Reste intacte)
-      setPieceData(prevData => {
-        if (!prevData) return prevData;
-        const updatedAppareils = (prevData.appareils ?? []).map(app =>
-          (app._id === appareilId || app.id === appareilId)
-            ? { ...app, ...updatedAppareilData }
-            : app
-        );
-        return { ...prevData, appareils: updatedAppareils };
-      });
-
       const token = localStorage.getItem('token');
       
-      
-      await axios.put(
+      const response = await axios.put(
         `http://localhost:5000/api/appareils/${appareilId}`,
         updatedAppareilData, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      if (response.data?.success) {
+        const serverDevice = response.data.data;
+        setPieceData(prevData => {
+          if (!prevData) return prevData;
+          const updatedAppareils = (prevData.appareils ?? []).map(app =>
+            (app._id === appareilId || app.id === appareilId) ? serverDevice : app
+          );
+          return { ...prevData, appareils: updatedAppareils };
+        });
+      }
 
     } catch (error) {
       console.error('Erreur réseau lors de la mise à jour de l\'appareil :', error);

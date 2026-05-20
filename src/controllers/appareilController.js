@@ -10,10 +10,7 @@ const {
     Aspirateur 
 } = require('../models/Appareil'); 
 
-// Importation du modèle Piece pour l'association et la mise à jour de la chambre
 const Piece = require('../models/Piece'); 
-
-// 🔌 INTEGRATION MQTT : Importation de la fonction pour envoyer des messages à Wokwi
 const { publishMessage } = require('../config/mqttService');
 
 /**
@@ -23,10 +20,8 @@ const { publishMessage } = require('../config/mqttService');
  */
 exports.createAppareil = async (req, res) => {
   try {
-    // Récupération des données envoyées par le client (React) depuis le corps de la requête
     const { nomAppareil, typeAppareil, piece, marque } = req.body;
 
-    // 1. Validation : Vérification que tous les champs obligatoires sont bien fournis
     if (!nomAppareil || !typeAppareil || !piece) {
       return res.status(400).json({
         success: false,
@@ -34,16 +29,15 @@ exports.createAppareil = async (req, res) => {
       });
     }
 
-    // 2. Initialisation des données de base communes à tous les appareils
     let appareilData = {
       nomAppareil,
       typeAppareil,
       piece,
       marque: marque || "",
-      status: "HORSLIGNE" // Initialisé hors ligne selon les contraintes du schéma Mongoose
+      status: "HORSLIGNE"
     };
 
-    // 3. Injection des valeurs par défaut spécifiques à chaque type (Mécanisme de Discrimination Mongoose)
+    // Initialisation des propriétés spécifiques selon le type d'appareil
     if (typeAppareil === 'ECLAIRAGE') {
       appareilData.intensite = 100;
       appareilData.couleur = '#FFFFFF';
@@ -68,18 +62,41 @@ exports.createAppareil = async (req, res) => {
       appareilData.resolution = '1080p';
     }
 
-    // 4. Création d'une nouvelle instance du modèle Appareil avec les données préparées
-    const nouvelAppareil = new Appareil(appareilData);
-    
-    // Sauvegarde définitive de l'appareil dans la collection 'appareils' de MongoDB
+    // 🌟 CORRECTION CRUCIALE : Sélection du modèle de discriminateur approprié pour la sauvegarde
+    let nouvelAppareil;
+
+    switch (typeAppareil?.toUpperCase()) {
+      case 'ECLAIRAGE':
+        nouvelAppareil = new AppareilEclairage(appareilData);
+        break;
+      case 'THERMIQUE':
+        nouvelAppareil = new AppareilThermique(appareilData);
+        break;
+      case 'MULTIMEDIA':
+        nouvelAppareil = new AppareilMultimedia(appareilData);
+        break;
+      case 'MOTORISE':
+        nouvelAppareil = new AppareilMotorise(appareilData);
+        break;
+      case 'ASPIRATEUR':
+        nouvelAppareil = new Aspirateur(appareilData);
+        break;
+      case 'CAMERA':
+        nouvelAppareil = new Camera(appareilData);
+        break;
+      default:
+        // Option de secours si le type ne correspond à aucun discriminateur spécifique
+        nouvelAppareil = new Appareil(appareilData);
+    }
+
+    // Sauvegarde effective dans la collection MongoDB unique 'appareils'
     await nouvelAppareil.save();
 
-    // 5. Synchronisation : Ajout immédiat de l'ID de cet appareil dans le tableau de la pièce (Piece)
+    // Attachement de l'identifiant de l'appareil à la pièce correspondante
     await Piece.findByIdAndUpdate(piece, {
         $push: { appareils: nouvelAppareil._id }
     });
 
-    // 6. Réponse de succès envoyée au frontend avec l'objet complet nouvellement créé
     return res.status(201).json({
       success: true,
       message: "Appareil ajouté avec succès !",
@@ -103,13 +120,13 @@ exports.createAppareil = async (req, res) => {
  */
 exports.updateAppareil = async (req, res) => {
   try {
-    const { id } = req.params; // Récupération de l'ID passé dans l'URL
+    const { id } = req.params;
     
-    // ⚠️ CRUCIAL : Clonage profond du body et suppression de la clé discriminator pour éviter le blocage Mongoose
+    // Clonage du body et suppression du discriminator pour éviter le blocage Mongoose
     const updateData = { ...req.body };
     delete updateData.typeAppareil;
 
-    // 1. Recherche préalable pour sécuriser et obtenir le type avant modification
+    // Recherche préalable pour récupérer le type réel depuis MongoDB
     const appareilExiste = await Appareil.findById(id);
     if (!appareilExiste) {
       return res.status(404).json({ 
@@ -118,24 +135,26 @@ exports.updateAppareil = async (req, res) => {
       });
     }
 
-    // Extraction sécurisée du type d'appareil depuis la base de données
+    // Récupération et normalisation du type depuis la base de données
     const typeReel = appareilExiste.typeAppareil?.toUpperCase();
 
-    // 2. CORRECTION CRUCIAL DISCRIMINATOR : Choix du modèle dynamique pour le save Mongoose
+    // Log de debug pour tracer le type reçu et les données envoyées
+    console.log(`🔍 [DEBUG] ID: ${id} | typeReel: "${typeReel}" | updateData:`, JSON.stringify(updateData));
+
+    // Choix du modèle dynamique selon le type pour éviter la perte des champs spécifiques
     let appareilModifie;
     if (typeReel === 'ASPIRATEUR') {
-      // Si c'est un aspirateur, on force l'utilisation du sous-modèle Aspirateur pour ne pas perdre les champs spécifiques
       appareilModifie = await Aspirateur.findByIdAndUpdate(
         id,
         { $set: updateData },
-        { new: true, runValidators: false }
+        { returnDocument: 'after', runValidators: false }
       );
     } else {
-      // Pour les autres appareils, on garde le modèle générique
+      // Grâce à strict: false dans baseOptions du modèle, le modèle parent peut mettre à jour les sous-champs
       appareilModifie = await Appareil.findByIdAndUpdate(
         id,
         { $set: updateData },
-        { new: true, runValidators: false }
+        { returnDocument: 'after', runValidators: false }
       );
     }
 
@@ -146,70 +165,71 @@ exports.updateAppareil = async (req, res) => {
       });
     }
 
-    // 3. Configuration du Topic MQTT pour cet appareil spécifiquement
+    // Construction du topic MQTT propre à cet appareil
     const deviceTopic = `smart/home/appareil/${id}`;
     
-    // --- INTEGRATION MQTT POUR L'ECLAIRAGE ---
+    // --- MQTT : ECLAIRAGE (Format -> STATUS:INTENSITE) ---
     if (typeReel === 'ECLAIRAGE') {
-      const statusPayload = appareilModifie.status === 'ENLIGNE' ? 'ON' : 'OFF';
+      const statusPayload    = appareilModifie.status === 'ENLIGNE' ? 'ON' : 'OFF';
       const intensityPayload = appareilModifie.intensite !== undefined ? appareilModifie.intensite : 100;
-      
-      const finalPayload = `${statusPayload}:${intensityPayload}`;
-      console.log(`📡 [MQTT SUCCESS - ECLAIRAGE] Topic: ${deviceTopic} | Payload: ${finalPayload}`);
+      const finalPayload     = `${statusPayload}:${intensityPayload}`;
+
+      console.log(`📡 [MQTT - ECLAIRAGE] Topic: ${deviceTopic} | Payload: ${finalPayload}`);
       publishMessage(deviceTopic, finalPayload);
     }
 
-    // --- INTEGRATION MQTT POUR LA CAMERA ---
+    // --- MQTT : CAMERA (Format -> STATUS:ENREGISTREMENT) ---
     if (typeReel === 'CAMERA') {
       const currentStatus = updateData.status || appareilModifie.status;
       const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
       
       const isRecordingActive = 
         updateData.estEnregistrement === true || 
-        appareilModifie.estEnregistrement === true ||
-        updateData.isRecording === true ||
-        appareilModifie.isRecording === true;
+        appareilModifie.estEnregistrement === true;
 
-      const recPayload = isRecordingActive ? 'REC' : 'NO_REC';
+      const recPayload    = isRecordingActive ? 'REC' : 'NO_REC';
       const cameraPayload = `${statusPayload}:${recPayload}`;
       
-      console.log(`📡 [MQTT SUCCESS - CAMERA] Topic: ${deviceTopic} | Payload: ${cameraPayload}`);
+      console.log(`📡 [MQTT - CAMERA] Topic: ${deviceTopic} | Payload: ${cameraPayload}`);
       publishMessage(deviceTopic, cameraPayload);
     }
 
-    // --- INTEGRATION MQTT POUR L'ASPIRATEUR ---
+    // --- MQTT : ASPIRATEUR (Format -> STATUS:MODE) ---
     if (typeReel === 'ASPIRATEUR') {
-      const currentStatus = updateData.status || appareilModifie.status;
-      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
-      
-      // Récupération sécurisée du mode depuis l'objet final modifié
-      const currentMode = appareilModifie.modeNettoyage || 'STANDARD';
-      const modePayload = currentMode.toUpperCase();
-      
-      const vacuumPayload = `${statusPayload}:${modePayload}`;
-      console.log(`📡 [MQTT SUCCESS - ASPIRATEUR] Topic: ${deviceTopic} | Payload: ${vacuumPayload}`);
-      
+      const currentStatus  = updateData.status || appareilModifie.status;
+      const statusPayload  = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      const currentMode    = appareilModifie.modeNettoyage || 'STANDARD';
+      const modePayload    = currentMode.toUpperCase();
+      const vacuumPayload  = `${statusPayload}:${modePayload}`;
+
+      console.log(`📡 [MQTT - ASPIRATEUR] Topic: ${deviceTopic} | Payload: ${vacuumPayload}`);
       publishMessage(deviceTopic, vacuumPayload);
     }
 
-    // --- 🌟 INTEGRATION MQTT POUR LE CLIMATISEUR (THERMIQUE) ---
+    // --- MQTT : CLIMATISEUR THERMIQUE (Format -> STATUS:MODE:TEMPERATURE) ---
     if (typeReel === 'THERMIQUE') {
-      const currentStatus = updateData.status || appareilModifie.status;
-      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
-      
-      const currentMode = appareilModifie.mode || 'AUTO';
-      const modePayload = currentMode.toUpperCase(); // AUTO, FROID, CHAUD, MANUEL
-      
-      const currentCible = appareilModifie.temperatureCible || 24;
+      const currentStatus  = updateData.status || appareilModifie.status;
+      const statusPayload  = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      const currentMode    = appareilModifie.mode || 'AUTO';
+      const modePayload    = currentMode.toUpperCase();
+      const currentCible   = appareilModifie.temperatureCible || 24;
+      const climaPayload   = `${statusPayload}:${modePayload}:${currentCible}`;
 
-      // Payload envoyé sous format -> STATUS:MODE:TEMPERATURE (Ex: ON:FROID:18)
-      const climaPayload = `${statusPayload}:${modePayload}:${currentCible}`;
-      console.log(`📡 [MQTT SUCCESS - THERMIQUE] Topic: ${deviceTopic} | Payload: ${climaPayload}`);
-      
+      console.log(`📡 [MQTT - THERMIQUE] Topic: ${deviceTopic} | Payload: ${climaPayload}`);
       publishMessage(deviceTopic, climaPayload);
     }
 
-    // Réponse de succès avec l'appareil synchronisé et persisté en base de données
+    // --- MQTT : RIDEAUX MOTORISÉS (Format -> STATUS:POURCENTAGE) ---
+    if (typeReel === 'MOTORISE') {
+      const currentStatus   = updateData.status || appareilModifie.status;
+      const statusPayload   = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      const pourcentage     = appareilModifie.pourcentageOuverture ?? 0;
+      const rideauxPayload  = `${statusPayload}:${pourcentage}`;
+
+      console.log(`📡 [MQTT - MOTORISE] Topic: ${deviceTopic} | Payload: ${rideauxPayload}`);
+      publishMessage(deviceTopic, rideauxPayload);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Appareil mis à jour avec succès !",

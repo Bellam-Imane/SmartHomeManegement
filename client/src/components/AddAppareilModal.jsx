@@ -2,7 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 
 /**
- * COMPOSANTE ADDAPPAREILMODAL : Version corrigée avec flou d'arrière-plan et soumission garantie.
+ * COMPOSANTE ADDAPPAREILMODAL : Version corrigée avec intégration complète des types d'appareils.
  */
 const AddAppareilModal = ({ 
   isOpen, 
@@ -16,7 +16,7 @@ const AddAppareilModal = ({
   // Fonction interne pour intercepter le clic et s'assurer que l'événement se déclenche
   const handleLocalSubmit = (e) => {
     e.preventDefault();
-    console.log("Formulaire soumis depuis le composant AddAppareilModal !");
+    console.log("Formulaire soumis depuis le composant AddAppareilModal avec le type :", formData.typeAppareil);
     onSubmit(e); // Appel de la fonction parente handleCreateAppareil
   };
 
@@ -40,6 +40,7 @@ const AddAppareilModal = ({
         {/* Formulaire lié à la fonction locale */}
         <form onSubmit={handleLocalSubmit} className="w-full flex flex-col gap-4 text-left">
           
+          {/* 1. Nom de l'appareil */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Nom de l'appareil</label>
             <input 
@@ -48,10 +49,11 @@ const AddAppareilModal = ({
               onChange={(e) => setFormData({ ...formData, nomAppareil: e.target.value })}
               placeholder="Ex: Climatiseur Principal"
               required
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-hidden focus:border-gray-400 transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-none focus:border-gray-400 transition-colors"
             />
           </div>
 
+          {/* 2. Marque */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Marque (Optionnel)</label>
             <input 
@@ -59,17 +61,18 @@ const AddAppareilModal = ({
               value={formData.marque}
               onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
               placeholder="Ex: LG, Samsung..."
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-hidden focus:border-gray-400 transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-none focus:border-gray-400 transition-colors"
             />
           </div>
 
+          {/* 3. Type d'appareil (Version corrigée et synchronisée avec le Backend) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Type d'appareil</label>
             <div className="relative">
               <select 
                 value={formData.typeAppareil}
                 onChange={(e) => setFormData({ ...formData, typeAppareil: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-hidden focus:border-gray-400 appearance-none cursor-pointer"
+                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-none focus:border-gray-400 cursor-pointer appearance-none"
               >
                 <option value="ECLAIRAGE">Éclairage</option>
                 <option value="CAMERA">Caméra de Sécurité</option>
@@ -78,6 +81,12 @@ const AddAppareilModal = ({
                 <option value="MOTORISE">Motorisé (Rideaux)</option>
                 <option value="ASPIRATEUR">Aspirateur Robot</option>
               </select>
+              
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                </svg>
+              </div>
             </div>
           </div>
 
