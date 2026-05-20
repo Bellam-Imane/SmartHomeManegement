@@ -52,6 +52,7 @@ exports.createAppareil = async (req, res) => {
     } else if (typeAppareil === 'MOTORISE') {
       appareilData.pourcentageOuverture = 0;
       appareilData.estVerrouille = true;
+      appareilData.mode = 'Ombrage automatique'; // Valeur par défaut pour le rideau
     } else if (typeAppareil === 'ASPIRATEUR') {
       appareilData.chargeBatterie = 100;
       appareilData.estEnCharge = false;
@@ -62,7 +63,7 @@ exports.createAppareil = async (req, res) => {
       appareilData.resolution = '1080p';
     }
 
-    // 🌟 CORRECTION CRUCIALE : Sélection du modèle de discriminateur approprié pour la sauvegarde
+    // Sélection du modèle de discriminateur approprié pour la sauvegarde
     let nouvelAppareil;
 
     switch (typeAppareil?.toUpperCase()) {
@@ -85,7 +86,6 @@ exports.createAppareil = async (req, res) => {
         nouvelAppareil = new Camera(appareilData);
         break;
       default:
-        // Option de secours si le type ne correspond à aucun discriminateur spécifique
         nouvelAppareil = new Appareil(appareilData);
     }
 
@@ -115,7 +115,7 @@ exports.createAppareil = async (req, res) => {
 
 /**
  * ---------------------------------------------------------------------------------
- * CONTROLLER : MISE À JOUR DES PROPRIÉTÉS D'UN APPAREIL CONNECTÉ EXISTANT
+ * CONTROLLER : MISE À ZONE DES PROPRIÉTÉS D'UN APPAREIL CONNECTÉ EXISTANT
  * ---------------------------------------------------------------------------------
  */
 exports.updateAppareil = async (req, res) => {
@@ -150,7 +150,6 @@ exports.updateAppareil = async (req, res) => {
         { returnDocument: 'after', runValidators: false }
       );
     } else {
-      // Grâce à strict: false dans baseOptions du modèle, le modèle parent peut mettre à jour les sous-champs
       appareilModifie = await Appareil.findByIdAndUpdate(
         id,
         { $set: updateData },
@@ -219,12 +218,20 @@ exports.updateAppareil = async (req, res) => {
       publishMessage(deviceTopic, climaPayload);
     }
 
-    // --- MQTT : RIDEAUX MOTORISÉS (Format -> STATUS:POURCENTAGE) ---
+    // --- 🌟 CORRECTION : MQTT : RIDEAUX MOTORISÉS (Nouveau Format -> STATUS:MODE:POURCENTAGE) ---
     if (typeReel === 'MOTORISE') {
       const currentStatus   = updateData.status || appareilModifie.status;
       const statusPayload   = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      
+      // Récupération sécurisée du mode actuel depuis la mise à jour ou l'objet existant
+      const currentMode     = appareilModifie.mode || 'Ombrage automatique';
+      // Remplacement des espaces par des underscores pour la propreté du payload MQTT si nécessaire
+      const modePayload     = currentMode.toUpperCase();
+      
       const pourcentage     = appareilModifie.pourcentageOuverture ?? 0;
-      const rideauxPayload  = `${statusPayload}:${pourcentage}`;
+      
+      // Assemblage du nouveau payload incluant le mode
+      const rideauxPayload  = `${statusPayload}:${modePayload}:${pourcentage}`;
 
       console.log(`📡 [MQTT - MOTORISE] Topic: ${deviceTopic} | Payload: ${rideauxPayload}`);
       publishMessage(deviceTopic, rideauxPayload);
