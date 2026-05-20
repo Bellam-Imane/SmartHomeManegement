@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
-import axios from 'axios'; // زدنا axios هنا
+import axios from 'axios'; 
 import livingRoomImg from '../assets/livingrom.jpeg';
 import user1 from '../assets/profile1.jfif';
 import climatiseurImg from '../assets/climatiseur-removebg-preview.png';
@@ -13,6 +13,9 @@ import {
   Lock, Unlock, Bell,
   Lightbulb
 } from 'lucide-react';
+
+// استيراد ملف الترجمة المتوافق مع الـ Webpack ديالك
+const { translations } = require("../translations");
 
 const Toggle = ({ on, onToggle }) => (
   <div
@@ -41,6 +44,7 @@ export default function Dashboard({ unreadCount }) {
   const [lightVal, setLightVal] = useState(36);
   const [activeTab, setActiveTab] = useState('Mois');
   const navigate = useNavigate(); 
+  const [language, setLanguage] = useState("Français");
 
   // --- الحالة ديال المستخدم (User State) ---
   const [currentUser, setCurrentUser] = useState({ 
@@ -50,6 +54,23 @@ export default function Dashboard({ unreadCount }) {
   });
 
   useEffect(() => {
+    // جلب اللغة المحددة أوتوماتيكياً
+    const handleStorageChange = () => {
+      const savedLang = localStorage.getItem("language");
+      if (savedLang) setLanguage(savedLang);
+
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(prev => ({
+          ...prev,
+          nom: parsed.nom || prev.nom,
+          prenom: parsed.prenom || prev.prenom,
+          photo: parsed.photo || prev.photo
+        }));
+      }
+    };
+
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -58,7 +79,6 @@ export default function Dashboard({ unreadCount }) {
           return;
         }
 
-        // كنجيبو البيانات الحقيقية من MongoDB
         const res = await axios.get('http://localhost:5000/api/users/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -72,7 +92,6 @@ export default function Dashboard({ unreadCount }) {
         }
       } catch (err) {
         console.error("Erreur fetching dashboard user", err);
-        // إيلا فشل السيرفر، كنرجعو لـ localStorage كحل احتياطي
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
           const parsed = JSON.parse(savedUser);
@@ -86,55 +105,46 @@ export default function Dashboard({ unreadCount }) {
     };
 
     fetchUserData();
-
-    // باش إيلا بدلتي السمية فـ Tab أخرى، يتحدث الـ Dashboard فالبلاصة
-    const handleStorageChange = () => {
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          setCurrentUser(prev => ({
-            ...prev,
-            nom: parsed.nom || prev.nom,
-            prenom: parsed.prenom || prev.prenom,
-            photo: parsed.photo || prev.photo
-          }));
-        }
-    };
+    handleStorageChange(); // تشغيل عند أول تحميل للـ Dashboard
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [navigate]);
 
-  // --------------------------------
+  // جلب قاموس الترجمة الحالي
+  const t = translations[language] || translations["Français"];
 
   const dataMap = {
     Jour: {
-      labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+      labels: t.labelsJour,
       heights: [40, 65, 30, 85, 45, 90, 55]
     },
     Mois: {
-      labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+      labels: t.labelsMois,
       heights: [38, 55, 42, 70, 60, 35, 75, 92, 55, 62, 48, 80]
     },
     Années: {
-      labels: ['2021', '2022', '2023', '2024', '2025', '2026'],
+      labels: t.labelsAnnees,
       heights: [60, 40, 80, 50, 95, 70]
     }
   };
 
-  const currentData = dataMap[activeTab];
+  const currentData = dataMap[activeTab] || dataMap["Mois"];
 
   return (
-    <div style={{
-      background: '#f0f2f5',
-      minHeight: '100vh',
-      padding: 'clamp(12px, 2vw, 20px)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'clamp(12px, 1.5vw, 16px)',
-      fontFamily: "'DM Sans', sans-serif",
-      boxSizing: 'border-box',
-    }}>
+    <div 
+      dir={language === "العربية" ? "rtl" : "ltr"}
+      style={{
+        background: '#f0f2f5',
+        minHeight: '100vh',
+        padding: 'clamp(12px, 2vw, 20px)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'clamp(12px, 1.5vw, 16px)',
+        fontFamily: "'DM Sans', sans-serif",
+        boxSizing: 'border-box',
+      }}
+    >
 
       {/* ====== HEADER ====== */}
       <div style={{
@@ -147,10 +157,10 @@ export default function Dashboard({ unreadCount }) {
       }}>
         <div>
           <h1 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
-            Bienvenue {currentUser.prenom || 'Utilisateur'}
+            {t.welcome} {currentUser.prenom || t.userDefault}
           </h1>
           <p style={{ fontSize: 'clamp(11px, 1.5vw, 13px)', color: '#9ca3af', margin: '4px 0 0 0' }}>
-            Génerer votre maison intelligente facilement.
+            {t.subHeader}
           </p>
         </div>
 
@@ -166,12 +176,12 @@ export default function Dashboard({ unreadCount }) {
           >
             <Bell size={20} color="#1a1a2e" />
             {unreadCount > 0 && (
-            <div style={{
-              position: 'absolute', top: '2px', right: '2px', background: '#ef4444',
-              border: '1.5px solid #f0f2f5', borderRadius: '50%', width: '16px', height: '16px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: 'white'
-            }}>{unreadCount}</div>
-          )}
+              <div style={{
+                position: 'absolute', top: '2px', right: '2px', background: '#ef4444',
+                border: '1.5px solid #f0f2f5', borderRadius: '50%', width: '16px', height: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: 'white'
+              }}>{unreadCount}</div>
+            )}
           </div>
 
           <div style={{
@@ -201,14 +211,14 @@ export default function Dashboard({ unreadCount }) {
         </div>
       </div>
 
-      {/* باقي الكود (Stats, AC, Light, Lock...) كيبقى هو هو بدون تغيير */}
+      {/* Info Stats Row */}
       <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', flexWrap: 'wrap' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px', flex: 1, minWidth: 0 }}>
-          {[{ label: 'Temp. intérieure', value: '24°C', icon: <Thermometer size={16} color="#9ca3af" /> },
-            { label: 'Temp. extérieure', value: '18°C', icon: <Sun size={16} color="#9ca3af" /> },
-            { label: 'Energie consommée', value: '13 kwh', icon: <Zap size={16} color="#9ca3af" /> },
-            { label: 'Humidité', value: '75%', icon: <Droplets size={16} color="#9ca3af" /> },
-            { label: 'Energie solaire', value: '78 kwh', icon: <Sun size={16} color="#9ca3af" /> }].map((s, i) => (
+          {[{ label: t.tempInt, value: '24°C', icon: <Thermometer size={16} color="#9ca3af" /> },
+            { label: t.tempExt, value: '18°C', icon: <Sun size={16} color="#9ca3af" /> },
+            { label: t.energyCons, value: '13 kwh', icon: <Zap size={16} color="#9ca3af" /> },
+            { label: t.humidity, value: '75%', icon: <Droplets size={16} color="#9ca3af" /> },
+            { label: t.solarEnergy, value: '78 kwh', icon: <Sun size={16} color="#9ca3af" /> }].map((s, i) => (
             <div key={i} style={{ background: 'white', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
               <p style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 500, margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>{s.icon}<span style={{ fontSize: 'clamp(13px, 2vw, 16px)', fontWeight: 700, color: '#1a1a2e' }}>{s.value}</span></div>
@@ -220,20 +230,23 @@ export default function Dashboard({ unreadCount }) {
 
       <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } .live-dot { animation: pulse 1.2s ease-in-out infinite; } @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr 1fr !important; } } @media (max-width: 600px) { .main-grid { grid-template-columns: 1fr !important; } }`}</style>
 
+      {/* Main Grid content */}
       <div className="main-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ borderRadius: 24, overflow: 'hidden', position: 'relative', width: '100%', aspectRatio: '16/9', boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
             <img src={livingRoomImg} alt="Salon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', top: 14, left: 14, background: '#ef4444', color: 'white', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 50, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div className="live-dot" style={{ width: 6, height: 6, background: 'white', borderRadius: '50%' }} /> LIVE
+            <div style={{ position: 'absolute', top: 14, [language === "العربية" ? "right" : "left"]: 14, background: '#ef4444', color: 'white', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 50, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div className="live-dot" style={{ width: 6, height: 6, background: 'white', borderRadius: '50%' }} /> {t.live}
             </div>
           </div>
           <div style={{ background: 'white', borderRadius: 24, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '8px' }}>
-              <span style={{ fontSize: 'clamp(12px, 1.5vw, 14px)', fontWeight: 600 }}>Aperçu de la situation énergétique</span>
+              <span style={{ fontSize: 'clamp(12px, 1.5vw, 14px)', fontWeight: 600 }}>{t.energyOverview}</span>
               <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 10, padding: 3, gap: 2 }}>
-                {['Jour', 'Mois', 'Années'].map(t => (
-                  <button key={t} onClick={() => setActiveTab(t)} style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', background: activeTab === t ? '#687586' : 'transparent', color: activeTab === t ? 'white' : '#1a1a2e' }}>{t}</button>
+                {['Jour', 'Mois', 'Années'].map(tabKey => (
+                  <button key={tabKey} onClick={() => setActiveTab(tabKey)} style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', background: activeTab === tabKey ? '#687586' : 'transparent', color: activeTab === tabKey ? 'white' : '#1a1a2e' }}>
+                    {t.tabs[tabKey]}
+                  </button>
                 ))}
               </div>
             </div>
@@ -248,10 +261,11 @@ export default function Dashboard({ unreadCount }) {
           </div>
         </div>
 
+        {/* Column 2: Climatiseur & Lumière */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ background: '#F9F4EF', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 15, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>climatiseur</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{t.climatiseur}</span>
               <Toggle on={acOn} onToggle={() => setAcOn(!acOn)} />
             </div>
             <div style={{ width: '100%', maxWidth: 180, aspectRatio: '1/1' }}>
@@ -260,41 +274,44 @@ export default function Dashboard({ unreadCount }) {
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', paddingTop: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sun size={14} color="#9ca3af" /></div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}><span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e' }}>AUTO</span><span style={{ fontSize: 9, color: '#9ca3af' }}>mode auto</span></div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}><span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e' }}>AUTO</span><span style={{ fontSize: 9, color: '#9ca3af' }}>{t.acModeAuto}</span></div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Zap size={14} color="#9ca3af" /></div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}><span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e' }}>137 min</span><span style={{ fontSize: 9, color: '#9ca3af' }}>refroid.</span></div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}><span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e' }}>137 min</span><span style={{ fontSize: 9, color: '#9ca3af' }}>{t.acRefroid}</span></div>
               </div>
             </div>
           </div>
+          
           <div style={{ background: '#EAEAEA', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', minHeight: '280px' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Lumière ES</span><Toggle on={lightOn} onToggle={() => setLightOn(!lightOn)} /></div>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{t.lumiereEs}</span><Toggle on={lightOn} onToggle={() => setLightOn(!lightOn)} /></div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 0' }}><img src={lightImg} alt="Lampe ES" style={{ maxHeight: '150px', objectFit: 'contain', opacity: lightOn ? 1 : 0.4, filter: lightOn ? `drop-shadow(0 0 ${lightVal / 10}px rgba(251, 191, 36, 0.4))` : 'none', transition: 'all 0.3s ease' }} /></div>
             <div style={{ width: '100%', background: '#1a1a2e', borderRadius: 50, height: '45px', display: 'flex', alignItems: 'center', padding: '0 10px', position: 'relative', marginTop: 10 }}>
               <input type="range" min="0" max="100" value={lightVal} onChange={(e) => setLightVal(parseInt(e.target.value))} style={{ position: 'absolute', width: '90%', left: '5%', zIndex: 3, opacity: 0, cursor: 'pointer', height: '100%' }} />
-              <div style={{ position: 'absolute', left: `${Math.max(8, Math.min(92, lightVal))}%`, transform: 'translateX(-50%)', width: '35px', height: '35px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', zIndex: 2, pointerEvents: 'none' }}><Lightbulb size={18} color={lightOn ? "#fbbf24" : "#cbd5e1"} /></div>
-              <span style={{ marginLeft: 'auto', marginRight: 15, color: 'white', fontSize: 13, fontWeight: 600, opacity: 0.5 }}>{lightVal}%</span>
+              <div style={{ position: 'absolute', [language === "العربية" ? "right" : "left"]: `${Math.max(8, Math.min(92, lightVal))}%`, transform: 'translateX(-50%)', width: '35px', height: '35px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', zIndex: 2, pointerEvents: 'none' }}><Lightbulb size={18} color={lightOn ? "#fbbf24" : "#cbd5e1"} /></div>
+              <span style={{ [language === "العربية" ? "marginRight" : "marginLeft"]: 'auto', [language === "العربية" ? "marginLeft" : "marginRight"]: 15, color: 'white', fontSize: 13, fontWeight: 600, opacity: 0.5 }}>{lightVal}%</span>
             </div>
           </div>
         </div>
 
+        {/* Column 3: Serrure & Aspirateur */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ background: '#EAEAEA', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', minHeight: '320px' }}>
-            <div style={{ width: '100%', textAlign: 'center' }}><p style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>serrure de porte</p></div>
+            <div style={{ width: '100%', textAlign: 'center' }}><p style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{t.serrure}</p></div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '16px 0' }}><img src={lockImg} alt="Serrure Connectée" style={{ maxHeight: '160px', width: 'auto', objectFit: 'contain', opacity: locked ? 1 : 0.7, filter: locked ? 'none' : 'grayscale(50%)', transition: 'all 0.3s ease' }} /></div>
             <div style={{ width: '100%', background: '#1a1a2e', borderRadius: 50, height: '45px', display: 'flex', alignItems: 'center', padding: '0 10px', position: 'relative', marginTop: 10 }}>
               <input type="range" min="0" max="1" step="1" value={locked ? 0 : 1} onChange={(e) => setLocked(e.target.value === "0")} style={{ position: 'absolute', width: '90%', left: '5%', zIndex: 3, opacity: 0, cursor: 'pointer', height: '100%' }} />
-              <div style={{ position: 'absolute', left: locked ? '10%' : '90%', transform: 'translateX(-50%)', width: '35px', height: '35px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 2, pointerEvents: 'none' }}>{locked ? <Lock size={18} color="#1a1a2e" /> : <Unlock size={18} color="#ef4444" />}</div>
+              <div style={{ position: 'absolute', [language === "العربية" ? "right" : "left"]: locked ? '10%' : '90%', transform: 'translateX(-50%)', width: '35px', height: '35px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 2, pointerEvents: 'none' }}>{locked ? <Lock size={18} color="#1a1a2e" /> : <Unlock size={18} color="#ef4444" />}</div>
               <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: 8, opacity: 0.3 }}>{[1, 2, 3, 4, 5].map(i => <div key={i} style={{ width: 4, height: 4, background: 'white', borderRadius: '50%' }} />)}</div>
             </div>
           </div>
+          
           <div style={{ background: '#EAEAEA', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', minHeight: '280px' }}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Aspirateur</span><Toggle on={vacOn} onToggle={() => setVacOn(!vacOn)} /></div>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{t.aspirateur}</span><Toggle on={vacOn} onToggle={() => setVacOn(!vacOn)} /></div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '12px 0' }}><img src={vacImg} alt="Aspirateur Robot" style={{ maxHeight: '140px', width: 'auto', objectFit: 'contain', opacity: vacOn ? 1 : 0.5, filter: vacOn ? 'none' : 'grayscale(80%)', transition: 'all 0.3s ease' }} /></div>
             <div style={{ width: '100%', background: '#1a1a2e', borderRadius: 50, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
               <div style={{ background: 'white', borderRadius: '12px', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Zap size={16} color="#fbbf24" fill="#fbbf24" /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}><span style={{ fontSize: 14, fontWeight: 700, color: 'white', lineHeight: 1 }}>69%</span><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>Batterie</span></div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}><span style={{ fontSize: 14, fontWeight: 700, color: 'white', lineHeight: 1 }}>69%</span><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>{t.batterie}</span></div>
             </div>
           </div>
         </div>
