@@ -51,21 +51,21 @@ const CameraCard = ({ cameraData, imageSrc, onUpdateAppareil, className = '' }) 
     setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
-  // Notification pour modifier un attribut spécifique
+  // Notification pour modifier un attribut spécifique (Optimisé et sécurisé avec typeAppareil)
   const toggleProperty = (property, currentValue) => {
     if (onUpdateAppareil) {
       onUpdateAppareil(_id || id, {
-        ...currentCamera,
+        typeAppareil: 'CAMERA', // 🔌 INDISPENSABLE : Pour que le backend active le MQTT de la caméra
         [property]: !currentValue
       });
     }
   };
 
-  // Switch d'alimentation centralisé
+  // Switch d'alimentation centralisé (Sécurisé avec typeAppareil)
   const togglePower = () => {
     if (onUpdateAppareil) {
       onUpdateAppareil(_id || id, {
-        ...currentCamera,
+        typeAppareil: 'CAMERA', // 🔌 INDISPENSABLE : Transmis pour réveiller le contrôleur MQTT
         status: isOn ? 'HORSLIGNE' : 'ENLIGNE'
       });
     }

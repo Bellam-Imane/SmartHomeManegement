@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const baseOptions = {
     discriminatorKey: 'typeAppareil', // La clé qui permet de distinguer le type d'appareil dans MongoDB
     collection: 'appareils',
-    timestamps: true
+    timestamps: true,
+    strict: false // 🌟 Permet de sauvegarder les champs des sous-modèles lors d'un update via le modèle parent
 };
 
 // Schéma parent pour tous les appareils de la maison
@@ -53,24 +54,32 @@ const AppareilThermique = Appareil.discriminator('THERMIQUE', new mongoose.Schem
     mode: { type: String, enum: ['CHAUD', 'FROID', 'AUTO'] }
 }));
 
-// Appareil Multimédia
+// Appareil Multimédia (TV / Streaming)
 const AppareilMultimedia = Appareil.discriminator('MULTIMEDIA', new mongoose.Schema({
     volume: { type: Number, min: 0, max: 100 },
     source: { type: String, enum: ['HDMI', 'Bluetooth', 'WIFI'] },
     application: {
         type: String,
-        enum: ['TV', 'YOUTOUB', 'NETFLIX', 'SPOTIFY', 'NONE'],
+        enum: ['TV', 'YOUTUBE', 'NETFLIX', 'SPOTIFY', 'NONE'],
         default: 'NONE'
     },
     chaineActuelle: { type: Number },
     estMuet: { type: Boolean, default: false },
-    niveauLuminosite: { type: Number, default: 50 }
+    niveauLuminosite: { type: Number, default: 50 },
+    
+    // 📺 🌟 AJOUT CRUCIAL : État de lecture pour la synchronisation (PLAY / PAUSE) avec l'ESP32
+    lectureActive: { type: Boolean, default: true },
+    
+    // ⏱️ Champs de suivi pour le calcul du temps d'utilisation global
+    dernierAllumage: { type: Date, default: null },
+    tempsUtilisationTotal: { type: Number, default: 0 }
 }));
 
 // Appareil Motorisé (Rideaux)
 const AppareilMotorise = Appareil.discriminator('MOTORISE', new mongoose.Schema({
     pourcentageOuverture: { type: Number, min: 0, max: 100, default: 0 },
-    estVerrouille: { type: Boolean, default: true }
+    estVerrouille: { type: Boolean, default: true },
+    mode: { type: String, default: 'Ombrage automatique' } 
 }));
 
 // Appareil Aspirateur Robot
@@ -95,9 +104,9 @@ const AppareilSecurite = Appareil.discriminator('SECURITE', new mongoose.Schema(
     ...proprietesSecuriteBase
 }));
 
-// Caméra de Sécurité (Rattachée directement au modèle racine Appareil pour éviter l'erreur de Mongoose)
+// Caméra de Sécurité
 const Camera = Appareil.discriminator('CAMERA', new mongoose.Schema({
-    ...proprietesSecuriteBase, // Hérite des propriétés de sécurité grâce au spread operator
+    ...proprietesSecuriteBase, 
     resolution: { type: String }, 
     estEnregistrement: { type: Boolean, default: false },
     stockageRestant: { type: Number },

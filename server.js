@@ -2,16 +2,25 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
+// 🌟 PRE-LOADING CRITIQUE : Charger tous les modèles Mongoose en premier pour éviter le bug "Schema hasn't been registered"
+require('./src/models/Appareil');
+require('./src/models/Piece');
+require('./src/models/Maison');
+
 // Import de la connexion multi-bases (MongoDB, PostgreSQL, InfluxDB)
 const { connectDatabases } = require('./src/config/db');
 const initializePostgres = require('./src/models/initPostgres');
 
+// 🔌 INTEGRATION MQTT : Importation du service de messagerie IoT
+const { initializeMqtt } = require('./src/config/mqttService');
+
 // Importation des routes de l'application
 const authRoutes = require('./src/routes/authRoutes');
-const pieceRoutes = require('./src/routes/pieceRoutes'); // ✅ Ajout de la route des pièces pour corriger l'erreur 404
+const pieceRoutes = require('./src/routes/pieceRoutes'); 
 const appareilRoutes = require('./src/routes/appareilRoutes');
 const securityRoutes = require('./src/routes/securityRoutes');
 const userRoutes = require('./src/routes/userRoutes');
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -27,10 +36,11 @@ app.use((req, res, next) => {
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/pieces', pieceRoutes); // ✅ Activation officielle du préfixe /api/pieces pour le backend
+app.use('/api/pieces', pieceRoutes); // Activation officielle du préfixe /api/pieces pour le backend
 app.use('/api/appareils', appareilRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/users', userRoutes);
+
 // --- Health check endpoint ---
 app.get('/test-health', (req, res) => {
   res.json({
@@ -56,10 +66,13 @@ connectDatabases().then(async () => {
     }
 
     // Lancement de l'écoute du serveur sur le port défini
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        console.log(`✅ Server running on http://localhost:${PORT}`);
+    app.listen(port, () => {
+        console.log(`✅ Server running on http://localhost:${port}`);
         console.log(`🚀 All Databases are ready and tables are checked!`);
+        
+        // 🔌 INTEGRATION MQTT SECURISEE : On lance le MQTT uniquement APRES que le serveur soit 100% prêt
+        console.log("⚡ Démarrage du service MQTT...");
+        initializeMqtt();
     });
 }).catch(err => {
     console.error("❌ Failed to start the system:", err.message);
