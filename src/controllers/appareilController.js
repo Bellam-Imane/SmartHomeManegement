@@ -22,6 +22,7 @@ exports.createAppareil = async (req, res) => {
   try {
     const { nomAppareil, typeAppareil, piece, marque } = req.body;
 
+    // Vérification des champs obligatoires
     if (!nomAppareil || !typeAppareil || !piece) {
       return res.status(400).json({
         success: false,
@@ -29,6 +30,7 @@ exports.createAppareil = async (req, res) => {
       });
     }
 
+    // Préparation des données de base de l'appareil
     let appareilData = {
       nomAppareil,
       typeAppareil,
@@ -50,6 +52,9 @@ exports.createAppareil = async (req, res) => {
       appareilData.source = 'HDMI';
       appareilData.application = 'NONE';
       appareilData.chaineActuelle = 1;
+      appareilData.lectureActive = true; // Initialisation de l'état de lecture à true (PLAY)
+      appareilData.dernierAllumage = null;
+      appareilData.tempsUtilisationTotal = 0; // Initialisation du temps d'utilisation à 0
     } else if (typeAppareil === 'MOTORISE') {
       appareilData.pourcentageOuverture = 0;
       appareilData.estVerrouille = true;
@@ -76,10 +81,10 @@ exports.createAppareil = async (req, res) => {
       default:            nouvelAppareil = new Appareil(appareilData);
     }
 
-    // Sauvegarde de l'appareil
+    // Sauvegarde de l'appareil dans la base de données
     await nouvelAppareil.save();
 
-    // SÉCURITÉ MAXIMUM : Liaison de l'appareil créé au tableau de la pièce correspondante
+    // Liaison automatique de l'appareil créé au tableau de la pièce correspondante
     try {
       await Piece.findByIdAndUpdate(piece, {
           $push: { appareils: nouvelAppareil._id }
@@ -114,12 +119,13 @@ exports.updateAppareil = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Clonage du body et suppression des IDs pour empêcher le blocage d'immuabilité Mongoose
+    // Clonage du corps de la requête et suppression des clés immuables pour Mongoose
     const updateData = { ...req.body };
     delete updateData.typeAppareil;
     delete updateData._id;  
     delete updateData.id;   
 
+    // Vérification de l'existence de l'appareil avant modification
     const appareilExiste = await Appareil.findById(id);
     if (!appareilExiste) {
       return res.status(404).json({ 
@@ -129,10 +135,29 @@ exports.updateAppareil = async (req, res) => {
     }
 
     const typeReel = appareilExiste.typeAppareil?.toUpperCase();
-
     console.log(`🔍 [DEBUG] ID: ${id} | typeReel: "${typeReel}" | updateData:`, JSON.stringify(updateData));
 
-    // Sélection dynamique du modèle pour la mise à jour en BDD (évite la perte d'attributs spécifiques)
+    // ⏱️ LOGIQUE CHRONOMÈTRE : Calcul du temps de visionnage pour les appareils MULTIMEDIA
+    if (typeReel === 'MULTIMEDIA') {
+      const maintenant = new Date();
+      const nouveauStatus = updateData.status || appareilExiste.status;
+
+      // Cas 1 : L'appareil s'allume (ENLIGNE) ou change d'application -> On enregistre l'heure de début
+      if (nouveauStatus === 'ENLIGNE' && (appareilExiste.status === 'HORSLIGNE' || updateData.application !== undefined)) {
+        updateData.dernierAllumage = maintenant;
+      }
+      // Cas 2 : L'appareil s'éteint (HORSLIGNE) -> On calcule la durée et on l'ajoute au total cumulé
+      else if (nouveauStatus === 'HORSLIGNE' && appareilExiste.status === 'ENLIGNE' && appareilExiste.dernierAllumage) {
+        const tempsPasseMs = maintenant - new Date(appareilExiste.dernierAllumage);
+        const tempsPasseMinutes = Math.round(tempsPasseMs / 1000 / 60); // Conversion des millisecondes en minutes
+        
+        // Cumul du temps passé et réinitialisation du marqueur de début
+        updateData.tempsUtilisationTotal = (appareilExiste.tempsUtilisationTotal || 0) + tempsPasseMinutes;
+        updateData.dernierAllumage = null;
+      }
+    }
+
+    // Sélection dynamique du sous-modèle pour appliquer la mise à jour en BDD
     let appareilModifie;
     if (typeReel === 'ASPIRATEUR') {
       appareilModifie = await Aspirateur.findByIdAndUpdate(
@@ -161,6 +186,7 @@ exports.updateAppareil = async (req, res) => {
       });
     }
 
+    // Définition du canal MQTT unique basé sur l'ID de l'appareil
     const deviceTopic = `smart/home/appareil/${id}`;
     
     // --- MQTT : ECLAIRAGE (Format -> STATUS:INTENSITE) ---
@@ -214,7 +240,7 @@ exports.updateAppareil = async (req, res) => {
       publishMessage(deviceTopic, climaPayload);
     }
 
-    // --- MQTT : RIDEAUX MOTORISÉS DE MANIÈRE INDIVIDUELLE (Format -> STATUS:MODE:POURCENTAGE) ---
+    // --- MQTT : RIDEAUX MOTORISÉS (Format -> STATUS:MODE:POURCENTAGE) ---
     else if (typeReel === 'MOTORISE') {
       const currentStatus   = updateData.status || appareilModifie.status;
       const statusPayload   = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
@@ -227,67 +253,30 @@ exports.updateAppareil = async (req, res) => {
       publishMessage(deviceTopic, rideauxPayload);
     }
 
-    // --- MQTT : MULTIMEDIA (🌟 VERSION CORRIGÉE POUR L'AUTOMATISATION DES RIDEAUX) ---
+    // --- MQTT : MULTIMEDIA (Format -> STATUS:APPLICATION:VOLUME:CHAINE:LECTURE) ---
     else if (typeReel === 'MULTIMEDIA') {
       const currentStatus   = updateData.status || appareilModifie.status;
-      const statusPayload   = currentStatus === 'ENLINLE' || currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      const statusPayload   = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
       const currentApp      = updateData.application || appareilModifie.application || 'NONE';
       const appPayload      = currentApp.toUpperCase();
       const currentVolume   = appareilModifie.estMuet ? 0 : (appareilModifie.volume ?? 20);
       const currentChannel  = appareilModifie.chaineActuelle || 1;
       
-      const multimediaPayload = `${statusPayload}:${appPayload}:${currentVolume}:${currentChannel}`;
-      console.log(`📡 [MQTT - MULTIMEDIA] Topic: ${deviceTopic} | Payload: ${multimediaPayload}`);
+      // Nouvelle variable pour gérer l'état de Lecture / Pause (PLAY ou PAUSE)
+      const isPlaying       = (appareilModifie.lectureActive !== false);
+      const currentLecture  = isPlaying ? "PLAY" : "PAUSE";
+      
+      // Construction du Payload final incluant le nouvel argument de lecture
+      const multimediaPayload = `${statusPayload}:${appPayload}:${currentVolume}:${currentChannel}:${currentLecture}`;
+      
+      // 📺 LOG DÉTAILLÉ DANS LE TERMINAL POUR LE MULTIMÉDIA (AVEC ÉTAT DU VIDÉO)
+      console.log(`\n==================================================`);
+      console.log(`📡 [MQTT - MULTIMEDIA] Topic: ${deviceTopic}`);
+      console.log(`🎬 [ÉTAT VIDÉO]      : ${isPlaying ? 'PLAY ▶️ (En cours de lecture)' : 'PAUSE ⏸️ (Arrêté)'}`);
+      console.log(`📦 [PAYLOAD ENVOYÉ]  : ${multimediaPayload}`);
+      console.log(`==================================================\n`);
+
       publishMessage(deviceTopic, multimediaPayload);
-
-      // 🌟 SCÉNARIO AUTOMATIQUE : Si le bouton Mode Cinéma de la TV est cliqué (true ou false)
-      if (updateData.modeCinema !== undefined) {
-        const etatCinema = updateData.modeCinema; // Contient true ou false
-        const idPiece = appareilModifie.piece;   // Récupération de l'ID de la pièce actuelle de la TV
-
-        if (idPiece) {
-          // 🔍 REQUÊTE SÉCURISÉE : On cherche dans le modèle global 'Appareil' pour éviter les conflits de discriminators
-          const rideauxDeLaPiece = await Appareil.find({ 
-            piece: idPiece, 
-            typeAppareil: 'MOTORISE' 
-          });
-
-          // Calcul du pourcentage : Si Cinéma activé -> Fermé (100%), sinon OFF -> Ouvert (0%)
-          const ciblePourcentage = etatCinema ? 100 : 0;
-
-          console.log(`🎬 [SCÉNARIO CINÉMA] Nombre de rideaux trouvés dans la pièce [${idPiece}]: ${rideauxDeLaPiece.length}`);
-
-          // Traitement de chaque rideau trouvé dans la pièce
-          for (let rideau of rideauxDeLaPiece) {
-            let structureMiseAJour = { pourcentageOuverture: ciblePourcentage };
-
-            // OBLIGATION LOGIQUE : Si le rideau est hors ligne ou OFF, on force son passage à ENLIGNE d'abord
-            if (rideau.status === 'HORSLIGNE' || rideau.status === 'OFF') {
-              structureMiseAJour.status = 'ENLIGNE';
-            }
-
-            // Mise à jour de l'état du rideau dans la base de données
-            const rideauMisAJour = await Appareil.findByIdAndUpdate(
-              rideau._id,
-              { $set: structureMiseAJour },
-              { returnDocument: 'after', runValidators: false }
-            );
-
-            if (rideauMisAJour) {
-              // Envoi immédiat du message MQTT standardisé à l'ESP32 qui pilote le rideau physique
-              const rideauTopic = `smart/home/appareil/${rideau._id}`;
-              const rStatus     = rideauMisAJour.status === 'ENLIGNE' ? 'ON' : 'OFF';
-              const rMode       = (rideauMisAJour.mode || 'Ombrage automatique').toUpperCase();
-              const rPayload    = `${rStatus}:${rMode}:${rideauMisAJour.pourcentageOuverture}`;
-
-              console.log(`🎬 [SCÉNARIO CINÉMA - SYNCHRO] Rideau [${rideauMisAJour.nomAppareil}] synchronisé | Topic: ${rideauTopic} | Payload: ${rPayload}`);
-              publishMessage(rideauTopic, rPayload);
-            }
-          }
-        } else {
-          console.log("⚠️ Impossible de lancer le scénario : Aucun ID de pièce trouvé pour cet appareil Multimedia.");
-        }
-      }
     }
 
     return res.status(200).json({
@@ -297,7 +286,7 @@ exports.updateAppareil = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Erreur dans fonction [updateAppareil]:", error);
+    console.error("❌ Erreur interne dans fonction [updateAppareil]:", error);
     return res.status(500).json({
       success: false,
       message: "Une erreur interne du serveur est survenue.",
