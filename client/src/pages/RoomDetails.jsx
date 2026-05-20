@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, Thermometer, Zap, ChevronDown } from 'lucide-react';
 import axios from 'axios';
@@ -31,53 +31,58 @@ const RoomDetails = () => {
   });
 
   // ─────────────────────────────────────────────
-  // Chargement des détails de la pièce au montage
+  // Fonction centralisée de chargement des détails
   // ─────────────────────────────────────────────
-  useEffect(() => {
-    const fetchRoomDetails = async () => {
-      setLoading(true);
-      try {
-        const token    = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:5000/api/pieces/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+  const fetchRoomDetails = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5000/api/pieces/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-        let data = response.data?.data ?? response.data;
+      // Normalisation des données retournées par le contrôleur (data ou document direct)
+      let data = response.data?.data ?? response.data?.piece ?? response.data;
 
-        if (Array.isArray(data.appareils) && data.appareils.length > 0) {
-          if (typeof data.appareils[0] === 'string') {
-            const requests = data.appareils.map(appId =>
-              axios
-                .get(`http://localhost:5000/api/appareils/${appId}`, {
-                  headers: { Authorization: `Bearer ${token}` }
-                })
-                .then(res => res.data?.data ?? res.data)
-                .catch(err => {
-                  console.error(`Erreur lors du chargement de l'appareil ${appId} :`, err);
-                  return null;
-                })
-            );
+      // Gestion du cas où le populate backend renverrait uniquement des IDs (Sécurité)
+      if (data && Array.isArray(data.appareils) && data.appareils.length > 0) {
+        if (typeof data.appareils[0] === 'string') {
+          const requests = data.appareils.map(appId =>
+            axios
+              .get(`http://localhost:5000/api/appareils/${appId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              })
+              .then(res => res.data?.data ?? res.data)
+              .catch(err => {
+                console.error(`Erreur lors du chargement de l'appareil ${appId} :`, err);
+                return null;
+              })
+          );
 
-            const fullAppareils = await Promise.all(requests);
-            data.appareils = fullAppareils.filter(app => app !== null);
-          }
-        } else {
-          data.appareils = [];
+          const fullAppareils = await Promise.all(requests);
+          data.appareils = fullAppareils.filter(app => app !== null);
         }
-
-        setPieceData(data);
-      } catch (error) {
-        console.error('Erreur générale lors du chargement de la pièce :', error);
-      } finally {
-        setLoading(false);
+      } else if (data) {
+        data.appareils = [];
       }
-    };
 
-    if (id) fetchRoomDetails();
+      setPieceData(data);
+    } catch (error) {
+      console.error('Erreur générale lors du chargement de la pièce :', error);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
+  // Chargement initial au montage du composant
+  useEffect(() => {
+    if (id) {
+      setLoading(true);
+      fetchRoomDetails();
+    }
+  }, [id, fetchRoomDetails]);
+
   // ─────────────────────────────────────────────────────────────────
-  // Mise à jour optimiste d'un appareil (UI d'abord, puis API)
+  // Mise à jour d'un appareil (Envoi à l'API puis rafraîchissement)
   // ─────────────────────────────────────────────────────────────────
   const handleUpdateAppareil = async (appareilId, updatedAppareilData) => {
     try {
@@ -106,13 +111,15 @@ const RoomDetails = () => {
   };
 
   // ─────────────────────────────────────
-  // Création d'un nouvel appareil
+  // Création et ajout d'un nouvel appareil
   // ─────────────────────────────────────
   const handleCreateAppareil = async (e) => {
     e.preventDefault();
     try {
       const payload  = { ...formData, piece: id };
       const token    = localStorage.getItem('token');
+      
+      // Envoi de la requête de création au serveur
       const response = await axios.post(
         'http://localhost:5000/api/appareils',
         payload,
@@ -120,14 +127,10 @@ const RoomDetails = () => {
       );
 
       if (response.data?.success) {
-        setPieceData(prevData => {
-          if (!prevData) return prevData;
-          const appareilsActuels = Array.isArray(prevData.appareils)
-            ? prevData.appareils
-            : [];
-          return { ...prevData, appareils: [...appareilsActuels, response.data.data] };
-        });
+        // 🌟 ACTION DIRECTE : On force un re-fetch global pour obtenir l'appareil avec ses champs par défaut typés du Backend
+        await fetchRoomDetails();
 
+        // Fermeture propre du modal et réinitialisation du formulaire
         setIsModalOpen(false);
         setFormData({ nomAppareil: '', typeAppareil: 'ECLAIRAGE', marque: '' });
       }
@@ -139,7 +142,7 @@ const RoomDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">
-        Chargement...
+        Chargement des appareils...
       </div>
     );
   }
@@ -149,8 +152,8 @@ const RoomDetails = () => {
   // ─────────────────────────────────────────────────────
   const appareilsList = Array.isArray(pieceData?.appareils) ? pieceData.appareils : [];
 
-  const cameras    = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'CAMERA');
-  const eclairages = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ECLAIRAGE');
+  const cameras     = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'CAMERA');
+  const eclairages  = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ECLAIRAGE');
   const multimedias = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MULTIMEDIA');
   const thermiques  = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'THERMIQUE');
   const motorises   = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MOTORISE');
@@ -171,7 +174,7 @@ const RoomDetails = () => {
 
           <div className="flex flex-col text-left">
             <h1 className="text-3xl font-black text-gray-800 tracking-tight">
-              {pieceData?.nomPiece ?? pieceData?.nom ?? 'Salon'}
+              {pieceData?.nomPiece ?? pieceData?.nom ?? 'Pièce'}
             </h1>
             <span className="text-sm font-semibold text-gray-400 mt-0.5">
               {appareilsList.length} appareils connectés
@@ -242,7 +245,7 @@ const RoomDetails = () => {
       <main className="w-full max-w-[1340px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-flow-dense gap-6 auto-rows-auto items-stretch justify-center w-full text-left">
 
-          {/* 1. Caméra — 1 colonne */}
+          {/* 1. Caméra */}
           {cameras.length > 0 && (
             <div className="h-[530px] flex w-full">
               <CameraCard
@@ -254,7 +257,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 2. Éclairage — 1 colonne */}
+          {/* 2. Éclairage */}
           {eclairages.length > 0 && (
             <div className="h-[530px] flex w-full">
               <EclairageCard
@@ -265,7 +268,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 3. Aspirateur — 1 colonne */}
+          {/* 3. Aspirateur */}
           {aspirateurs.length > 0 && (
             <div className="h-[530px] flex w-full">
               <VacuumCard
@@ -276,7 +279,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 4. Multimédia — 1 colonne */}
+          {/* 4. Multimédia */}
           {multimedias.length > 0 && (
             <div className="h-[530px] flex w-full">
               <MultimediaCard
@@ -287,7 +290,7 @@ const RoomDetails = () => {
             </div>
           )}
 
-          {/* 5. Conteneur combiné (Climatiseur + Rideaux) — Ne change pas de structure */}
+          {/* 5. Conteneur combiné (Climatiseur + Rideaux) */}
           {(thermiques.length > 0 || motorises.length > 0) && (
             <div className="flex flex-col justify-between gap-6 w-full md:col-span-2 lg:col-span-2 h-full min-h-[530px]">
               

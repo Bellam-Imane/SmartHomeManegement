@@ -60,7 +60,8 @@ const AppareilMultimedia = Appareil.discriminator('MULTIMEDIA', new mongoose.Sch
     source: { type: String, enum: ['HDMI', 'Bluetooth', 'WIFI'] },
     application: {
         type: String,
-        enum: ['TV', 'YOUTOUB', 'NETFLIX', 'SPOTIFY', 'NONE'],
+        // 🌟 CORRECTIF : Orthographe de YOUTUBE corrigée et ajout de CINEMA rencontré dans les logs
+        enum: ['TV', 'YOUTUBE', 'NETFLIX', 'SPOTIFY', 'CINEMA', 'NONE'],
         default: 'NONE'
     },
     chaineActuelle: { type: Number },
@@ -71,7 +72,8 @@ const AppareilMultimedia = Appareil.discriminator('MULTIMEDIA', new mongoose.Sch
 // Appareil Motorisé (Rideaux)
 const AppareilMotorise = Appareil.discriminator('MOTORISE', new mongoose.Schema({
     pourcentageOuverture: { type: Number, min: 0, max: 100, default: 0 },
-    estVerrouille: { type: Boolean, default: true }
+    estVerrouille: { type: Boolean, default: true },
+    mode: { type: String, default: 'Ombrage automatique' } // Ajout du champ mode pour éviter le décalage avec le frontend
 }));
 
 // Appareil Aspirateur Robot
@@ -96,9 +98,9 @@ const AppareilSecurite = Appareil.discriminator('SECURITE', new mongoose.Schema(
     ...proprietesSecuriteBase
 }));
 
-// Caméra de Sécurité (Rattachée directement au modèle racine Appareil pour éviter l'erreur de Mongoose)
+// Caméra de Sécurité
 const Camera = Appareil.discriminator('CAMERA', new mongoose.Schema({
-    ...proprietesSecuriteBase, // Hérite des propriétés de sécurité grâce au spread operator
+    ...proprietesSecuriteBase, 
     resolution: { type: String }, 
     estEnregistrement: { type: Boolean, default: false },
     stockageRestant: { type: Number },

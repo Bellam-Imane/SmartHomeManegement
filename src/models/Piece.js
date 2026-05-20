@@ -1,41 +1,43 @@
 const mongoose = require('mongoose');
 
+// 🌟 FORCE COUPLING : On s'assure que le fichier Appareil est lu complètement
+require('./Appareil'); 
+
 const pieceSchema = new mongoose.Schema({
-    nomPiece:{
+    nomPiece: {
         type: String,
         required: true,
         trim: true
     },
 
-    type:{
+    type: {
         type: String,
         required: true,
-        enum: ['Salon','Chambre à coucher','Cuisine','Bureau','Autre'],
-        default:'Salon'
+        enum: ['Salon', 'Chambre à coucher', 'Cuisine', 'Bureau', 'Autre'],
+        default: 'Salon'
     },
 
-    superficie:{
+    superficie: {
         type: String,
         required: true
     },
 
-    etage:{
+    etage: {
         type: Number,
-        default: 0  // 0 pour le rez-de-dhaussée
+        default: 0  // 0 pour le rez-de-chaussée
     },
 
-    maison:{
+    maison: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:'Maison',
+        ref: 'Maison',
         required: true
     },
 
     appareils: [{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'Appareil'
-
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Appareil'
     }]
+}, { timestamps: true });
 
-},{timestamps: true});
-
-module.exports = mongoose.model('Piece', pieceSchema) ;
+// Exportation unique conforme
+module.exports = mongoose.model('Piece', pieceSchema);
