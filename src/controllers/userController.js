@@ -9,7 +9,7 @@ const User = require('../models/User');
 // @access  Private
 exports.getUserProfile = async (req, res) => {
     try {
-        // req.user.id جاية من verifyToken middleware
+        // req.user.id verifyToken middleware
         const user = await User.findById(req.user.id).populate('role');
 
         if (user) {
@@ -38,7 +38,7 @@ exports.updateUserProfile = async (req, res) => {
         const user = await User.findById(req.user.id);
 
         if (user) {
-            // تحديث البيانات وسط كائن profile
+            // profile
             if (req.body.nom) user.profile.nom = req.body.nom;
             if (req.body.prenom) user.profile.prenom = req.body.prenom;
             if (req.body.telephone) user.profile.telephone = req.body.telephone;
