@@ -54,7 +54,7 @@ export default function Settings() {
     device: { mobile: true, email: true, desktop: false },
   });
 
-  // 1. جلب البيانات الحقيقية من السيرفر عند فتح الصفحة
+  // 1. Récupérer les données réelles du serveur lors de l’ouverture de la page
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -79,7 +79,7 @@ export default function Settings() {
     fetchProfile();
   }, []);
 
-  // 2. حفظ البيانات في قاعدة البيانات (MongoDB)
+  // 2. (MongoDB)
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -96,12 +96,12 @@ export default function Settings() {
       });
 
       if (res.status === 200) {
-        // تحديث التخزين المحلي أيضاً
+        // Mettez également à jour le stockage local
         localStorage.setItem("user", JSON.stringify(res.data.user));
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
         
-        // إشعار باقي الصفحات (مثل Dashboard) بالتغيير
+        // Notifier les autres pages (telles que le tableau de bord) de la modification
         window.dispatchEvent(new Event("storage"));
       }
     } catch (err) {
