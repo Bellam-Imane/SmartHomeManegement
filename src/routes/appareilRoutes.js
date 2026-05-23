@@ -6,5 +6,5 @@ const verifyToken = require('../middleware/authMiddleware');
 
 router.put('/:id', verifyToken, appareilController.updateAppareil);
 router.post('/', verifyToken, appareilController.createAppareil);
-
+router.get('/', verifyToken, appareilController.getAllAppareils);
 module.exports = router;

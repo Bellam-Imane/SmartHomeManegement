@@ -3,14 +3,14 @@ import { Activity, Zap, DoorOpen, RefreshCw } from 'lucide-react';
 import VoiceControlButton from '../components/VoiceControlButton';
 import NotificationItem from '../components/NotificationItem';
 
-// استيراد ملف الترجمة المتوافق مع الـ Webpack
+
 const { translations } = require("../translations");
 
 const Notifications = () => {
   const [language, setLanguage] = useState("Français");
   const [isVoiceActive, setIsVoiceActive] = useState(false);
 
-  // مراقبة تغيير اللغة فـ localStorage
+  
   useEffect(() => {
     const handleStorageChange = () => {
       const savedLang = localStorage.getItem("language");
@@ -24,7 +24,7 @@ const Notifications = () => {
 
   const t = translations[language] || translations["Français"];
 
-  // الـ State ديال الإشعارات مع ربط الـ title والـ desc بالترجمة الديناميكية
+  
   const [notifications, setNotifications] = useState([
     { id: 1, key: "mouvement", type: "danger", isRead: false, icon: Activity },
     { id: 2, key: "optimisation", type: "routine", isRead: false, icon: Zap },
@@ -55,7 +55,7 @@ const Notifications = () => {
       <div className="mt-10 bg-white/80 backdrop-blur-md rounded-[35px] shadow-sm border border-gray-100 overflow-hidden">
         <div className="divide-y divide-gray-100">
           {notifications.map((notif) => {
-            // دمج النصوص المترجمة مع كائن الإشعار قبل تمريره للـ Component الفرعي
+           
             const translatedNotif = {
               ...notif,
               title: t.notifData[notif.key]?.title || "",

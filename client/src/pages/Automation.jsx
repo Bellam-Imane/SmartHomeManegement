@@ -6,13 +6,13 @@ import VoiceControlButton from '../components/VoiceControlButton';
 import SceneCard from '../components/SceneCard';
 import AIRecommendationCard from '../components/AIRecommendationCard';
 
-// استيراد ملف الترجمة المتوافق مع المشروع
+
 const { translations } = require("../translations");
 
 const Automation = () => {
   const [language, setLanguage] = useState("Français");
 
-  // مراقبة تغيير اللغة فـ localStorage ديناميكياً
+ 
   useEffect(() => {
     const handleStorageChange = () => {
       const savedLang = localStorage.getItem("language");
@@ -26,7 +26,7 @@ const Automation = () => {
 
   const t = translations[language] || translations["Français"];
 
-  // ─── 1. تجميع وترجمة البيانات (Scenes) ───
+  
   const scenes = [
     { 
       title: language === "العربية" ? "الوضع الليلي" : language === "English" ? "Night Mode" : "Mode Nuit", 
@@ -55,7 +55,7 @@ const Automation = () => {
     }
   ];
 
-  // ─── 2. تجميع وترجمة القواعد (Rules) ───
+  
   const rules = [
     { 
       title: language === "العربية" ? "الإضاءة التلقائية" : language === "English" ? "Automatic Light" : "Lumière Automatique", 
@@ -107,7 +107,7 @@ const Automation = () => {
     }
   ];
 
-  // ─── 3. ترجمة التوصيات (AI Recommendations) ───
+  
   const allRecommendations = [
     { id: 1, text: language === "العربية" ? "استهلاكك للطاقة مرتفع في المطبخ حالياً." : language === "English" ? "Your energy consumption is high in the kitchen." : "Votre consommation est élevée dans la cuisine." },
     { id: 2, text: language === "العربية" ? "بناءً على عاداتك، نقترح تفعيل وضع التوفير عند الساعة 14:00." : language === "English" ? "Based on your habits, activate Eco Mode at 14:00." : "D'après vos habitudes, activez le Mode Économie à 14:00." },

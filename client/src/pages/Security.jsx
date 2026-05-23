@@ -133,12 +133,12 @@ const Security = () => {
 
   const [currentCam, setCurrentCam] = useState({
     img: room,
-    id: 'salon' // استعملت معرف هنا باش نقدرو نترجموه ديناميكياً دابا
+    id: 'salon' 
   });
 
   const changeCamera = (camData) => setCurrentCam(camData);
 
-  // جلب نصوص الكاميرا الحالية حسب اللغة المختارة
+  
   const currentCamName = secData.cams[currentCam.id]?.name || secData.cams['salon'].name;
   const currentCamDesc = secData.cams[currentCam.id]?.desc || secData.cams['salon'].desc;
 

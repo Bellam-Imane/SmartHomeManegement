@@ -4,7 +4,6 @@ import { Zap, Sun, AirVent, Refrigerator, Tv, Lightbulb } from "lucide-react";
 import VoiceControlButton from "../components/VoiceControlButton";
 import { useNavigate } from 'react-router-dom';
 
-// استيراد ملف الترجمة المتوافق مع المشروع
 const { translations } = require("../translations");
 
 // Jetons de conception (Design Tokens)
@@ -61,7 +60,7 @@ const Energy = () => {
   const [activeTab, setActiveTab] = useState("Mois"); 
   const [isVoiceActive, setIsVoiceActive] = useState(false); 
 
-  // مراقبة تغيير اللغة فـ localStorage ديناميكياً
+  
   useEffect(() => {
     const handleStorageChange = () => {
       const savedLang = localStorage.getItem("language");
@@ -75,7 +74,7 @@ const Energy = () => {
 
   const t = translations[language] || translations["Français"];
 
-  // ─── جلب وتسمية بيانات المخطط البياني حسب اللغة الحالية ───
+  
   const labelsJour = t.labelsJour || translations["Français"].labelsJour;
   const labelsMois = t.labelsMois || translations["Français"].labelsMois;
   const labelsAnnees = t.labelsAnnees || translations["Français"].labelsAnnees;
@@ -115,7 +114,7 @@ const Energy = () => {
 
   const currentChartData = dataByTab[activeTab] || dataByTab["Mois"];
 
-  // ربط الأيقونات بالأسماء المترجمة
+
   const devices = [
     { id: "ac", Icon: AirVent, kwh: 50, pct: 70, color: COLORS.ac, fallback: "AC" },
     { id: "frigo", Icon: Refrigerator, kwh: 30, pct: 40, color: COLORS.frigo, fallback: "Frigo" },
@@ -215,7 +214,7 @@ const Energy = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {devices.map((d) => {
-                // جلب اسم الجهاز المترجم من t.climatiseur أو الحقول الأخرى المتوفرة
+          
                 let labelName = d.fallback;
                 if (d.id === "ac") labelName = t.climatiseur || d.fallback;
                 if (d.id === "frigo") labelName = language === "العربية" ? "المكيف" : t.aspirateur ? "Frigo" : d.fallback; // تعديل حسب كود الترجمة

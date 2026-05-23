@@ -5,13 +5,13 @@ import VoiceControlButton from '../components/VoiceControlButton';
 import CameraCard from '../components/CameraCard'; 
 import RoomUsersCard from '../components/RoomUsersCard';
 
-// استيراد ملف الترجمة المتوافق مع المشروع
+
 const { translations } = require("../translations");
 
 const Devices = () => {
   const [language, setLanguage] = useState("Français");
 
-  // مراقبة تغيير اللغة فـ localStorage ديناميكياً
+
   useEffect(() => {
     const handleStorageChange = () => {
       const savedLang = localStorage.getItem("language");
@@ -47,7 +47,7 @@ const Devices = () => {
 
   const activeCount = devices.filter(d => d.isOn).length;
 
-  // ترجمة الفئات (Categories) ديناميكياً
+  
   const categories = language === "العربية" 
     ? ['الكل', 'الإضاءة', 'الأمن', 'المكيف', 'الميديا']
     : language === "English"
@@ -103,14 +103,14 @@ const Devices = () => {
       {/* --- Devices Grid --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {devices.map(device => {
-          // جلب الاسم المترجم للجهاز
+        
           let translatedName = device.defaultName;
           if (device.nameKey === 'lumierePlat') translatedName = language === "العربية" ? "إضاءة السقف" : language === "English" ? "Ceiling Light" : "Lumière Plafond";
           if (device.nameKey === 'climatiseur') translatedName = t.climatiseur || device.defaultName;
           if (device.nameKey === 'cameraEntree') translatedName = language === "العربية" ? "كاميرا المدخل" : language === "English" ? "Entrance Camera" : "Caméra Entrée";
           if (device.nameKey === 'smartTv') translatedName = language === "العربية" ? "تلفاز ذكي" : language === "English" ? "Smart TV" : "Smart TV";
 
-          // جلب اسم الغرفة المترجم
+          
           let translatedRoom = device.defaultRoom;
           if (t.roomsNames && t.roomsNames[device.roomKey]) {
             translatedRoom = t.roomsNames[device.roomKey];

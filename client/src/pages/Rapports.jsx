@@ -18,7 +18,7 @@ import Four_électrique from '../assets/Four_électrique.png';
 import refrigerator from '../assets/refrigerator.png';
 import Air_conditionné from '../assets/Air_conditionné.png';
 
-// استيراد ملف الترجمة المتوافق مع المشروع
+
 const { translations } = require("../translations");
 
 const BarChart = ({ data, language }) => {
@@ -69,7 +69,7 @@ const Rapports = () => {
     setTimeout(() => setAnimated(true), 100);
   }, []);
 
-  // مراقبة تغيير اللغة فـ localStorage ديناميكياً
+   
   useEffect(() => {
     const handleStorageChange = () => {
       const savedLang = localStorage.getItem("language");
@@ -83,7 +83,7 @@ const Rapports = () => {
 
   const t = translations[language] || translations["Français"];
 
-  // تسميات المخطط البياني حسب اللغة لي معزولة
+  
   const labelsJourMapped = t.labelsJour || ['Lun', 'Mar', 'Merc', 'Jeud', 'Vend', 'Sam', 'Dem'];
   
   const dayData = [
@@ -485,7 +485,7 @@ const Rapports = () => {
             { icon: Eclairage_intelligent, nameKey: 'lum', name: 'Eclairage intelligent', pct: 20 },
             { icon: Home_Theatre, nameKey: 'tv', name: 'Home Theatre', pct: 35 },
           ].map((d, i) => {
-            // ترجمة أسماء الأجهزة داخل الـ Grid
+            
             let deviceName = d.name;
             if (d.nameKey === 'air') deviceName = language === "العربية" ? "مكيف الهواء" : language === "English" ? "Air Conditioning" : "Air conditionné";
             if (d.nameKey === 'frigo') deviceName = language === "العربية" ? "الثلاجة" : language === "English" ? "Refrigerator" : "Refrigerator";

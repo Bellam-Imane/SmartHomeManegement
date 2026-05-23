@@ -4,7 +4,7 @@ import VoiceControlButton from "../components/VoiceControlButton";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// عيطنا ليها بـ require باش توافق مع الـ Webpack ديالك 100%
+
 const { translations } = require("../translations");
 
 function Toggle({ checked, onChange }) {
@@ -44,6 +44,7 @@ export default function Settings() {
 
   const t = translations[language] || translations["Français"];
 
+  // 1. Récupérer les données réelles du serveur lors de l’ouverture de la page
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -112,11 +113,9 @@ export default function Settings() {
       });
 
       if (res.status === 200) {
-        // 💡 إصلاح مشكل الـ undefined والـ JSON.parse الخاسر
         const userData = res.data.user ? res.data.user : res.data;
         localStorage.setItem("user", JSON.stringify(userData));
         
-        // كنعلمو الـ Dashboard وباقي المكونات باش يتحدثوا فالبلاصة
         window.dispatchEvent(new Event("storage")); 
         
         setSaved(true);

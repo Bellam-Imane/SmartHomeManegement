@@ -3,7 +3,7 @@ import { ArrowLeft, Bell, Mic, Pencil, Trash2, Lock, Lightbulb, Thermometer, Vid
 import VoiceControlButton from "../components/VoiceControlButton";
 import { useNavigate } from "react-router-dom";
 
-// استيراد ملف الترجمة المتوافق مع الـ Webpack ديالك
+
 const { translations } = require("../translations");
 
 // ─── COMPONENT: Toggle Switch ────────────────────────────────────────────────
@@ -64,7 +64,7 @@ function Avatar({ src, name, bg, color }) {
 
 // ─── COMPONENT: Member Card ──────────────────────────────────────────────────
 function MemberCard({ member, t }) {
-  // ترجمة الأدوار بشكل ديناميكي داخل الكارت
+  
   const getTranslatedRole = (role) => {
     if (role.toLowerCase().includes("admin")) return t.roles.admin.label;
     if (role.toLowerCase().includes("mem") || role.toLowerCase().includes("عضو")) return t.roles.membre.label;
