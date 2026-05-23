@@ -20,7 +20,8 @@ exports.getUserProfile = async (req, res) => {
                 prenom: user.profile.prenom,
                 photo: user.profile.photo,
                 telephone: user.profile.telephone,
-                role: user.role
+                role: user.role,
+                preferences: user.preferences
             });
         } else {
             res.status(404).json({ message: "Utilisateur non trouvé" });
@@ -47,17 +48,29 @@ exports.updateUserProfile = async (req, res) => {
             if (req.body.email) {
                 user.email = req.body.email;
             }
+            if (req.body.preferences) {
+                user.preferences = {
+                    twoFactor: req.body.preferences.twoFactor ?? user.preferences.twoFactor,
+                    emergencyContact: req.body.preferences.emergencyContact ?? user.preferences.emergencyContact,
+                    darkMode: req.body.preferences.darkMode ?? user.preferences.darkMode,
+                    language: req.body.preferences.language ?? user.preferences.language,
+                    notifications: req.body.preferences.notifications ?? user.preferences.notifications
+                };
+            }
 
             const updatedUser = await user.save();
+            console.log("✅ Preferences saved successfully in DB:", updatedUser.preferences);
+            
             
             res.status(200).json({
                 message: "Profil mis à jour avec succès !",
-                user: {
-                    nom: updatedUser.profile.nom,
-                    prenom: updatedUser.profile.prenom,
-                    email: updatedUser.email,
-                    photo: updatedUser.profile.photo
-                }
+                _id: updatedUser._id,
+                email: updatedUser.email,
+                nom: updatedUser.profile.nom,
+                prenom: updatedUser.profile.prenom,
+                photo: updatedUser.profile.photo,
+                telephone: updatedUser.profile.telephone,
+                preferences: updatedUser.preferences // صيفطناهم هنا نقيين
             });
         } else {
             res.status(404).json({ message: "Utilisateur non trouvé" });

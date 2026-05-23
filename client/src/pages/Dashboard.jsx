@@ -10,6 +10,28 @@ import lockImg from '../assets/sereure-removebg-preview.png';
 import lightImg from '../assets/lumiére-removebg-preview.png';
 import vacImg from '../assets/asp-removebg-preview.png';
 
+
+const { translations } = require("../translations");
+
+const Toggle = ({ on, onToggle }) => (
+  <div
+    onClick={onToggle}
+    style={{
+      width: 38, height: 22, borderRadius: 50, cursor: 'pointer',
+      background: on ? '#1E232A' : 'hsl(210, 5%, 84%)',
+      position: 'relative', transition: 'all 0.2s ease',
+      flexShrink: 0,
+    }}
+  >
+    <div style={{
+      position: 'absolute', width: 16, height: 16, background: 'white',
+      borderRadius: '50%', top: 3,
+      left: on ? 'calc(100% - 19px)' : 3,
+      transition: 'all 0.2s ease',
+    }} />
+  </div>
+);
+
 // Importation des composants de l'interface (Appareils)
 import ClimateCard from '../components/DashboardDevices/ClimateCard';
 import EnergyChart from '../components/DashboardDevices/EnergyChart';
@@ -32,14 +54,35 @@ export default function Dashboard({ unreadCount }) {
   const [activeTab, setActiveTab] = useState('Mois');
   
   const navigate = useNavigate(); 
+  const [language, setLanguage] = useState("Français");
   const [currentUser, setCurrentUser] = useState({ nom: '', prenom: '', photo: user1 });
 
   // 1. Charger les données utilisateur (Déjà fonctionnel)
   useEffect(() => {
+    
+    const handleStorageChange = () => {
+      const savedLang = localStorage.getItem("language");
+      if (savedLang) setLanguage(savedLang);
+
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(prev => ({
+          ...prev,
+          nom: parsed.nom || prev.nom,
+          prenom: parsed.prenom || prev.prenom,
+          photo: parsed.photo || prev.photo
+        }));
+      }
+    };
+
     const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) { navigate('/login'); return; }
+        if (!token) {
+          navigate('/login');
+          return;
+        }
         
         const res = await axios.get('http://localhost:5000/api/users/profile', {
           headers: { Authorization: `Bearer ${token}` }
@@ -53,6 +96,7 @@ export default function Dashboard({ unreadCount }) {
           });
         }
       } catch (err) {
+        console.error("Erreur fetching dashboard user", err);
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
           const parsed = JSON.parse(savedUser);
@@ -61,20 +105,25 @@ export default function Dashboard({ unreadCount }) {
       }
     };
     fetchUserData();
+    handleStorageChange(); 
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [navigate]);
+
+  
+  const t = translations[language] || translations["Français"];
 
   // 2. Tenter de charger l'état des appareils (Ne cassera pas le design si ça échoue)
   useEffect(() => {
     const fetchAppareils = async () => {
       try {
         const token = localStorage.getItem('token');
-        // Attention : il faut que ce GET existe dans appareilRoutes.js !
         const res = await axios.get('http://localhost:5000/api/appareils', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         if (res.data && res.data.length > 0) {
-           // On met à jour si la DB répond, sinon les valeurs restent sur "true"
            res.data.forEach(app => {
               if (app.nom === 'climatiseur') setAcOn(app.status);
               if (app.nom === 'lumiere') setLightOn(app.status);
@@ -96,42 +145,75 @@ export default function Dashboard({ unreadCount }) {
 
     try {
       const token = localStorage.getItem('token');
-      // On utilise PUT comme défini dans tes routes backend
       await axios.put(`http://localhost:5000/api/appareils/${appareilIdOrName}`, 
         { status: newState },
         { headers: { Authorization: `Bearer ${token}` } }
       );
     } catch (err) {
       console.error(`Erreur de synchronisation pour ${appareilIdOrName}`, err);
-      // Optionnel : on pourrait annuler le changement ici, mais on laisse pour ne pas frustrer l'utilisateur
     }
   };
 
   const dataMap = {
-    Jour: { labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'], heights: [40, 65, 30, 85, 45, 90, 55] },
-    Mois: { labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'], heights: [38, 55, 42, 70, 60, 35, 75, 92, 55, 62, 48, 80] },
-    Années: { labels: ['2021', '2022', '2023', '2024', '2025', '2026'], heights: [60, 40, 80, 50, 95, 70] }
+    領our: {
+      labels: t.labelsJour || ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+      heights: [40, 65, 30, 85, 45, 90, 55]
+    },
+    Mois: {
+      labels: t.labelsMois || ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+      heights: [38, 55, 42, 70, 60, 35, 75, 92, 55, 62, 48, 80]
+    },
+    Années: {
+      labels: t.labelsAnnees || ['2021', '2022', '2023', '2024', '2025', '2026'],
+      heights: [60, 40, 80, 50, 95, 70]
+    }
   };
-  const currentData = dataMap[activeTab];
+
+  const currentData = dataMap[activeTab] || dataMap["Mois"];
 
   return (
-    <div style={{ background: '#f0f2f5', minHeight: '100vh', padding: 'clamp(12px, 2vw, 20px)', display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 1.5vw, 16px)', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' }}>
+    <div 
+      dir={language === "العربية" ? "rtl" : "ltr"}
+      style={{
+        background: '#f0f2f5',
+        minHeight: '100vh',
+        padding: 'clamp(12px, 2vw, 20px)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'clamp(12px, 1.5vw, 16px)',
+        fontFamily: "'DM Sans', sans-serif",
+        boxSizing: 'border-box',
+      }}
+    >
+      <style>{`
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } 
+        .live-dot { animation: pulse 1.2s infinite; } 
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr 1fr !important; } } 
+        @media (max-width: 600px) { .main-grid { grid-template-columns: 1fr !important; } }
+      `}</style>
 
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '4px' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
-            Bienvenue {currentUser.prenom || 'Utilisateur'}
+            {t.welcome} {currentUser.prenom || t.userDefault}
           </h1>
           <p style={{ fontSize: 'clamp(11px, 1.5vw, 13px)', color: '#9ca3af', margin: '4px 0 0 0' }}>
-            Gérez votre maison intelligente facilement.
+            {t.subHeader}
+            Géer votre maison intelligente facilement.
           </p>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div onClick={() => navigate('/home/Notifications')} style={{ background: 'white', width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer' }}>
             <Bell size={20} color="#1a1a2e" />
-            {unreadCount > 0 && <div style={{ position: 'absolute', top: '2px', right: '2px', background: '#ef4444', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'white' }}>{unreadCount}</div>}
+            {unreadCount > 0 && (
+              <div style={{
+                position: 'absolute', top: '2px', right: '2px', background: '#ef4444',
+                border: '1.5px solid #f0f2f5', borderRadius: '50%', width: '16px', height: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: 'white'
+              }}>{unreadCount}</div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
              <img src={currentUser.photo} alt="Profil utilisateur" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }} />
@@ -144,11 +226,11 @@ export default function Dashboard({ unreadCount }) {
       <div style={{ display: 'flex', alignItems: 'stretch', gap: '10px', flexWrap: 'wrap' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px', flex: 1 }}>
           {[
-            { label: 'Temp. intérieure', value: '24°C', icon: <Thermometer size={16} color="#9ca3af" /> },
-            { label: 'Temp. extérieure', value: '18°C', icon: <Sun size={16} color="#9ca3af" /> },
-            { label: 'Energie consommée', value: '13 kwh', icon: <Zap size={16} color="#9ca3af" /> },
-            { label: 'Humidité', value: '75%', icon: <Droplets size={16} color="#9ca3af" /> },
-            { label: 'Energie solaire', value: '78 kwh', icon: <Sun size={16} color="#9ca3af" /> }
+            { label: t.tempInt || 'Temp. intérieure', value: '24°C', icon: <Thermometer size={16} color="#9ca3af" /> },
+            { label: t.tempExt || 'Temp. extérieure', value: '18°C', icon: <Sun size={16} color="#9ca3af" /> },
+            { label: t.energyCons || 'Energie consommée', value: '13 kwh', icon: <Zap size={16} color="#9ca3af" /> },
+            { label: t.humidity || 'Humidité', value: '75%', icon: <Droplets size={16} color="#9ca3af" /> },
+            { label: t.solarEnergy || 'Energie solaire', value: '78 kwh', icon: <Sun size={16} color="#9ca3af" /> }
           ].map((s, i) => (
             <div key={i} style={{ background: 'white', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
               <p style={{ fontSize: '10px', color: '#9ca3af', margin: '0 0 4px 0' }}>{s.label}</p>
@@ -159,31 +241,26 @@ export default function Dashboard({ unreadCount }) {
         <VoiceControlButton />
       </div>
 
-      <style>{`
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } 
-        .live-dot { animation: pulse 1.2s infinite; } 
-        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr 1fr !important; } } 
-        @media (max-width: 600px) { .main-grid { grid-template-columns: 1fr !important; } }
-      `}</style>
-
       {/* MAIN GRID */}
       <div className="main-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', alignItems: 'start' }}>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ borderRadius: 24, overflow: 'hidden', position: 'relative', width: '100%', aspectRatio: '16/9' }}>
-            <img src={livingRoomImg} alt="Vue du salon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', top: 14, left: 14, background: '#ef4444', color: 'white', fontSize: 11, padding: '4px 10px', borderRadius: 50, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div className="live-dot" style={{ width: 6, height: 6, background: 'white', borderRadius: '50%' }} /> LIVE
+          <div style={{ borderRadius: 24, overflow: 'hidden', position: 'relative', width: '100%', aspectRatio: '16/9', boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
+            <img src={livingRoomImg} alt="Salon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', top: 14, [language === "العربية" ? "right" : "left"]: 14, background: '#ef4444', color: 'white', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 50, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div className="live-dot" style={{ width: 6, height: 6, background: 'white', borderRadius: '50%' }} /> {t.live}
             </div>
           </div>
           <EnergyChart activeTab={activeTab} setActiveTab={setActiveTab} currentData={currentData} />
         </div>
 
+        {/* Column 2: Climatiseur & Lumière */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <ClimateCard isOn={acOn} onToggle={() => handleAppareilToggle('climatiseur', acOn, setAcOn)} img={climatiseurImg} />
           <LightCard isOn={lightOn} onToggle={() => handleAppareilToggle('lumiere', lightOn, setLightOn)} val={lightVal} setVal={setLightVal} img={lightImg} />
         </div>
 
+        {/* Column 3: Serrure & Aspirateur */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <LockCard isLocked={locked} onToggle={() => handleAppareilToggle('serrure', locked, setLocked)} img={lockImg} />
           <VacuumCard isOn={vacOn} onToggle={() => handleAppareilToggle('aspirateur', vacOn, setVacOn)} img={vacImg} />

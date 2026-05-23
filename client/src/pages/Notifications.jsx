@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Activity, Zap, DoorOpen, RefreshCw } from 'lucide-react';
 import VoiceControlButton from '../components/VoiceControlButton';
-import NotificationItem from '../components/NotificationItem'; // Import dyal l-component jdid
+import NotificationItem from '../components/NotificationItem';
+
+
+const { translations } = require("../translations");
 
 const Notifications = () => {
+  const [language, setLanguage] = useState("Français");
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+
+  
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedLang = localStorage.getItem("language");
+      if (savedLang) setLanguage(savedLang);
+    };
+
+    handleStorageChange();
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  const t = translations[language] || translations["Français"];
+
+  
   const [notifications, setNotifications] = useState([
-    { id: 1, title: "Mouvement Détecté", desc: "Un mouvement a été détecté dans le Salon à 02:30 AM.", type: "danger", isRead: false, icon: Activity },
-    { id: 2, title: "Optimisation Énergie", desc: "Voulez-vous fermer les rideaux pour réduire la clim de 15% ?", type: "routine", isRead: false, icon: Zap },
-    { id: 3, title: "Porte Ouverte", desc: "La porte principale est restée ouverte plus de 5 minutes.", type: "danger", isRead: true, icon: DoorOpen },
-    { id: 4, title: "Économie Hebdomadaire", desc: "Votre consommation a baissé de 10% par rapport à la semaine dernière.", type: "eco", isRead: false, icon: Zap },
-    { id: 5, title: "Système à jour", desc: "Le système ESP32 a été mis à jour avec succès.", type: "normal", isRead: true, icon: RefreshCw }
+    { id: 1, key: "mouvement", type: "danger", isRead: false, icon: Activity },
+    { id: 2, key: "optimisation", type: "routine", isRead: false, icon: Zap },
+    { id: 3, key: "porte", type: "danger", isRead: true, icon: DoorOpen },
+    { id: 4, key: "economie", type: "eco", isRead: false, icon: Zap },
+    { id: 5, key: "systeme", type: "normal", isRead: true, icon: RefreshCw }
   ]);
 
   const handleNotificationClick = (id) => {
@@ -19,24 +40,36 @@ const Notifications = () => {
   };
 
   return (
-    <div className="p-8 min-h-screen">
+    <div className="p-8 min-h-screen bg-transparent" dir={language === "العربية" ? "rtl" : "ltr"}>
       <header className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-md rounded-2xl shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Notifications</h1>
-          <p className="text-gray-500 mt-1 text-sm font-medium">Restez informé de l'état de votre maison.</p>
+          <h1 className="text-3xl font-bold text-gray-800">{t.notifHeader}</h1>
+          <p className="text-gray-500 mt-1 text-sm font-medium">{t.notifSubHeader}</p>
         </div>
-        <VoiceControlButton onClick={() => console.log("Voice control clicked")} />
+        <VoiceControlButton 
+          isActive={isVoiceActive} 
+          onClick={() => setIsVoiceActive(!isVoiceActive)} 
+        />
       </header>
 
       <div className="mt-10 bg-white/80 backdrop-blur-md rounded-[35px] shadow-sm border border-gray-100 overflow-hidden">
         <div className="divide-y divide-gray-100">
-          {notifications.map((notif) => (
-            <NotificationItem 
-              key={notif.id} 
-              notif={notif} 
-              onClick={handleNotificationClick} 
-            />
-          ))}
+          {notifications.map((notif) => {
+           
+            const translatedNotif = {
+              ...notif,
+              title: t.notifData[notif.key]?.title || "",
+              desc: t.notifData[notif.key]?.desc || ""
+            };
+
+            return (
+              <NotificationItem 
+                key={notif.id} 
+                notif={translatedNotif} 
+                onClick={handleNotificationClick} 
+              />
+            );
+          })}
         </div>
       </div>
     </div>

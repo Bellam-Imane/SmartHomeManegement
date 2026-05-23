@@ -35,6 +35,20 @@ const userSchema = new mongoose.Schema({
     telephone: {type: String }
   } ,
 
+  // Preferences
+  preferences: {
+    twoFactor: { type: Boolean, default: false },
+    emergencyContact: { type: String, default: "" },
+    darkMode: { type: Boolean, default: false },
+    language: { type: String, default: "Français" },
+    notifications: {
+      security: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } },
+      system: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } },
+      energy: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: false } },
+      device: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } }
+    }
+  },
+
   // --- Relation avec la classe Role ---
   role: {
     type: mongoose.Schema.Types.ObjectId ,

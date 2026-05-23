@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import {ArrowLeft,Bell,Mic,Pencil,Trash2,Lock,Lightbulb,Thermometer,Video,ShieldCheck,User,Users,UserPlus,RefreshCw,} from "lucide-react";
+import { ArrowLeft, Bell, Mic, Pencil, Trash2, Lock, Lightbulb, Thermometer, Video, ShieldCheck, User, Users, UserPlus, RefreshCw } from "lucide-react";
 import VoiceControlButton from "../components/VoiceControlButton";
 import { useNavigate } from "react-router-dom";
 
 
+const { translations } = require("../translations");
 
 // ─── COMPONENT: Toggle Switch ────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
@@ -28,7 +29,7 @@ function Toggle({ checked, onChange }) {
 // ─── COMPONENT: Badge ────────────────────────────────────────────────────────
 function Badge({ label }) {
   return (
-    <span className="ml-2 inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
+    <span className="mx-2 inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
       {label}
     </span>
   );
@@ -38,7 +39,7 @@ function Badge({ label }) {
 function StatusDot({ online }) {
   return (
     <span
-      className={`mr-1.5 inline-block h-2 w-2 rounded-full ${
+      className={`mx-1.5 inline-block h-2 w-2 rounded-full ${
         online ? "bg-green-500" : "bg-gray-400"
       }`}
     />
@@ -62,7 +63,14 @@ function Avatar({ src, name, bg, color }) {
 }
 
 // ─── COMPONENT: Member Card ──────────────────────────────────────────────────
-function MemberCard({ member }) {
+function MemberCard({ member, t }) {
+  
+  const getTranslatedRole = (role) => {
+    if (role.toLowerCase().includes("admin")) return t.roles.admin.label;
+    if (role.toLowerCase().includes("mem") || role.toLowerCase().includes("عضو")) return t.roles.membre.label;
+    return t.roles.invite.label;
+  };
+
   return (
     <div
       className="flex items-center justify-between rounded-2xl bg-white px-5 py-4 transition-transform duration-200 hover:-translate-y-0.5"
@@ -78,13 +86,13 @@ function MemberCard({ member }) {
         <div>
           <div className="flex items-center text-sm font-semibold text-gray-900">
             {member.name}
-            <Badge label={member.role} />
+            <Badge label={getTranslatedRole(member.role)} />
           </div>
           <div className="mt-1 flex items-center text-xs text-gray-400">
             <StatusDot online={member.online} />
-            {member.online ? "Online" : "Offline"}
+            {member.online ? t.online : t.offline}
             &nbsp;•&nbsp;
-            {member.devices} appareils
+            {member.devices} {t.deviceCount}
           </div>
         </div>
       </div>
@@ -101,7 +109,7 @@ function MemberCard({ member }) {
 }
 
 // ─── COMPONENT: Permission Row ───────────────────────────────────────────────
-function PermRow({ device, permissions, onChange }) {
+function PermRow({ device, permissions, onChange, t }) {
   return (
     <div className="flex items-center border-b border-gray-100 py-4 last:border-none">
       <div className="flex flex-1 items-center gap-4">
@@ -109,8 +117,8 @@ function PermRow({ device, permissions, onChange }) {
           {device.icon}
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-900">{device.name}</p>
-          <p className="text-xs text-gray-400">{device.room}</p>
+          <p className="text-sm font-medium text-gray-900">{t.deviceNames[device.id] || device.name}</p>
+          <p className="text-xs text-gray-400">{t.roomsNames[device.room.toLowerCase()] || device.room}</p>
         </div>
       </div>
       {["admin", "membre", "invite"].map((role) => (
@@ -165,8 +173,7 @@ function QRCodePlaceholder() {
 function ModalBackdrop({ onClose, children }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: "rgba(0,0,0,0.40)", backdropFilter: "blur(7px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[7px]"
       onClick={onClose}
     >
       <div
@@ -180,20 +187,21 @@ function ModalBackdrop({ onClose, children }) {
 }
 
 // ─── COMPONENT: Role Selection Modal ──────────────────────────────────────────
-const ROLES = [
-  { key: "admin", label: "Admin", Icon: ShieldCheck, desc: "Accès complet aux paramètres" },
-  { key: "membre", label: "Membre", Icon: User, desc: "Contrôle des appareils" },
-  { key: "invite", label: "Invité", Icon: UserPlus, desc: "Accès temporaire sélectionné" },
-];
-
-function RoleSelectionModal({ onClose, onNext }) {
+function RoleSelectionModal({ onClose, onNext, t }) {
   const [selected, setSelected] = useState("membre");
+
+  const ROLES_LIST = [
+    { key: "admin", Icon: ShieldCheck, data: t.roles.admin },
+    { key: "membre", Icon: User, data: t.roles.membre },
+    { key: "invite", Icon: UserPlus, data: t.roles.invite },
+  ];
+
   return (
     <div className="w-[520px] rounded-3xl bg-white p-8 shadow-2xl">
-      <p className="mb-1 text-center text-xl font-bold text-gray-900">Sélection du Rôle</p>
-      <p className="mb-7 text-center text-sm text-gray-400">Choisissez le niveau d'accès pour le nouveau membre</p>
+      <p className="mb-1 text-center text-xl font-bold text-gray-900">{t.roleTitle}</p>
+      <p className="mb-7 text-center text-sm text-gray-400">{t.roleDesc}</p>
       <div className="grid grid-cols-3 gap-3 mb-8">
-        {ROLES.map(({ key, label, Icon, desc }) => {
+        {ROLES_LIST.map(({ key, Icon, data }) => {
           const active = selected === key;
           return (
             <button
@@ -204,16 +212,16 @@ function RoleSelectionModal({ onClose, onNext }) {
               }`}
             >
               <Icon size={28} className={`mb-3 ${active ? "text-gray-900" : "text-gray-400"}`} />
-              <span className={`mb-2 text-sm font-bold ${active ? "text-gray-900" : "text-gray-700"}`}>{label}</span>
-              <span className="text-[11px] leading-snug text-gray-400">{desc}</span>
+              <span className={`mb-2 text-sm font-bold ${active ? "text-gray-900" : "text-gray-700"}`}>{data.label}</span>
+              <span className="text-[11px] leading-snug text-gray-400">{data.desc}</span>
             </button>
           );
         })}
       </div>
       <div className="flex items-center justify-between">
-        <button onClick={onClose} className="text-sm font-medium text-gray-500 hover:text-gray-800">Annuler</button>
+        <button onClick={onClose} className="text-sm font-medium text-gray-500 hover:text-gray-800">{t.annuler}</button>
         <button onClick={() => onNext(selected)} className="rounded-xl bg-gray-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors shadow-sm">
-          Générer le QR Code
+          {t.generateQR}
         </button>
       </div>
     </div>
@@ -223,7 +231,7 @@ function RoleSelectionModal({ onClose, onNext }) {
 // ─── COMPONENT: QR Code Modal ─────────────────────────────────────────────────
 const TIMER_TOTAL = 5 * 60;
 
-function QRCodeModal({ onClose }) {
+function QRCodeModal({ onClose, t, language }) {
   const [seconds, setSeconds] = useState(TIMER_TOTAL);
   const intervalRef = useRef(null);
 
@@ -243,26 +251,26 @@ function QRCodeModal({ onClose }) {
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <div className="w-[600px] rounded-3xl bg-white p-8 shadow-2xl">
+    <div className="w-[600px] rounded-3xl bg-white p-8 shadow-2xl" dir={language === "العربية" ? "rtl" : "ltr"}>
       <div className="flex flex-row items-center gap-10">
-        <div className="flex flex-col items-center gap-4 border-r border-gray-100 pr-10">
+        <div className={`flex flex-col items-center gap-4 ${language === "العربية" ? "border-l pl-10" : "border-r pr-10"} border-gray-100`}>
           <div className="rounded-2xl border border-gray-100 p-4 shadow-sm bg-white">
             <QRCodePlaceholder />
           </div>
           <div className="rounded-full bg-gray-900 px-5 py-1.5 text-sm font-bold tabular-nums text-white tracking-widest">
             {fmt(seconds)}
           </div>
-          <p className="text-[10px] text-gray-400 uppercase font-medium">Expire dans 5 min</p>
+          <p className="text-[10px] text-gray-400 uppercase font-medium">{t.expireMsg}</p>
         </div>
         <div className="flex flex-1 flex-col justify-center">
           <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 border border-gray-100">
             <ShieldCheck size={20} className="text-gray-500" />
           </div>
           <h2 className="mb-2 text-xl font-bold text-gray-900 leading-tight">
-            Scannez ce code pour rejoindre la maison
+            {t.scanTitle}
           </h2>
           <p className="mb-6 text-sm text-gray-400 leading-relaxed">
-            Demandez au nouveau membre de pointer son appareil photo vers ce code pour s'ajouter automatiquement.
+            {t.scanDesc}
           </p>
           <div className="flex flex-col gap-3">
             <button
@@ -270,10 +278,10 @@ function QRCodeModal({ onClose }) {
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
             >
               <RefreshCw size={14} className="text-gray-500" />
-              Régénérer le code
+              {t.regenerateCode}
             </button>
             <button onClick={onClose} className="text-sm font-medium text-gray-500 hover:text-gray-800 underline">
-              Annuler
+              {t.annuler}
             </button>
           </div>
         </div>
@@ -293,10 +301,10 @@ const MEMBERS = [
 ];
 
 const INITIAL_DEVICES = [
-  { id: "serrure", name: "Serrure porte entrée", room: "Entrée", icon: <Lock size={18} />, permissions: { admin: true, membre: true, invite: true } },
+  { id: "serrure", name: "Serrure porte entrée", room: "entree", icon: <Lock size={18} />, permissions: { admin: true, membre: true, invite: true } },
   { id: "lumieres", name: "Lumières du salon", room: "salon", icon: <Lightbulb size={18} />, permissions: { admin: true, membre: true, invite: false } },
-  { id: "thermostat", name: "Thermostat intelligent", room: "Couloir", icon: <Thermometer size={18} />, permissions: { admin: true, membre: false, invite: false } },
-  { id: "camera", name: "Caméra de l'allée", room: "Extérieur", icon: <Video size={18} />, permissions: { admin: true, membre: true, invite: false } },
+  { id: "thermostat", name: "Thermostat intelligent", room: "couloir", icon: <Thermometer size={18} />, permissions: { admin: true, membre: false, invite: false } },
+  { id: "camera", name: "Caméra de l'allée", room: "exterieur", icon: <Video size={18} />, permissions: { admin: true, membre: true, invite: false } },
 ];
 
 // ─── MAIN PAGE COMPONENT ─────────────────────────────────────────────────────
@@ -305,7 +313,21 @@ export default function UsersPage() {
   const [devices, setDevices] = useState(INITIAL_DEVICES);
   const [modalStep, setModalStep] = useState(null);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [language, setLanguage] = useState("Français");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedLang = localStorage.getItem("language");
+      if (savedLang) setLanguage(savedLang);
+    };
+
+    handleStorageChange();
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  const t = translations[language] || translations["Français"];
 
   const openModal = () => setModalStep("role");
   const closeModal = () => setModalStep(null);
@@ -321,70 +343,28 @@ export default function UsersPage() {
     <>
       {modalStep === "role" && (
         <ModalBackdrop onClose={closeModal}>
-          <RoleSelectionModal onClose={closeModal} onNext={goToQR} />
+          <RoleSelectionModal onClose={closeModal} onNext={goToQR} t={t} />
         </ModalBackdrop>
       )}
       {modalStep === "qr" && (
         <ModalBackdrop onClose={closeModal}>
-          <QRCodeModal onClose={closeModal} />
+          <QRCodeModal onClose={closeModal} t={t} language={language} />
         </ModalBackdrop>
       )}
 
-      <div className="min-h-screen font-sans text-gray-900" style={{ backgroundColor: "#ffffff" }}>
+      <div className="min-h-screen font-sans text-gray-900 bg-white" dir={language === "العربية" ? "rtl" : "ltr"}>
         {/* Header Section */}
         <div className="flex items-center justify-between border-b border-gray-100 bg-white px-8 py-5">
           <div className="flex items-center gap-6">
-            
-            
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">Membres et famille</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t.usersHeader}</h1>
             </div>
           </div>
-
           <div className="flex items-center gap-6">
-            
-           
-      <div 
-  onClick={() => navigate('/home/Notifications')} 
-  style={{
-    background: 'white', 
-    width: '42px', 
-    height: '42px', 
-    borderRadius: '50%',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    position: 'relative', 
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
-    cursor: 'pointer',
-    border: '1px solid #e5e7eb'
-  }}
->
-  <Bell size={20} color="#1a1a2e" />
-  <div style={{
-    position: 'absolute', 
-    top: '2px', 
-    right: '2px', 
-    background: 'white',
-    border: '1.5px solid #f0f2f5', 
-    borderRadius: '50%', 
-    width: '16px', 
-    height: '16px',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    fontSize: '9px', 
-    fontWeight: 'bold'
-  }}>
-    2
-  </div>
-</div>
-
-
-<VoiceControlButton 
-  isActive={isVoiceActive} 
-  onClick={() => setIsVoiceActive(!isVoiceActive)} 
-/>
+            <VoiceControlButton 
+              isActive={isVoiceActive} 
+              onClick={() => setIsVoiceActive(!isVoiceActive)} 
+            />
           </div>
         </div>
 
@@ -393,32 +373,32 @@ export default function UsersPage() {
           <div className="rounded-2xl bg-white p-7 shadow-sm border border-gray-50">
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Membres Actifs</h2>
-                <p className="mt-1 text-xs text-gray-400">Gérez les personnes qui ont accès au foyer</p>
+                <h2 className="text-lg font-bold text-gray-900">{t.activeMembers}</h2>
+                <p className="mt-1 text-xs text-gray-400">{t.manageAccess}</p>
               </div>
               <button onClick={openModal} className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors shadow-sm">
-                Ajouter un membre
+                {t.addMember}
               </button>
             </div>
             <div className="grid grid-cols-2 gap-5">
-              {filtered.map((m) => (<MemberCard key={m.id} member={m} />))}
+              {filtered.map((m) => (<MemberCard key={m.id} member={m} t={t} />))}
             </div>
           </div>
 
           {/* Permissions Matrix Section */}
           <div className="rounded-2xl bg-white p-7 shadow-sm border border-gray-50">
-            <h2 className="text-lg font-bold text-gray-900">Matrice des Permissions</h2>
-            <p className="mt-1 mb-5 text-xs text-gray-400">Définissez un accès granulaire pour chaque rôle.</p>
+            <h2 className="text-lg font-bold text-gray-900">{t.matrixTitle}</h2>
+            <p className="mt-1 mb-5 text-xs text-gray-400">{t.matrixDesc}</p>
             <div className="flex items-center border-b border-gray-100 pb-3">
-              <div className="flex-1 text-xs font-medium text-gray-500">Appareil / Ressource</div>
-              {[{ label: "Admin", Icon: ShieldCheck }, { label: "Membre", Icon: User }, { label: "Invité", Icon: Users }].map(({ label, Icon }) => (
+              <div className="flex-1 text-xs font-medium text-gray-500">{t.resourceHeader}</div>
+              {[{ label: t.roles.admin.label, Icon: ShieldCheck }, { label: t.roles.membre.label, Icon: User }, { label: t.roles.invite.label, Icon: Users }].map(({ label, Icon }) => (
                 <div key={label} className="flex w-28 flex-col items-center gap-1">
                   <Icon size={17} className="text-gray-600" />
                   <span className="text-xs font-semibold text-gray-800">{label}</span>
                 </div>
               ))}
             </div>
-            {devices.map((device) => (<PermRow key={device.id} device={device} permissions={device.permissions} onChange={handleToggle} />))}
+            {devices.map((device) => (<PermRow key={device.id} device={device} permissions={device.permissions} onChange={handleToggle} t={t} />))}
           </div>
         </div>
       </div>
