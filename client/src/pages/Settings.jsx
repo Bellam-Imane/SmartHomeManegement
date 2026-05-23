@@ -99,13 +99,26 @@ export default function Settings() {
   const handleSaveProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const updatedData = { nom: profile.name, prenom: profile.prenom, email: profile.email, telephone: profile.phone, photo: profile.photo };
+      const updatedData = { 
+        nom: profile.name, 
+        prenom: profile.prenom, 
+        email: profile.email, 
+        telephone: profile.phone, 
+        photo: profile.photo 
+      };
+      
       const res = await axios.put('http://localhost:5000/api/users/profile', updatedData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.status === 200) {
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+        // 💡 إصلاح مشكل الـ undefined والـ JSON.parse الخاسر
+        const userData = res.data.user ? res.data.user : res.data;
+        localStorage.setItem("user", JSON.stringify(userData));
+        
+        // كنعلمو الـ Dashboard وباقي المكونات باش يتحدثوا فالبلاصة
+        window.dispatchEvent(new Event("storage")); 
+        
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
