@@ -38,13 +38,18 @@ exports.registerAdmin = async (req, res) => {
 // Fonction pour la connexion (Login) - ✅ VERSION NETTOYÉE ET SÉCURISÉE
 exports.login = async (req, res) => {
     try {
+
         const { email, motDePasse } = req.body;
+
+        
 
         // Recherche de l'utilisateur
         const user = await Administrateur.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
+
+        
 
         // Comparaison du mot de passe
         const isMatch = await bcrypt.compare(motDePasse, user.motDePasse);

@@ -7,7 +7,7 @@ const maisonSchema = new mongoose.Schema({
     nbEtages: { type: Number, default: 1 },
 
     proprietaire: {
-        type: mongoose.Schema.Types.ObjextId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
     }
