@@ -6,21 +6,19 @@ const userSchema = new mongoose.Schema({
     type : String,
     required: true,
     unique: true,
-    lowercase: true 
+    lowercase: true,
+    trim: true
   },
   motDePasse: {
     type: String,
+    minlength: 6,
     required: true
   },
   dateCreation: {
     type: Date,
     default: Date.now
   },
-  estActif: {
-    type : Boolean,
-    default: false
-  },
-
+  
   //Etat de l'utilisateur (userStatus)
   status: {
     type : String,
@@ -37,11 +35,32 @@ const userSchema = new mongoose.Schema({
     telephone: {type: String }
   } ,
 
+  // Preferences
+  preferences: {
+    twoFactor: { type: Boolean, default: false },
+    emergencyContact: { type: String, default: "" },
+    darkMode: { type: Boolean, default: false },
+    language: { type: String, default: "Français" },
+    notifications: {
+      security: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } },
+      system: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } },
+      energy: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: false } },
+      device: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } }
+    }
+  },
+
   // --- Relation avec la classe Role ---
   role: {
     type: mongoose.Schema.Types.ObjectId ,
-    ref: 'Role' //Lien vers le modèle Role 
+    ref: 'Role' , //Lien vers le modèle Role 
+    required : true 
+  },
+
+  maison: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Maison'
   }
+  
 },{
   timestamps: true, // Pour garder une trace des modifications 
   discriminatorKey: 'userType'

@@ -26,6 +26,7 @@ const Login = () => {
         console.log("RESPONSE:", response.data);
 
         localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         alert('Connexion réussie !');
 
         navigate('/home/Dashboard');

@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User'); 
 
-const verifyToken = (req, res, next) => {
-    // 1. Récupérer le token du header Authorization (Bearer <token>)
+/**
+ * Middleware pour vérifier la validité du Token JWT
+ */
+const verifyToken = async (req, res, next) => {
+    // 1. Récupérer le token du header Authorization
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -11,17 +15,38 @@ const verifyToken = (req, res, next) => {
     }
 
     try {
-        // 3. VÉRIFICATION : Utilise UNIQUEMENT le secret du fichier .env
+        // 3. VÉRIFICATION du Token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // 4. Ajouter les données du user décodées à la requête
-        req.user = decoded;
+        // 4. SÉCURITÉ : Chercher l'utilisateur dans la base de données
+        // On utilise User.findById car c'est le modèle parent
+        const currentUser = await User.findById(decoded.id);
         
-        // 5. Passer à la suite (la route protégée)
+        if (!currentUser) {
+            return res.status(401).json({ message: "Utilisateur introuvable. Accès refusé." });
+        }
+
+        // 5. Vérifier le status (Optionnel mais recommandé)
+        if (currentUser.status && currentUser.status.toUpperCase() !== 'ACTIVE') {
+            return res.status(401).json({ message: "Accès refusé. Compte inactif." });
+        }
+
+        /**
+         * 6. IMPORTANT : On stocke les infos importantes dans req.user
+         * req.user.id permettra de chercher l'utilisateur dans les autres contrôleurs
+         */
+        req.user = {
+            id: currentUser._id,
+            role: currentUser.role,
+            email: currentUser.email
+        };
+        
         next();
     } catch (err) {
-        // En cas de token invalide ou expiré
-        return res.status(401).json({ message: "Token invalide ou expiré." });
+        return res.status(401).json({ 
+            message: "Token invalide ou expiré.", 
+            error: err.message 
+        });
     }
 };
 

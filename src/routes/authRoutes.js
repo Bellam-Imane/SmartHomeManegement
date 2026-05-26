@@ -10,7 +10,8 @@ router.post('/register-admin', authController.registerAdmin);
 router.post('/login', authController.login);
 
 // Routes riham
+// Fix for password reset flow completed
 router.post('/forgot-passwords', authController.forgotPassword);
 router.post('/reset-password/:token', authController.resetPassword);
 
-module.exports = router;
+module.exports = router
