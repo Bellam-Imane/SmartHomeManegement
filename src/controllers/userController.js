@@ -50,6 +50,7 @@ exports.updateUserProfile = async (req, res) => {
             }
             if (req.body.preferences) {
                 user.preferences = {
+                    location: req.body.preferences.location ?? user.preferences.location,
                     twoFactor: req.body.preferences.twoFactor ?? user.preferences.twoFactor,
                     emergencyContact: req.body.preferences.emergencyContact ?? user.preferences.emergencyContact,
                     darkMode: req.body.preferences.darkMode ?? user.preferences.darkMode,
