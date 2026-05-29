@@ -2,16 +2,31 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, Thermometer, Zap, ChevronDown } from 'lucide-react';
 import axios from 'axios';
+import { io } from 'socket.io-client'; 
 
+// ── IMPORTATION DES COMPOSANTS ──
 import RoomUsersCard     from '../components/RoomUsersCard';
 import VoiceControlButton from '../components/VoiceControlButton';
 import AirConditionerCard from '../components/AirConditionerCard';
-import CameraCard        from '../components/CameraCard';
-import CurtainsCard      from '../components/CurtainsCard';
-import EclairageCard     from '../components/EclairageCard';
+import CameraCard         from '../components/CameraCard';
+import CurtainsCard       from '../components/CurtainsCard';
+import EclairageCard      from '../components/EclairageCard';
 import MultimediaCard    from '../components/MultimediaCard';
 import VacuumCard        from '../components/VacuumCard';
 import AddAppareilModal  from '../components/AddAppareilModal';
+
+// 🔍 FONCTION DE SÉCURITÉ
+const SafeRender = ({ component: Component, props = {}, fallbackName = "Component" }) => {
+  if (!Component || typeof Component !== 'function') {
+    console.error(`🚨 ERREUR RUNTIME: Le composant <${fallbackName} /> n'est pas exporté correctement.`);
+    return (
+      <div className="p-4 bg-red-50 text-red-600 rounded-2xl border border-red-200 text-xs font-mono">
+        ⚠️ Erreur d'export sur {fallbackName}Card
+      </div>
+    );
+  }
+  return <Component {...props} />;
+};
 
 const RoomDetails = () => {
   const { id }     = useParams();
@@ -23,6 +38,9 @@ const RoomDetails = () => {
   const [isModalOpen, setIsModalOpen]             = useState(false);
   const [showUsersDropdown, setShowUsersDropdown] = useState(false);
 
+  const [liveTemperature, setLiveTemperature]     = useState(24); 
+  const [liveEnergy, setLiveEnergy]               = useState(0);
+
   // État du formulaire d'ajout d'appareil
   const [formData, setFormData] = useState({
     nomAppareil:  '',
@@ -30,9 +48,7 @@ const RoomDetails = () => {
     marque:       ''
   });
 
-  // ─────────────────────────────────────────────
   // Fonction centralisée de chargement des détails
-  // ─────────────────────────────────────────────
   const fetchRoomDetails = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -40,10 +56,8 @@ const RoomDetails = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Normalisation des données retournées par le contrôleur (data ou document direct)
       let data = response.data?.data ?? response.data?.piece ?? response.data;
 
-      // Gestion du cas où le populate backend renverrait uniquement des IDs (Sécurité)
       if (data && Array.isArray(data.appareils) && data.appareils.length > 0) {
         if (typeof data.appareils[0] === 'string') {
           const requests = data.appareils.map(appId =>
@@ -66,6 +80,17 @@ const RoomDetails = () => {
       }
 
       setPieceData(data);
+
+      if (data.appareils) {
+        const totalInitial = data.appareils.reduce((sum, app) => sum + (app.consommationActuelle || 0), 0);
+        setLiveEnergy(totalInitial);
+        
+        const clima = data.appareils.find(app => app.typeAppareil?.toUpperCase() === 'THERMIQUE');
+        if (clima && clima.temperatureActuelle) {
+          setLiveTemperature(clima.temperatureActuelle);
+        }
+      }
+
     } catch (error) {
       console.error('Erreur générale lors du chargement de la pièce :', error);
     } finally {
@@ -73,7 +98,6 @@ const RoomDetails = () => {
     }
   }, [id]);
 
-  // Chargement initial au montage du composant
   useEffect(() => {
     if (id) {
       setLoading(true);
@@ -81,13 +105,53 @@ const RoomDetails = () => {
     }
   }, [id, fetchRoomDetails]);
 
-  // ─────────────────────────────────────────────────────────────────
-  // Mise à jour d'un appareil (Envoi à l'API puis rafraîchissement)
-  // ─────────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // ⚡ CONFIGURATION DU ÉCOUTEUR REACTIONNEL SOCKET.IO (MISE À JOUR CORRECTE)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const socket = io('http://localhost:5000', {
+      transports: ['websocket', 'polling']
+    });
+
+    console.log("🔌 [SOCKET.IO] Écouteur activé et connecté");
+
+    socket.on('appareil_update', (data) => {
+      const { deviceId, payload } = data;
+      console.log("📥 [SOCKET.IO] Nouvelle mise à jour reçue :", data);
+
+      // 1. تحديث الحرارة فوراً إذا كانت قادمة من الحساس
+      if (payload.temperatureActuelle !== undefined) {
+        setLiveTemperature(Number(payload.temperatureActuelle).toFixed(1));
+      }
+
+      // 2. تحديث قائمة الأجهزة وحساب مجموع الطاقة لايف دقة وحدة
+      setPieceData(prevData => {
+        if (!prevData || !prevData.appareils) return prevData;
+
+        const updatedAppareils = prevData.appareils.map(app => {
+          if (app._id === deviceId || app.id === deviceId) {
+            return { ...app, ...payload };
+          }
+          return app;
+        });
+
+        // إعادة حساب مجموع الواط مباشرة من الليستة المحدثة
+        const newTotalEnergy = updatedAppareils.reduce((sum, app) => sum + (app.consommationActuelle || 0), 0);
+        setLiveEnergy(newTotalEnergy);
+
+        return { ...prevData, appareils: updatedAppareils };
+      });
+    });
+
+    return () => {
+      socket.off('appareil_update');
+      socket.disconnect();
+    };
+  }, [id]); // تم التأكد من ربط التبعية بشكل صحيح
+
   const handleUpdateAppareil = async (appareilId, updatedAppareilData) => {
     try {
       const token = localStorage.getItem('token');
-      
       const response = await axios.put(
         `http://localhost:5000/api/appareils/${appareilId}`,
         updatedAppareilData, 
@@ -101,25 +165,25 @@ const RoomDetails = () => {
           const updatedAppareils = (prevData.appareils ?? []).map(app =>
             (app._id === appareilId || app.id === appareilId) ? serverDevice : app
           );
+          
+          // تحديث الواط الإجمالي بعد التحكم اليدوي أيضاً
+          const newTotalEnergy = updatedAppareils.reduce((sum, app) => sum + (app.consommationActuelle || 0), 0);
+          setLiveEnergy(newTotalEnergy);
+          
           return { ...prevData, appareils: updatedAppareils };
         });
       }
-
     } catch (error) {
       console.error('Erreur réseau lors de la mise à jour de l\'appareil :', error);
     }
   };
 
-  // ─────────────────────────────────────
-  // Création et ajout d'un nouvel appareil
-  // ─────────────────────────────────────
   const handleCreateAppareil = async (e) => {
     e.preventDefault();
     try {
       const payload  = { ...formData, piece: id };
       const token    = localStorage.getItem('token');
       
-      // Envoi de la requête de création au serveur
       const response = await axios.post(
         'http://localhost:5000/api/appareils',
         payload,
@@ -127,10 +191,7 @@ const RoomDetails = () => {
       );
 
       if (response.data?.success) {
-        // 🌟 ACTION DIRECTE : On force un re-fetch global pour obtenir l'appareil avec ses champs par défaut typés du Backend
         await fetchRoomDetails();
-
-        // Fermeture propre du modal et réinitialisation du formulaire
         setIsModalOpen(false);
         setFormData({ nomAppareil: '', typeAppareil: 'ECLAIRAGE', marque: '' });
       }
@@ -147,16 +208,14 @@ const RoomDetails = () => {
     );
   }
 
-  // ─────────────────────────────────────────────────────
-  // Normalisation et filtrage des appareils par catégorie
-  // ─────────────────────────────────────────────────────
   const appareilsList = Array.isArray(pieceData?.appareils) ? pieceData.appareils : [];
 
+  // تصنيف الأجهزة مع دعم أسماء الـ Types المختلفة (تحسين التوافق)
   const cameras     = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'CAMERA');
   const eclairages  = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ECLAIRAGE');
   const multimedias = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MULTIMEDIA');
   const thermiques  = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'THERMIQUE');
-  const motorises   = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MOTORISE');
+  const motorises   = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'MOTORISE' || a?.typeAppareil?.toUpperCase() === 'RIDEAU');
   const aspirateurs = appareilsList.filter(a => a?.typeAppareil?.toUpperCase() === 'ASPIRATEUR');
 
   return (
@@ -183,7 +242,7 @@ const RoomDetails = () => {
         </div>
 
         <div className="flex items-center gap-6 relative">
-          <VoiceControlButton />
+          <SafeRender component={VoiceControlButton} fallbackName="VoiceControlButton" />
 
           <div
             onClick={() => setShowUsersDropdown(prev => !prev)}
@@ -201,11 +260,15 @@ const RoomDetails = () => {
 
           {showUsersDropdown && (
             <div className="absolute top-full right-0 mt-2 w-[340px] bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
-              <RoomUsersCard
-                utilisateurs={pieceData?.utilisateurs ?? []}
-                onAddUser={() => {}}
-                onEditUser={() => {}}
-                onDeleteUser={() => {}}
+              <SafeRender 
+                component={RoomUsersCard} 
+                fallbackName="RoomUsersCard"
+                props={{
+                  utilisateurs: pieceData?.utilisateurs ?? [],
+                  onAddUser: () => {},
+                  onEditUser: () => {},
+                  onDeleteUser: () => {}
+                }}
               />
             </div>
           )}
@@ -219,7 +282,7 @@ const RoomDetails = () => {
             <Thermometer size={18} className="text-orange-500" />
             <span className="text-xs font-bold text-gray-400 flex flex-col items-start leading-none">
               Température intérieure
-              <strong className="text-sm font-extrabold text-gray-800 mt-1">24°C</strong>
+              <strong className="text-sm font-extrabold text-gray-800 mt-1">{liveTemperature}°C</strong>
             </span>
           </div>
 
@@ -227,7 +290,7 @@ const RoomDetails = () => {
             <Zap size={18} className="text-amber-500" />
             <span className="text-xs font-bold text-gray-400 flex flex-col items-start leading-none">
               Énergie consommée
-              <strong className="text-sm font-extrabold text-gray-800 mt-1">13 kWh</strong>
+              <strong className="text-sm font-extrabold text-gray-800 mt-1">{liveEnergy} W</strong>
             </span>
           </div>
         </div>
@@ -248,11 +311,15 @@ const RoomDetails = () => {
           {/* 1. Caméra */}
           {cameras.length > 0 && (
             <div className="h-[530px] flex w-full">
-              <CameraCard
-                cameraData={cameras}
-                imageSrc="https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80"
-                onUpdateAppareil={handleUpdateAppareil}
-                className="h-full w-full"
+              <SafeRender 
+                component={CameraCard} 
+                fallbackName="CameraCard"
+                props={{
+                  cameraData: cameras,
+                  imageSrc: "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80",
+                  onUpdateAppareil: handleUpdateAppareil,
+                  className: "h-full w-full"
+                }}
               />
             </div>
           )}
@@ -260,10 +327,14 @@ const RoomDetails = () => {
           {/* 2. Éclairage */}
           {eclairages.length > 0 && (
             <div className="h-[530px] flex w-full">
-              <EclairageCard
-                bulbsData={eclairages}
-                onUpdateAppareil={handleUpdateAppareil}
-                className="h-full w-full grow"
+              <SafeRender 
+                component={EclairageCard} 
+                fallbackName="EclairageCard"
+                props={{
+                  bulbsData: eclairages,
+                  onUpdateAppareil: handleUpdateAppareil,
+                  className: "h-full w-full grow"
+                }}
               />
             </div>
           )}
@@ -271,10 +342,14 @@ const RoomDetails = () => {
           {/* 3. Aspirateur */}
           {aspirateurs.length > 0 && (
             <div className="h-[530px] flex w-full">
-              <VacuumCard
-                vacuumData={aspirateurs}
-                onUpdateAppareil={handleUpdateAppareil}
-                className="h-full w-full grow"
+              <SafeRender 
+                component={VacuumCard} 
+                fallbackName="VacuumCard"
+                props={{
+                  vacuumData: aspirateurs,
+                  onUpdateAppareil: handleUpdateAppareil,
+                  className: "h-full w-full grow"
+                }}
               />
             </div>
           )}
@@ -282,10 +357,14 @@ const RoomDetails = () => {
           {/* 4. Multimédia */}
           {multimedias.length > 0 && (
             <div className="h-[530px] flex w-full">
-              <MultimediaCard
-                multimediaData={multimedias}
-                onUpdateAppareil={handleUpdateAppareil}
-                className="h-full w-full"
+              <SafeRender 
+                component={MultimediaCard} 
+                fallbackName="MultimediaCard"
+                props={{
+                  multimediaData: multimedias,
+                  onUpdateAppareil: handleUpdateAppareil,
+                  className: "h-full w-full"
+                }}
               />
             </div>
           )}
@@ -297,10 +376,14 @@ const RoomDetails = () => {
               {/* Climatiseur */}
               {thermiques.length > 0 && (
                 <div className="flex w-full">
-                  <AirConditionerCard
-                    acData={thermiques}
-                    onUpdateAppareil={handleUpdateAppareil}
-                    className="w-full"
+                  <SafeRender 
+                    component={AirConditionerCard} 
+                    fallbackName="AirConditionerCard"
+                    props={{
+                      acData: thermiques,
+                      onUpdateAppareil: handleUpdateAppareil,
+                      className: "w-full"
+                    }}
                   />
                 </div>
               )}
@@ -308,10 +391,14 @@ const RoomDetails = () => {
               {/* Rideaux motorisés */}
               {motorises.length > 0 && (
                 <div className="flex w-full">
-                  <CurtainsCard
-                    curtainsData={motorises}
-                    onUpdateAppareil={handleUpdateAppareil}
-                    className="w-full"
+                  <SafeRender 
+                    component={CurtainsCard} 
+                    fallbackName="CurtainsCard"
+                    props={{
+                      curtainsData: motorises,
+                      onUpdateAppareil: handleUpdateAppareil,
+                      className: "w-full"
+                    }}
                   />
                 </div>
               )}
@@ -323,12 +410,16 @@ const RoomDetails = () => {
       </main>
 
       {/* ── Modal d'ajout d'un nouvel appareil ── */}
-      <AddAppareilModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateAppareil}
-        formData={formData}
-        setFormData={setFormData}
+      <SafeRender 
+        component={AddAppareilModal} 
+        fallbackName="AddAppareilModal"
+        props={{
+          isOpen: isModalOpen,
+          onClose: () => setIsModalOpen(false),
+          onSubmit: handleCreateAppareil,
+          formData: formData,
+          setFormData: setFormData
+        }}
       />
     </div>
   );
