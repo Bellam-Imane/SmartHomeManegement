@@ -240,3 +240,27 @@ exports.updateAppareil = async (req, res) => {
     });
   }
 };
+
+/**
+ * ---------------------------------------------------------------------------------
+ * CONTROLLER : RÉCUPÉRER TOUS LES APPAREILS
+ * ---------------------------------------------------------------------------------
+ */
+exports.getAllAppareils = async (req, res) => {
+  try {
+    const appareils = await Appareil.find().populate('piece');
+
+    return res.status(200).json({
+      success: true,
+      count: appareils.length,
+      data: appareils
+    });
+  } catch (error) {
+    console.error("❌ Erreur dans fonction [getAllAppareils]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Une erreur est survenue lors de la récupération des appareils.",
+      error: error.message
+    });
+  }
+};

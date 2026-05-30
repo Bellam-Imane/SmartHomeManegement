@@ -100,7 +100,7 @@ exports.login = async (req, res) => {
         const token = jwt.sign(
             { id: user._id, role: user.role ? user.role.nomRole : 'ADMIN' },
             process.env.JWT_SECRET, 
-            { expiresIn: '1h' }
+            { expiresIn: '30d' }
         );
 
         // Retourner les infos (On accède bien à user.profile.nom)
