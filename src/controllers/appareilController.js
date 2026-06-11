@@ -114,16 +114,6 @@ exports.createAppareil = async (req, res) => {
 exports.updateAppareil = async (req, res) => {
   try {
 
-    const debugApps = await Appareil.find({}, 'nomAppareil typeAppareil');
-    console.log("=== 📋 ها هما الـ IDs ديال الأجهزة ديالك : ===");
-    console.log(JSON.stringify(debugApps, null, 2));
-    console.log("===============================================");
-
-    
-
-
-
-
 
     const { id } = req.params;
 

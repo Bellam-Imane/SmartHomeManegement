@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 import axios from 'axios';
 
-// استيراد المكونات بشكل آمن
+
 import VoiceControlButton from '../components/VoiceControlButton';
 import RoomCard from '../components/RoomCard';
 import AddRoomModal from '../components/AddRoomModal';
-import FilterDropdown from '../components/FilterDropDown'; // 👈 تأكد من تطابق الحروف الكبيرة والصغيرة ف اسم الملف
+import FilterDropdown from '../components/FilterDropDown'; 
 import EditRoomModal from '../components/EditRoomModal'; 
 
 // Importation des images des pièces depuis les assets
@@ -48,7 +48,7 @@ const Rooms = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // تأمين قراءة البيانات من الباكيند كيفما صاوبناها ف الـ Controller
+      
       if (response.data?.success) {
         const rawPieces = response.data?.data?.pieces ?? response.data?.pieces ?? [];
         setPieces(Array.isArray(rawPieces) ? rawPieces : []); 

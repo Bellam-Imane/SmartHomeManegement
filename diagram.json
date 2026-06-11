@@ -15,7 +15,7 @@
       "top": -150,
       "left": -120,
       "attrs": {
-        "i2c": "true"
+        "pins": "i2c"
       }
     },
     {
@@ -102,48 +102,38 @@
       "left": 220,
       "attrs": { "common": "cathode" }
     }
-  ],
+
+   ],
   "connections": [
-    [ "esp:5V", "lcd:VCC", "red", [] ],
-    [ "esp:GND.1", "lcd:GND", "black", [] ],
-    [ "esp:D21", "lcd:SDA", "green", [] ],
-    [ "esp:D22", "lcd:SCL", "blue", [] ],
-    
+    [ "esp:3V3", "lcd:VCC", "red", [] ],
+    [ "esp:GND", "lcd:GND", "black", [] ],
+    [ "esp:21", "lcd:SDA", "green", [] ],
+    [ "esp:22", "lcd:SCL", "blue", [] ],
     [ "esp:3V3", "dht:VCC", "red", [] ],
-    [ "esp:GND.2", "dht:GND", "black", [] ],
-    [ "esp:D23", "dht:DATA", "yellow", [] ],
-    
-    [ "esp:D2", "led_salon:A", "red", [] ],
-    [ "esp:GND.1", "led_salon:C", "black", [] ],
-    
-    [ "esp:D4", "led_chambre:A", "green", [] ],
-    [ "esp:GND.1", "led_chambre:C", "black", [] ],
-    
-    [ "esp:D5", "led_cuisine:A", "blue", [] ],
-    [ "esp:GND.1", "led_cuisine:C", "black", [] ],
-    
-    [ "esp:D26", "cam_power:A", "yellow", [] ],
-    [ "esp:GND.1", "cam_power:C", "black", [] ],
-    
-    [ "esp:D14", "cam_rec:A", "red", [] ],
-    [ "esp:GND.1", "cam_rec:C", "black", [] ],
-    
-    [ "esp:D13", "cli_power:A", "cyan", [] ],
-    [ "esp:GND.1", "cli_power:C", "black", [] ],
-    
-    [ "esp:D12", "cli_temp:A", "white", [] ],
-    [ "esp:GND.1", "cli_temp:C", "black", [] ],
-    
-    [ "esp:D27", "rideau:A", "yellow", [] ],
-    [ "esp:GND.1", "rideau:C", "black", [] ],
-    
-    [ "esp:D32", "rgb:R", "red", [] ],
-    [ "esp:D33", "rgb:G", "green", [] ],
-    [ "esp:D25", "rgb:B", "blue", [] ],
-    [ "esp:GND.2", "rgb:COM", "black", [] ],
-    
-    [ "esp:D19", "vac_mode:A", "purple", [] ],
-    [ "esp:GND.1", "vac_mode:C", "black", [] ]
+    [ "esp:GND", "dht:GND", "black", [] ],
+    [ "esp:23", "dht:SDA", "yellow", [] ],
+    [ "esp:2", "led_salon:A", "red", [] ],
+    [ "esp:GND", "led_salon:C", "black", [] ],
+    [ "esp:4", "led_chambre:A", "green", [] ],
+    [ "esp:GND", "led_chambre:C", "black", [] ],
+    [ "esp:5", "led_cuisine:A", "blue", [] ],
+    [ "esp:GND", "led_cuisine:C", "black", [] ],
+    [ "esp:26", "cam_power:A", "yellow", [] ],
+    [ "esp:GND", "cam_power:C", "black", [] ],
+    [ "esp:14", "cam_rec:A", "red", [] ],
+    [ "esp:GND", "cam_rec:C", "black", [] ],
+    [ "esp:13", "cli_power:A", "cyan", [] ],
+    [ "esp:GND", "cli_power:C", "black", [] ],
+    [ "esp:12", "cli_temp:A", "white", [] ],
+    [ "esp:GND", "cli_temp:C", "black", [] ],
+    [ "esp:27", "rideau:A", "yellow", [] ],
+    [ "esp:GND", "rideau:C", "black", [] ],
+    [ "esp:32", "rgb:R", "red", [] ],
+    [ "esp:33", "rgb:G", "green", [] ],
+    [ "esp:25", "rgb:B", "blue", [] ],
+    [ "esp:GND", "rgb:COM", "black", [] ],
+    [ "esp:19", "vac_mode:A", "purple", [] ],
+    [ "esp:GND", "vac_mode:C", "black", [] ]
   ],
   "dependencies": {
     "PubSubClient": "2.8",

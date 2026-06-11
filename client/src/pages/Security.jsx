@@ -17,7 +17,7 @@ import icon_DEVERROUILLE from '../assets/icon_DÉVERROUILLÉ.png';
 import icon_VERROUILLE from '../assets/icon_VERROUILLÉ.png';
 import icon_start from '../assets/icon_start.png';
 
-// استيراد ملف الترجمة المتوافق مع الـ Webpack بدون Context
+
 const { translations } = require("../translations");
 
 const Toggle = ({ on, onToggle }) => (

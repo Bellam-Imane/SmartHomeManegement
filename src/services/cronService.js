@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const Appareil = mongoose.model('Appareil');
 const SystemeGestionEnergetique = mongoose.model('SystemeGestionEnergetique');
 const HistoriqueConsommation = mongoose.model('HistoriqueConsommation');
+const Notification = mongoose.model('Notification'); // Ajout du modèle Notification
 
 const { resetLocalConsumptionCache } = require('../config/mqttService');
 const { getIO } = require('../config/socket');
@@ -53,6 +54,23 @@ const initializeMonthlyResetCron = () => {
                 });
 
                 console.log(`💾 [CRON] Archivage réussi pour le mois ${numeroMoisHumain}/${anneePrecedente} | Archive ID: ${nouvelleArchive._id}`);
+
+                // ======================================================
+                // 3️⃣b️⃣ GÉNÉRATION AUTOMATIQUE DE LA NOTIFICATION SYSTEME
+                // ======================================================
+                try {
+                    await Notification.create({
+                        titre: "🧾 Nouveau bilan disponible",
+                        message: `Le rapport du mois ${numeroMoisHumain}/${anneePrecedente} est prêt. Facture estimée : ${nouvelleArchive.factureEstimee.toFixed(2)} DH.`,
+                        type: "INFO",
+                        estLue: false,
+                        utilisateur: systeme.utilisateurPrincipal || "65a123456789abcdef012345" // ATTENTION: Remplacez par le champ ID réel de votre admin/user principal si disponible
+                    });
+                    console.log("🔔 [CRON] Notification de fin de mois enregistrée en base de données.");
+                } catch (notifError) {
+                    console.warn("⚠️ [CRON WARN] Échec de la création de la notification :", notifError.message);
+                }
+
             } else {
                 console.warn("⚠️ [CRON WARN] Aucun document énergétique global trouvé pour l'archivage.");
             }
@@ -106,6 +124,11 @@ const initializeMonthlyResetCron = () => {
                 io.emit('global_energy_update', {
                     consommationTotale: 0,
                     balanceEnergetique: 0
+                });
+
+                // Envoi d'un signal en temps réel pour alerter le client de la nouvelle notification
+                io.emit('new_notification', {
+                    message: "Un nouveau bilan énergétique mensuel est disponible !"
                 });
 
                 console.log("📡 [CRON] Notification de remise à zéro poussée vers Socket.IO.");
