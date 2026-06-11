@@ -3,6 +3,7 @@ const { Appareil } = require('../models/Appareil');
 const { sendSecurityAlertEmail } = require('../services/emailService');
 const { logNotification, logDeviceEvent } = require('../services/historyService');
 const { getLatestSensorData } = require('../services/influxService');
+const { publishMessage } = require('../config/mqttService');
 
 // Map lock keys to expected MongoDB device names for PORTE sync
 const LOCK_DEVICE_NAMES = {
@@ -91,9 +92,10 @@ exports.updateSecurityStatus = async (req, res) => {
                 });
             }
 
-            // Fallback: first PORTE device if no exact match
+            // Fallback: first PORTE or MOTORISE door/lock device
             if (!doorDevice) {
-                doorDevice = await Appareil.findOne({ typeAppareil: 'PORTE' });
+                doorDevice = await Appareil.findOne({ typeAppareil: 'PORTE' })
+                    || await Appareil.findOne({ typeAppareil: 'MOTORISE', nomAppareil: /serrure|porte|lock/i });
             }
 
             if (doorDevice) {
@@ -110,6 +112,13 @@ exports.updateSecurityStatus = async (req, res) => {
                     String(oldLockValue),
                     String(value)
                 );
+
+                // MQTT: publish lock state to ESP32 with door identifier
+                const lockTopic = 'smart/home/portes';
+                const doorName = name.toUpperCase(); // ENTREE, GARAGE, FENETRE, ALLEE
+                const lockPayload = value ? `LOCK:${doorName}` : `UNLOCK:${doorName}`;
+                publishMessage(lockTopic, lockPayload);
+                console.log(`[Security] 📡 MQTT published -> ${lockTopic} : ${lockPayload}`);
             } else {
                 console.log(`[Security] ⚠️ No PORTE device found for lock "${name}" — skipping device sync`);
             }
@@ -117,8 +126,16 @@ exports.updateSecurityStatus = async (req, res) => {
             user.preferences.securitySettings.locks[name] = value;
         } else if (type === 'alarmActive') {
             user.preferences.securitySettings.alarmActive = value;
+            // MQTT: publish alarm state to ESP32
+            const alarmPayload = value ? 'ON' : 'OFF';
+            publishMessage('smart/home/alarme', alarmPayload);
+            console.log(`[Security] 📡 MQTT published -> smart/home/alarme : ${alarmPayload}`);
         } else if (type === 'sensors' && name) {
             user.preferences.securitySettings.sensors[name] = value;
+            // MQTT: publish sensor state to ESP32
+            const sensorPayload = value ? 'ON' : 'OFF';
+            publishMessage(`smart/home/capteur/${name}`, sensorPayload);
+            console.log(`[Security] 📡 MQTT published -> smart/home/capteur/${name} : ${sensorPayload}`);
         }
 
         console.log("[DEBUG] Tentative de sauvegarde...");

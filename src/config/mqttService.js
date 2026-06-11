@@ -3,19 +3,21 @@ const mqtt = require('mqtt');
 const { Appareil } = require('../models/Appareil'); // Importation correcte (destructuring) du modèle parent
 const { saveSensorData } = require('../services/influxService');
 
-const MQTT_BROKER = 'ws://broker.hivemq.com:8000/mqtt';
+// Broker URL from .env — defaults to EMQX public broker (Wokwi ESP32 compatible)
+const MQTT_BROKER = process.env.MQTT_BROKER_URL || 'mqtt://broker.emqx.io:1883';
 const TOPIC_CLIMA_PUB = "smart/home/climatiseur/mesures"; // Température DHT11
 const TOPIC_HUMI_PUB = "smart/home/capteurs/humidite";   // Humidité
 const TOPIC_AIR_PUB = "smart/home/capteurs/air";         // Qualité de l'air (CO2 / PPM)
+const TOPIC_CONSO_ACK = "smart/home/appareils/consommation"; // ESP32 acknowledgment
 
 let mqttClient = null;
 
 const initializeMqtt = () => {
-    console.log("⏳ Connexion au Broker MQTT HiveMQ en cours...");
+    console.log(`⏳ Connexion au Broker MQTT: ${MQTT_BROKER}...`);
     mqttClient = mqtt.connect(MQTT_BROKER);
 
     mqttClient.on('connect', () => {
-        console.log("📡 ✅ Connecté avec succès au Broker MQTT (HiveMQ) !");
+        console.log(`📡 ✅ Connecté avec succès au Broker MQTT (${MQTT_BROKER}) !`);
 
         mqttClient.subscribe(TOPIC_CLIMA_PUB, { qos: 1 }, (err) => {
             if (!err) {
@@ -31,6 +33,11 @@ const initializeMqtt = () => {
         });
         mqttClient.subscribe(TOPIC_AIR_PUB, { qos: 1 }, (err) => {
             if (!err) console.log(`📥 Abonné au flux Qualité Air : ${TOPIC_AIR_PUB}`);
+        });
+
+        // ESP32 consumption acknowledgment
+        mqttClient.subscribe(TOPIC_CONSO_ACK, { qos: 1 }, (err) => {
+            if (!err) console.log(`📥 Abonné à l'accusé de réception : ${TOPIC_CONSO_ACK}`);
         });
     });
 
@@ -100,6 +107,11 @@ const initializeMqtt = () => {
                     await saveSensorData('mq135_salon', 'qualite_air', ppm);
                 }
             }
+        }
+
+        // Topic Consommation : ESP32 acknowledgment (payload: "OK")
+        if (topic === TOPIC_CONSO_ACK) {
+            console.log(`✅ [CONSO ACK] ESP32 confirme la réception -> ${payload}`);
         }
     });
 

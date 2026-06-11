@@ -24,7 +24,8 @@ exports.getDashboardSummary = async (req, res) => {
         const [clima, light, lock, aspi] = await Promise.all([
             Appareil.findOne({ typeAppareil: 'THERMIQUE' }),
             Appareil.findOne({ typeAppareil: 'ECLAIRAGE' }),
-            Appareil.findOne({ typeAppareil: 'PORTE' }),
+            Appareil.findOne({ typeAppareil: 'MOTORISE', nomAppareil: /serrure/i })
+                .then(r => r || Appareil.findOne({ typeAppareil: 'PORTE' })),
             Appareil.findOne({ typeAppareil: 'ASPIRATEUR' })
         ]);
 
