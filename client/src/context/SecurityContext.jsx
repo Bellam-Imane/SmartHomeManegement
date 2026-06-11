@@ -8,6 +8,7 @@ export const SecurityProvider = ({ children }) => {
     const [locks, setLocks] = useState({ entree: true, garage: true, fenetre: false, allee: true });
     const [alarmActive, setAlarmActive] = useState(true);
     const [sensors, setSensors] = useState({ mouvement: true, fumee: true });
+    const [airQuality, setAirQuality] = useState(null);
 
     // 2. دالة جلب الداتا من الباكاند
     const fetchSecurityStatus = async () => {
@@ -24,6 +25,7 @@ export const SecurityProvider = ({ children }) => {
                 if (res.data.locks) setLocks(res.data.locks);
                 if (res.data.alarmActive !== undefined) setAlarmActive(res.data.alarmActive);
                 if (res.data.sensors) setSensors(res.data.sensors);
+                if (res.data.airQuality !== undefined) setAirQuality(res.data.airQuality);
             }
         } catch (err) {
             console.error("Erreur lors de la récupération du statut (Context):", err);
@@ -39,7 +41,8 @@ export const SecurityProvider = ({ children }) => {
         <SecurityContext.Provider value={{ 
             locks, setLocks, 
             alarmActive, setAlarmActive, 
-            sensors, setSensors, 
+            sensors, setSensors,
+            airQuality, setAirQuality,
             fetchSecurityStatus 
         }}>
             {children}

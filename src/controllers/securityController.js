@@ -1,9 +1,19 @@
 const User = require('../models/User');
+const { Appareil } = require('../models/Appareil');
 const { sendSecurityAlertEmail } = require('../services/emailService');
-const { logNotification } = require('../services/historyService');
+const { logNotification, logDeviceEvent } = require('../services/historyService');
+const { getLatestSensorData } = require('../services/influxService');
+
+// Map lock keys to expected MongoDB device names for PORTE sync
+const LOCK_DEVICE_NAMES = {
+    entree: "Porte d'Entrée",
+    garage: "Porte de Garage",
+    fenetre: "Porte Fenêtre",
+    allee: "Portail Allée"
+};
 
 /**
- * @desc    Récupérer l'état actuel de la sécurité
+ * @desc    Récupérer l'état actuel de la sécurité + AQI live depuis InfluxDB
  * @route   GET /api/security
  * @access  Private
  */
@@ -14,7 +24,23 @@ exports.getSecurityStatus = async (req, res) => {
         if (!user) return res.status(404).json({ message: "User not found" });
 
         const securityData = user.preferences?.securitySettings || {};
-        res.status(200).json(securityData);
+
+        // --- Live Air Quality from InfluxDB ---
+        let airQuality = null;
+        try {
+            const aqiValue = await getLatestSensorData('qualite_air', '-1h');
+            if (aqiValue !== null) {
+                airQuality = {
+                    value: Math.round(aqiValue),
+                    score: aqiValue <= 50 ? 'Excellent' : aqiValue <= 100 ? 'Bon' : aqiValue <= 200 ? 'Modéré' : 'Mauvais'
+                };
+                console.log(`[Security] Live AQI from InfluxDB: ${airQuality.value} (${airQuality.score})`);
+            }
+        } catch (aqiErr) {
+            console.warn("[Security] Could not fetch AQI from InfluxDB:", aqiErr.message);
+        }
+
+        res.status(200).json({ ...securityData, airQuality });
     } catch (error) {
         console.error("[GET ERROR]:", error);
         res.status(500).json({ error: error.message });
@@ -23,6 +49,7 @@ exports.getSecurityStatus = async (req, res) => {
 
 /**
  * @desc    Mettre à jour un élément de sécurité (Alarme, Verrous, Capteurs)
+ *          + Sync PORTE devices in MongoDB + Audit trail in PostgreSQL
  * @route   PUT /api/security
  * @access  Private
  */
@@ -32,7 +59,8 @@ exports.updateSecurityStatus = async (req, res) => {
         console.log("[DEBUG] User ID du Token:", req.user?.id);
 
         const { type, name, value } = req.body;
-        const user = await User.findById(req.user.id);
+        const userId = req.user.id;
+        const user = await User.findById(userId);
 
         if (!user) {
             console.error("[ERROR] Utilisateur introuvable en DB");
@@ -40,12 +68,55 @@ exports.updateSecurityStatus = async (req, res) => {
         }
 
         if (!user.preferences) user.preferences = {};
-        if (!user.preferences.securitySettings) user.preferences.securitySettings = { locks: {}, sensors: {} };
+        if (!user.preferences.securitySettings) {
+            user.preferences.securitySettings = { locks: {}, sensors: {} };
+        }
+        if (!user.preferences.securitySettings.sensors) {
+            user.preferences.securitySettings.sensors = {};
+        }
 
-        if (type === 'alarmActive') {
-            user.preferences.securitySettings.alarmActive = value;
-        } else if (type === 'locks' && name) {
+        // ==========================================
+        // 1. DUAL LOCK SYNCHRONIZATION
+        // ==========================================
+        let syncedDeviceId = null;
+        if (type === 'locks' && name) {
+            const expectedDeviceName = LOCK_DEVICE_NAMES[name];
+
+            // Try exact name match first
+            let doorDevice = null;
+            if (expectedDeviceName) {
+                doorDevice = await Appareil.findOne({
+                    typeAppareil: 'PORTE',
+                    nomAppareil: expectedDeviceName
+                });
+            }
+
+            // Fallback: first PORTE device if no exact match
+            if (!doorDevice) {
+                doorDevice = await Appareil.findOne({ typeAppareil: 'PORTE' });
+            }
+
+            if (doorDevice) {
+                const oldLockValue = doorDevice.estVerrouillee;
+                doorDevice.estVerrouillee = value;
+                await doorDevice.save();
+                syncedDeviceId = String(doorDevice._id);
+                console.log(`[Security] 🔒 Synced PORTE device "${doorDevice.nomAppareil}" (${syncedDeviceId}) -> estVerrouillee: ${value}`);
+
+                // Log device-level event to PostgreSQL historique_donnees
+                await logDeviceEvent(
+                    syncedDeviceId,
+                    'CHANGEMENT_ETAT_VERROU',
+                    String(oldLockValue),
+                    String(value)
+                );
+            } else {
+                console.log(`[Security] ⚠️ No PORTE device found for lock "${name}" — skipping device sync`);
+            }
+
             user.preferences.securitySettings.locks[name] = value;
+        } else if (type === 'alarmActive') {
+            user.preferences.securitySettings.alarmActive = value;
         } else if (type === 'sensors' && name) {
             user.preferences.securitySettings.sensors[name] = value;
         }
@@ -54,6 +125,28 @@ exports.updateSecurityStatus = async (req, res) => {
         user.markModified('preferences.securitySettings');
         await user.save();
         console.log("[DEBUG] Sauvegarde réussie !");
+
+        // ==========================================
+        // 2. POSTGRESQL AUDIT TRAIL
+        // ==========================================
+        try {
+            if (type === 'alarmActive') {
+                const action = value ? "Système d'alarme ACTIVÉ" : "Système d'alarme DÉSACTIVÉ";
+                await logNotification(userId, "Changement Alarme", action);
+                console.log(`[Security] 📝 Audit log: ${action}`);
+            } else if (type === 'locks' && name) {
+                const lockLabel = LOCK_DEVICE_NAMES[name] || name;
+                const action = value ? `${lockLabel} VERROUILLÉ` : `${lockLabel} DÉVERROUILLÉ`;
+                await logNotification(userId, "Changement Verrou", action);
+                console.log(`[Security] 📝 Audit log: ${action}`);
+            } else if (type === 'sensors' && name) {
+                const action = value ? `Capteur "${name}" activé` : `Capteur "${name}" désactivé`;
+                await logNotification(userId, "Changement Capteur", action);
+                console.log(`[Security] 📝 Audit log: ${action}`);
+            }
+        } catch (logErr) {
+            console.error("[Security] ⚠️ PostgreSQL audit log failed (non-blocking):", logErr.message);
+        }
 
         res.status(200).json(user.preferences.securitySettings);
     } catch (error) {
