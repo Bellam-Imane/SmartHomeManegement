@@ -22,6 +22,7 @@ const securityRoutes = require('./src/routes/securityRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const historyRoutes = require('./src/routes/historyRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
+const reportRoutes = require('./src/routes/reportRoutes');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -44,6 +45,7 @@ app.use('/api/security', securityRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/history', historyRoutes); // Phase 4 - Step 2: PostgreSQL history query endpoints
 app.use('/api/dashboard', dashboardRoutes); // Dashboard: live sensors, devices, energy chart
+app.use('/api/reports', reportRoutes); // Reports & Analytics: KPIs, charts, weekly stats, breakdown
 
 // --- Health check endpoint ---
 app.get('/test-health', (req, res) => {
