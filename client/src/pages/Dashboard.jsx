@@ -246,6 +246,21 @@ export default function Dashboard({ unreadCount }) {
     }
   };
 
+  // 3b. Fonction de mise à jour de l'intensité lumineuse (Slider → API → MQTT)
+  const handleLightIntensity = async (newVal) => {
+    const deviceId = deviceIds.light;
+    if (!deviceId) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:5000/api/appareils/${deviceId}`,
+        { status: 'ENLIGNE', intensite: newVal },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error('Erreur sync intensité lumière', err);
+    }
+  };
+
   // 4. Analyse et exécution des commandes vocales
   const executeVoiceCommand = (command) => {
     const { type, action, targetState } = command;
@@ -416,7 +431,7 @@ export default function Dashboard({ unreadCount }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <ClimateCard isOn={acOn} onToggle={() => handleAppareilToggle('ac', acOn, setAcOn)} img={climatiseurImg} />
-          <LightCard isOn={lightOn} onToggle={() => handleAppareilToggle('light', lightOn, setLightOn)} val={lightVal} setVal={setLightVal} img={lightImg} />
+          <LightCard isOn={lightOn} onToggle={() => handleAppareilToggle('light', lightOn, setLightOn)} val={lightVal} setVal={setLightVal} img={lightImg} onIntensityChange={handleLightIntensity} />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
