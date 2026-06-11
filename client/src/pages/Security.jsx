@@ -43,7 +43,7 @@ const SensorCard = ({ img, title, subtitle, tSecured, tUnsecured, isOn, onToggle
 );
 
 const AirQualityCard = ({ img, title, subtitle, value, score }) => (
-  <div style={{ background: 'white', borderRadius: '24px', padding: '18px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '15px' }}>
+  <div className="air-quality-span" style={{ background: 'white', borderRadius: '24px', padding: '18px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '15px' }}>
     <div style={{ background: '#f8f9fa', width: '45px', height: '45px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
       <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
     </div>
@@ -122,7 +122,22 @@ const Security = () => {
 
   return (
     <div style={{ background: '#f0f2f5', minHeight: '100vh', padding: 'clamp(12px, 2vw, 20px)', display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' }} dir={language === "العربية" ? "rtl" : "ltr"}>
-      <style>{`@keyframes blinker { 50% { opacity: 0; } }`}</style>
+      <style>{`
+        @keyframes blinker { 50% { opacity: 0; } }
+        @media (max-width: 768px) {
+          .alarm-card { flex-direction: column !important; padding: 18px !important; gap: 15px !important; }
+          .alarm-card-left { flex-direction: column !important; gap: 12px !important; text-align: center !important; }
+          .alarm-card-buttons { flex-direction: column !important; width: 100% !important; }
+          .alarm-card-buttons button { width: 100% !important; padding: 12px 20px !important; }
+          .security-mid-grid { grid-template-columns: 1fr !important; }
+          .sensor-grid-mobile { grid-template-columns: 1fr !important; }
+          .air-quality-span { grid-column: span 1 !important; }
+          .lock-grid-mobile { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .lock-grid-mobile { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -136,8 +151,8 @@ const Security = () => {
       {/* SYSTÈME D'ALARME */}
       <div style={{ maxWidth: '1100px', width: '100%', margin: '0 auto' }}>
         <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '15px' }}>{t.systemStatusTitle}</h3>
-        <div style={{ background: 'white', borderRadius: '35px', padding: '25px 35px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 15px 45px rgba(0,0,0,0.08)', border: '1px solid #f8f8f8' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+        <div className="alarm-card" style={{ background: 'white', borderRadius: '35px', padding: '25px 35px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 15px 45px rgba(0,0,0,0.08)', border: '1px solid #f8f8f8', flexWrap: 'wrap', gap: '15px' }}>
+          <div className="alarm-card-left" style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
             <div style={{ width: '75px', height: '75px', background: alarmActive ? '#FF0000' : '#626262', borderRadius: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}>
               <img src={iconsecur} alt="Security" style={{ width: '75px', height: '75px', objectFit: 'contain' }} />
             </div>
@@ -149,7 +164,7 @@ const Security = () => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '15px' }}>
+          <div className="alarm-card-buttons" style={{ display: 'flex', gap: '15px' }}>
             <button onClick={() => updateSecurityBackend('alarmActive', null, true)} style={{ background: alarmActive ? '#FF0000' : '#F2F2F7', color: alarmActive ? 'white' : '#1a1a2e', border: 'none', padding: '14px 45px', borderRadius: '20px', fontWeight: '900', cursor: 'pointer' }}>{language === "العربية" ? "تفعيل" : "Active"}</button>
             <button onClick={() => updateSecurityBackend('alarmActive', null, false)} style={{ background: !alarmActive ? '#9ca3af' : '#F2F2F7', color: !alarmActive ? 'white' : '#000', border: 'none', padding: '14px 35px', borderRadius: '20px', fontWeight: '700', cursor: 'pointer' }}>{language === "العربية" ? "تعطيل" : "Désactiver"}</button>
           </div>
@@ -158,7 +173,7 @@ const Security = () => {
 
       {/* MIDDLE SECTION */}
       <div style={{ width: '100%', maxWidth: '1100px', margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px', alignItems: 'start' }}>
+        <div className="security-mid-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '700' }}>{t.cameraFeedTitle}</h3>
@@ -200,7 +215,7 @@ const Security = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '700' }}>{t.connectedSensorsTitle}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div className="sensor-grid-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <SensorCard isOn={sensors.mouvement} onToggle={() => updateSecurityBackend('sensors', 'mouvement', !sensors.mouvement)} img={Capteur_Mouvement} title={secData.sensors.mouvement.title} subtitle={secData.sensors.mouvement.subtitle} tSecured={t.sensorSecured} tUnsecured={t.sensorUnsecured} />
               <SensorCard isOn={sensors.fumee} onToggle={() => updateSecurityBackend('sensors', 'fumee', !sensors.fumee)} img={Détecteur_Fumée} title={secData.sensors.fumee.title} subtitle={secData.sensors.fumeeSub || secData.sensors.fumee.subtitle} tSecured={t.sensorSecured} tUnsecured={t.sensorUnsecured} />
               <AirQualityCard img={Qualité_de_lair} title={secData.sensors.air.title} subtitle={secData.sensors.air.subtitle} value={airQuality ? `${airQuality.value} AQI` : secData.sensors.air.value} score={airQuality ? airQuality.score : secData.sensors.air.score} />
@@ -212,7 +227,7 @@ const Security = () => {
       {/* BOTTOM SECTION */}
       <div style={{ width: '100%', maxWidth: '1100px', margin: '0 auto 40px auto' }}>
         <h3 style={{ margin: '0 0 20px 0', fontSize: '22px', fontWeight: '700' }}>{t.accessLockTitle}</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        <div className="lock-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
           <LockCard isLocked={locks.entree} onToggle={() => updateSecurityBackend('locks', 'entree', !locks.entree)} name={secData.locks.entree} tLocked={t.lockLocked} tUnlocked={t.lockUnlocked} />
           <LockCard isLocked={locks.garage} onToggle={() => updateSecurityBackend('locks', 'garage', !locks.garage)} name={secData.locks.garage} tLocked={t.lockLocked} tUnlocked={t.lockUnlocked} />
           <LockCard isLocked={locks.fenetre} onToggle={() => updateSecurityBackend('locks', 'fenetre', !locks.fenetre)} name={secData.locks.fenetre} tLocked={t.lockLocked} tUnlocked={t.lockUnlocked} />
