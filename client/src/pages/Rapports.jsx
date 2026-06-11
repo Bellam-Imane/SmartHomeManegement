@@ -25,7 +25,7 @@ const { translations } = require("../translations");
 const BarChart = ({ data, language }) => {
   const max = Math.max(...data.map(d => d.val));
   return (
-    <div className="relative h-52 pt-2 px-8">
+    <div className="relative h-52 pt-2 px-3 sm:px-5 md:px-8">
       <div className={`absolute inset-0 flex flex-col justify-between pointer-events-none pb-[40px] ${language === "العربية" ? "ps-2" : "px-2"}`}>
         <div className="border-b border-[#f0f2f5] w-full h-full flex items-start">
           <span className={`text-[10px] text-[#b0b8c4] ${language === "العربية" ? "-mr-7" : "-ml-7"}`}>18</span>
@@ -45,7 +45,7 @@ const BarChart = ({ data, language }) => {
         {data.map((d, i) => (
           <div key={i} className="flex flex-col items-center gap-2">
             <div
-              className="w-11 transition-all duration-500"
+              className="w-5 sm:w-7 md:w-11 transition-all duration-500"
               style={{
                 height: `${Math.round((d.val / max) * 160)}px`,
                 background: d.active ? '#6d7d93' : '#a3bbcf',
@@ -366,7 +366,7 @@ const Rapports = () => {
   };
 
   return (
-    <div className="bg-[#f0f2f7] p-6 rounded-[32px] w-full min-h-screen font-sans" dir={language === "العربية" ? "rtl" : "ltr"}>
+    <div className="bg-[#f0f2f7] p-3 md:p-6 rounded-2xl md:rounded-[32px] w-full min-h-screen font-sans" dir={language === "العربية" ? "rtl" : "ltr"}>
 
       {loading && (
         <div className="fixed inset-0 bg-white/60 z-50 flex items-center justify-center">
@@ -378,9 +378,9 @@ const Rapports = () => {
       )}
 
       {/* TOP BAR */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 md:mb-8 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a1d2e] tracking-tight mb-4">
+          <h1 className="text-xl md:text-2xl font-bold text-[#1a1d2e] tracking-tight mb-3 md:mb-4">
             {language === "العربية" ? "التقارير والتحليلات" : language === "English" ? "Reports & Analytics" : "Reports & Analytics"}
           </h1>
           <div className="flex gap-2">
