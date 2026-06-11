@@ -73,7 +73,7 @@ const LockCard = ({ name, isLocked, onToggle, tLocked, tUnlocked }) => (
 
 const Security = () => {
   // ✅ 1. أخذ الداتا من Context بلاصة useState
-  const { alarmActive, setAlarmActive, locks, setLocks, sensors, setSensors } = useSecurity();
+  const { alarmActive, setAlarmActive, locks, setLocks, sensors, setSensors, airQuality } = useSecurity();
   
   const [language, setLanguage] = useState(() => localStorage.getItem("language") || "Français");
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -203,7 +203,7 @@ const Security = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <SensorCard isOn={sensors.mouvement} onToggle={() => updateSecurityBackend('sensors', 'mouvement', !sensors.mouvement)} img={Capteur_Mouvement} title={secData.sensors.mouvement.title} subtitle={secData.sensors.mouvement.subtitle} tSecured={t.sensorSecured} tUnsecured={t.sensorUnsecured} />
               <SensorCard isOn={sensors.fumee} onToggle={() => updateSecurityBackend('sensors', 'fumee', !sensors.fumee)} img={Détecteur_Fumée} title={secData.sensors.fumee.title} subtitle={secData.sensors.fumeeSub || secData.sensors.fumee.subtitle} tSecured={t.sensorSecured} tUnsecured={t.sensorUnsecured} />
-              <AirQualityCard img={Qualité_de_lair} title={secData.sensors.air.title} subtitle={secData.sensors.air.subtitle} value={secData.sensors.air.value} score={secData.sensors.air.score} />
+              <AirQualityCard img={Qualité_de_lair} title={secData.sensors.air.title} subtitle={secData.sensors.air.subtitle} value={airQuality ? `${airQuality.value} AQI` : secData.sensors.air.value} score={airQuality ? airQuality.score : secData.sensors.air.score} />
             </div>
           </div>
         </div>
