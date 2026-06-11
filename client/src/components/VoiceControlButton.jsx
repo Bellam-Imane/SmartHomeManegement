@@ -2,8 +2,14 @@ import React, { useState } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Mic, Loader2 } from 'lucide-react';
 
-// حطي الـ API Key ديالك هنا
-const genAI = new GoogleGenerativeAI("AIzaSyD6krDCT6nTPovbWpakSOiM-vPTkOPpn2k");
+// Gemini AI — API Key loaded from environment variable (client/.env)
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || '';
+// Force v1 API — v1beta is deprecated and returns 404 for gemini-1.5-flash
+const genAI = GEMINI_API_KEY
+  ? new GoogleGenerativeAI(GEMINI_API_KEY, { apiVersion: 'v1' })
+  : null;
+
+const MODEL_NAME = "gemini-1.5-flash";
 
 const VoiceControlButton = ({ onCommand, allData }) => {
   const [isListening, setIsListening] = useState(false);
@@ -18,24 +24,30 @@ const VoiceControlButton = ({ onCommand, allData }) => {
   const handleAIResponse = async (userText) => {
     setIsProcessing(true);
     try {
-      console.log("🛠️ Testing Gemini with API Key:", "YOUR_API_KEY".substring(0, 5) + "...");
-      // تأكدي أن الموديل مكتوب بهاد الطريقة البسيطة
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      if (!genAI) {
+        console.error("🔑 Gemini API Key not found. Set REACT_APP_GEMINI_API_KEY in client/.env");
+        speak("Désolé, la configuration vocale n'est pas disponible.");
+        setIsProcessing(false);
+        return;
+      }
+      // Initialize Gemini model
+      const model = genAI.getGenerativeModel({ model: MODEL_NAME });
       
       const prompt = `
         Tu es "Riri", l'assistant vocal intelligent d'une application SmartHome.
         Voici les données actuelles de la maison :
         - Statistiques : ${JSON.stringify(allData?.stats || {})}
         - État des appareils : ${JSON.stringify(allData?.devices || {})}
+        - Sécurité (alarme/serrures/capteurs) : ${JSON.stringify(allData?.security || {})}
         
         L'utilisateur te dit : "${userText}"
         
         Réponds UNIQUEMENT sous ce format JSON strict :
         {
-          "type": "DEVICE_CONTROL" ou "NAVIGATE" ou "READ_INFO",
-          "action": "light", "ac", "lock", "vac" (si appareil) OU "rapport", "notification", "paramètre", "accueil" (si page) OU "info",
-          "targetState": true (pour allumer/verrouiller), false (pour éteindre/déverrouiller), ou null,
-          "reply": "Ta réponse vocale en Français (ex: 'D'accord, j'allume la lumière' ou 'Votre consommation est de 13kwh')"
+          "type": "DEVICE_CONTROL" ou "SECURITY_CONTROL" ou "NAVIGATE" ou "READ_INFO",
+          "action": "light", "ac", "lock", "vac" (si appareil) OU "alarm", "entree", "garage", "fenetre", "allee" (si sécurité) OU "rapport", "notification", "paramètre", "accueil" (si page) OU "info",
+          "targetState": true (pour allumer/verrouiller/activer), false (pour éteindre/déverrouiller/désactiver), ou null,
+          "reply": "Ta réponse vocale en Français (ex: 'D'accord, j'allume la lumière' ou 'Alarme activée' ou 'La porte d'entrée est verrouillée')"
         }
       `;
 

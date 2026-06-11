@@ -120,6 +120,35 @@ const Security = () => {
   const currentCamName = secData.cams[currentCam.id]?.name || secData.cams['salon'].name;
   const currentCamDesc = secData.cams[currentCam.id]?.desc || secData.cams['salon'].desc;
 
+  // ✅ 4. Voice command handler — maps Gemini AI responses to security actions
+  const handleVoiceCommand = (command) => {
+    const { type, action, targetState } = command;
+
+    if (type === 'SECURITY_CONTROL') {
+      if (action === 'alarm') {
+        updateSecurityBackend('alarmActive', null, targetState);
+      }
+      if (action === 'entree') updateSecurityBackend('locks', 'entree', targetState);
+      if (action === 'garage') updateSecurityBackend('locks', 'garage', targetState);
+      if (action === 'fenetre') updateSecurityBackend('locks', 'fenetre', targetState);
+      if (action === 'allee') updateSecurityBackend('locks', 'allee', targetState);
+      // Sensors
+      if (action === 'mouvement') updateSecurityBackend('sensors', 'mouvement', targetState);
+      if (action === 'fumee') updateSecurityBackend('sensors', 'fumee', targetState);
+    }
+
+    if (type === 'NAVIGATE') {
+      const pages = {
+        'rapport': '/home/Reports',
+        'notification': '/home/Notifications',
+        'paramètre': '/home/Settings',
+        'accueil': '/home/Dashboard',
+        'security': '/home/Security',
+      };
+      if (pages[action]) navigate(pages[action]);
+    }
+  };
+
   return (
     <div style={{ background: '#f0f2f5', minHeight: '100vh', padding: 'clamp(12px, 2vw, 20px)', display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' }} dir={language === "العربية" ? "rtl" : "ltr"}>
       <style>{`
@@ -145,7 +174,17 @@ const Security = () => {
           <h1 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{t.securityPanelTitle}</h1>
           <p style={{ fontSize: 'clamp(11px, 1.5vw, 13px)', color: '#9ca3af', margin: '4px 0 0 0' }}>{t.securityPanelDesc}</p>
         </div>
-        <VoiceControlButton />
+        <VoiceControlButton
+          onCommand={handleVoiceCommand}
+          allData={{
+            security: {
+              alarmActive,
+              locks: { entree: locks.entree, garage: locks.garage, fenetre: locks.fenetre, allee: locks.allee },
+              sensors: { mouvement: sensors.mouvement, fumee: sensors.fumee },
+              airQuality
+            }
+          }}
+        />
       </div>
 
       {/* SYSTÈME D'ALARME */}
