@@ -10,6 +10,7 @@ const bucket = process.env.INFLUX_BUCKET || 'sensors_data';
 
 let influxClient = null;
 let writeApi = null;
+let queryApi = null;
 
 // Pool PostgreSQL exporté directement pour être utilisé dans initPostgres et ailleurs
 const pgPool = new Pool({
@@ -40,7 +41,8 @@ const connectDatabases = async () => {
       if (influxToken) {
         influxClient = new InfluxDB({ url: influxUrl, token: influxToken });
         writeApi = influxClient.getWriteApi(org, bucket, 'ms');
-        console.log("📊 ✅ InfluxDB Client & Write API initialisés !");
+        queryApi = influxClient.getQueryApi(org);
+        console.log("📊 ✅ InfluxDB Client, Write API & Query API initialisés !");
       } else {
         console.warn("⚠️ [InfluxDB WARNING] INFLUX_TOKEN introuvable dans le fichier .env !");
       }
@@ -59,5 +61,6 @@ module.exports = {
   connectDatabases,
   pgPool,
   get influxClient() { return influxClient; },
-  get writeApi() { return writeApi; }
+  get writeApi() { return writeApi; },
+  get queryApi() { return queryApi; }
 };
