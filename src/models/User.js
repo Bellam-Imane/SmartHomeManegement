@@ -47,12 +47,27 @@ const userSchema = new mongoose.Schema({
     emergencyContact: { type: String, default: "" },
     darkMode: { type: Boolean, default: false },
     language: { type: String, default: "Français" },
+    // ---(Security Settings) ---
+  securitySettings: {
+    alarmActive: { type: Boolean, default: true },
+    locks: {
+      entree: { type: Boolean, default: true },
+      garage: { type: Boolean, default: true },
+      fenetre: { type: Boolean, default: false },
+      allee: { type: Boolean, default: true }
+    },
+    sensors: {
+      mouvement: { type: Boolean, default: true },
+      fumee: { type: Boolean, default: true }
+    }
+  },
     notifications: {
       security: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } },
       system: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } },
       energy: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: false } },
       device: { mobile: { type: Boolean, default: true }, email: { type: Boolean, default: true } }
     }
+    
   },
 
   // --- Relation avec la classe Role ---

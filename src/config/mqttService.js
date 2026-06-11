@@ -4,7 +4,9 @@ const { Appareil } = require('../models/Appareil'); // Importation correcte (des
 const { saveSensorData } = require('../services/influxService');
 
 const MQTT_BROKER = 'ws://broker.hivemq.com:8000/mqtt';
-const TOPIC_CLIMA_PUB = "smart/home/climatiseur/mesures";
+const TOPIC_CLIMA_PUB = "smart/home/climatiseur/mesures"; // Température DHT11
+const TOPIC_HUMI_PUB = "smart/home/capteurs/humidite";   // Humidité
+const TOPIC_AIR_PUB = "smart/home/capteurs/air";         // Qualité de l'air (CO2 / PPM)
 
 let mqttClient = null;
 
@@ -14,13 +16,21 @@ const initializeMqtt = () => {
 
     mqttClient.on('connect', () => {
         console.log("📡 ✅ Connecté avec succès au Broker MQTT (HiveMQ) !");
-        
+
         mqttClient.subscribe(TOPIC_CLIMA_PUB, { qos: 1 }, (err) => {
             if (!err) {
                 console.log(`📥 Abonné avec succès au flux DHT11 : ${TOPIC_CLIMA_PUB}`);
             } else {
                 console.error(`❌ Échec d'abonnement au topic ${TOPIC_CLIMA_PUB}:`, err.message);
             }
+        });
+
+        // Nouveaux topics Phase 3
+        mqttClient.subscribe(TOPIC_HUMI_PUB, { qos: 1 }, (err) => {
+            if (!err) console.log(`📥 Abonné au flux Humidité : ${TOPIC_HUMI_PUB}`);
+        });
+        mqttClient.subscribe(TOPIC_AIR_PUB, { qos: 1 }, (err) => {
+            if (!err) console.log(`📥 Abonné au flux Qualité Air : ${TOPIC_AIR_PUB}`);
         });
     });
 
@@ -45,7 +55,7 @@ const initializeMqtt = () => {
                             let nouvelleCible = climatiseur.temperatureCible;
 
                             if (tempAmbiante > 26.0) {
-                                nouvelleCible = 18; 
+                                nouvelleCible = 18;
                             } else if (tempAmbiante < 20.0) {
                                 nouvelleCible = 28;
                             } else {
@@ -66,6 +76,28 @@ const initializeMqtt = () => {
                     } catch (error) {
                         console.error("❌ Erreur lors du calcul du mode AUTO :", error.message);
                     }
+                }
+            }
+        }
+
+        // --- Phase 3 : Nouveaux capteurs ---
+
+        // Topic Humidité : payload attendu ex: "HUMI:65.3"
+        if (topic === TOPIC_HUMI_PUB) {
+            if (payload.startsWith("HUMI:")) {
+                const humidite = parseFloat(payload.split(":")[1]);
+                if (!isNaN(humidite)) {
+                    await saveSensorData('dht11_salon', 'humidite', humidite);
+                }
+            }
+        }
+
+        // Topic Qualité de l'air : payload attendu ex: "AIR:420"
+        if (topic === TOPIC_AIR_PUB) {
+            if (payload.startsWith("AIR:")) {
+                const ppm = parseFloat(payload.split(":")[1]);
+                if (!isNaN(ppm)) {
+                    await saveSensorData('mq135_salon', 'qualite_air', ppm);
                 }
             }
         }

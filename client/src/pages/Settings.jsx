@@ -128,20 +128,39 @@ export default function Settings() {
     setDebouncer(d);
   }
   const handleUpdatePreference = async (updatedPrefs) => {
+    // ✅ أول حاجة: نحدثو الـ States فـ الـ UI فوراً باش ما يرجعوش Static
+    if (updatedPrefs.language) setLanguage(updatedPrefs.language);
+    if (updatedPrefs.darkMode !== undefined) setDarkMode(updatedPrefs.darkMode);
+    if (updatedPrefs.twoFactor !== undefined) setTwoFactor(updatedPrefs.twoFactor);
+    if (updatedPrefs.notifications) setNotifications(updatedPrefs.notifications);
+    if (updatedPrefs.location) setLocation(updatedPrefs.location);
+
     try {
       const token = localStorage.getItem('token');
-      const currentPrefs = { twoFactor, emergencyContact, darkMode, language, notifications, ...updatedPrefs };
+      
+      const currentPrefs = { 
+        twoFactor, 
+        emergencyContact, 
+        darkMode, 
+        language, // هادي غاتاخد القيمة القديمة من الـ state إيلا ما كانتش فـ updatedPrefs
+        notifications, 
+        location,
+        ...updatedPrefs 
+      };
 
-      // 1. التغيير الفوري: نسيفيو اللغة فالمتصفح ونعلمو كاع الصفحات فالحيييييين!
-      localStorage.setItem("darkMode", currentPrefs.darkMode ? "true" : "false");
-      localStorage.setItem("language", currentPrefs.language);
-      window.dispatchEvent(new Event("storage"));
+      // ✅ سيف فـ LocalStorage قبل ما نصيفطو للسيرفر باش نحميو الحالة
+      if (currentPrefs.language) localStorage.setItem("language", currentPrefs.language);
+      if (currentPrefs.darkMode !== undefined) localStorage.setItem("darkMode", currentPrefs.darkMode ? "true" : "false");
 
-      // 2. عاد نصيفطو التحديث للسيرفر فـ الخلفية
-      await axios.put('http://localhost:5000/api/users/profile', { preferences: currentPrefs }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await axios.put('http://localhost:5000/api/users/profile', 
+        { preferences: currentPrefs }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
+      if (res.status === 200) {
+        window.dispatchEvent(new Event("storage"));
+        console.log("Sync OK!");
+      }
     } catch (err) {
       console.error("Erreur auto-save preference", err);
     }
