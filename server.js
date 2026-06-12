@@ -87,14 +87,14 @@ app.use((req, res, next) => {
 });
 
 // -----------------------------------------------------------------------------
-// ENREGISTREMENT DES ROUTES API MIDDLEWARES
+// ENREGISTREMENT DES ROUTES API MIDDLEWARES (CORRECTIF : ROUTE AUTOMATION ACCESSIBLE DIRECTEMENT SUR /api)
 // -----------------------------------------------------------------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/pieces', pieceRoutes);
 app.use('/api/appareils', appareilRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/automation', automationRoutes);
+app.use('/api', automationRoutes); // 💡 التغيير هنا: رديناها ديريكت تحت /api باش تتوافق مع /api/scenes و /api/rules دون مشاكل 404
 
 
 // -----------------------------------------------------------------------------

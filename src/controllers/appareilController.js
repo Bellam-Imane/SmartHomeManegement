@@ -32,10 +32,13 @@ exports.createAppareil = async (req, res) => {
     }
 
     // Structure de base de l'appareil
+    // 💡 Note : On stocke typeAppareil et type pour assurer une compatibilité totale
     let appareilData = {
       nomAppareil,
-      typeAppareil,
+      typeAppareil: typeAppareil.toUpperCase(),
+      type: typeAppareil.toUpperCase(), 
       piece,
+      userId: req.user.id,
       marque: marque || "",
       status: "HORSLIGNE"
     };
@@ -44,26 +47,21 @@ exports.createAppareil = async (req, res) => {
     if (typeAppareil === 'ECLAIRAGE') {
       appareilData.intensite = 100;
       appareilData.couleur = '#FFFFFF';
-
     } else if (typeAppareil === 'THERMIQUE') {
       appareilData.temperatureActuelle = 22;
       appareilData.temperatureCible = 24;
       appareilData.mode = 'AUTO';
-
     } else if (typeAppareil === 'MULTIMEDIA') {
       appareilData.volume = 20;
       appareilData.source = 'HDMI';
       appareilData.application = 'NONE';
       appareilData.lectureActive = true;
-
     } else if (typeAppareil === 'MOTORISE') {
       appareilData.pourcentageOuverture = 0;
       appareilData.estVerrouille = true;
-
     } else if (typeAppareil === 'ASPIRATEUR') {
       appareilData.chargeBatterie = 100;
       appareilData.modeNettoyage = 'STANDARD';
-
     } else if (typeAppareil === 'CAMERA') {
       appareilData.niveauSensibilite = 'MEDIUM';
       appareilData.estDeclanche = false;
@@ -112,14 +110,15 @@ exports.updateAppareil = async (req, res) => {
 
     const updateData = { ...req.body };
     delete updateData._id;
-    delete updateData.typeAppareil;
 
+    // 💡 CORRECTIF EXCLUSIF : Recherche par ID uniquement car le modèle actuel ne contient pas userId
     const appareil = await Appareil.findById(id);
     if (!appareil) {
       return res.status(404).json({ success: false, message: "Appareil introuvable" });
     }
 
-    const type = appareil.typeAppareil?.toUpperCase();
+    // 💡 Lecture unifiée du type (gère 'type' ou 'typeAppareil')
+    const type = (appareil.type || appareil.typeAppareil || req.body.type || "").toUpperCase();
 
     // Logique multimédia pour temps d'utilisation
     if (type === 'MULTIMEDIA') {
@@ -132,17 +131,16 @@ exports.updateAppareil = async (req, res) => {
       if (updateData.status === 'HORSLIGNE' && appareil.dernierAllumage) {
         const diff = now - new Date(appareil.dernierAllumage);
         const minutes = Math.round(diff / 60000);
-        updateData.tempsUtilisationTotal =
-          (appareil.tempsUtilisationTotal || 0) + minutes;
+        updateData.tempsUtilisationTotal = (appareil.tempsUtilisationTotal || 0) + minutes;
         updateData.dernierAllumage = null;
       }
     }
 
-    // Sauvegarde DB
+    // Sauvegarde DB via ID de manière générique et fluide
     const updated = await Appareil.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { returnDocument: 'after', runValidators: true }
+      { new: true, runValidators: true }
     );
 
     const isEnLigne = updated.status === 'ENLIGNE';
@@ -154,7 +152,7 @@ exports.updateAppareil = async (req, res) => {
 
     const basePayload = {
       deviceId: id,
-      type: type,
+      type: type, 
       action: "TOGGLE",
       valeur: isEnLigne,
       data: {}
@@ -173,14 +171,13 @@ exports.updateAppareil = async (req, res) => {
       };
     }
 
+    // Envoi immédiat au format JSON stringifié pour Wokwi
     mqttService.publish(TOPIC_COMMANDES, JSON.stringify(basePayload));
 
     // ─────────────────────────────────────────────
-    // MQTT SIMULATOR 
+    // MQTT SIMULATOR (COMPATIBILITÉ ANCIEN FLUX)
     // ─────────────────────────────────────────────
-
     const deviceTopic = `smart/home/appareil/${id}`;
-
     let simplePayload = "OFF";
 
     if (isEnLigne) {
@@ -200,12 +197,10 @@ exports.updateAppareil = async (req, res) => {
     } else {
       simplePayload = (type === 'MOTORISE') ? "0" : "OFF";
     }
-
     
     mqttService.publish(deviceTopic, simplePayload);
 
-    console.log(`📤 MQTT SENT -> ${TOPIC_COMMANDES}`);
-    console.log(`📤 MQTT SIM -> ${deviceTopic} : ${simplePayload}`);
+    console.log(`📤 MQTT SENT -> ${TOPIC_COMMANDES} (Type: ${type}, Status: ${updated.status})`);
 
     return res.json({
       success: true,
@@ -226,8 +221,8 @@ exports.updateAppareil = async (req, res) => {
  */
 exports.getAllAppareils = async (req, res) => {
   try {
-
-    const appareils = await Appareil.find().populate({
+    // Note: On récupère temporairement tous les appareils pour s'assurer de l'affichage complet sans blocage de clé
+    const appareils = await Appareil.find({}).populate({
       path: 'piece',
       select: 'nomPiece' 
     });
