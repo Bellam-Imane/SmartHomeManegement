@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const nootifications = new mongoose.Schema({
+const notificationSchema = new mongoose.Schema({
     titre : { type : String , required: true },
     message : { type: String, required: true },
     dateHeure: { type: Date, default: Date.now },

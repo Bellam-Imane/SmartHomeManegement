@@ -106,36 +106,22 @@ exports.createAppareil = async (req, res) => {
  * UPDATE APPAREIL + MQTT SYNC (FORMAT UNIFIÉ)
  * ---------------------------------------------------------------------------------
  */
-/**
- * ---------------------------------------------------------------------------------
- * UPDATE APPAREIL + MQTT SYNC (COMPATIBLE 100% AVEC LE FAKE ESP32)
- * ---------------------------------------------------------------------------------
- */
 exports.updateAppareil = async (req, res) => {
   try {
-
-
     const { id } = req.params;
 
-    // Protection des champs sensibles
     const updateData = { ...req.body };
     delete updateData._id;
     delete updateData.typeAppareil;
 
     const appareil = await Appareil.findById(id);
-
     if (!appareil) {
-      return res.status(404).json({
-        success: false,
-        message: "Appareil introuvable"
-      });
+      return res.status(404).json({ success: false, message: "Appareil introuvable" });
     }
 
     const type = appareil.typeAppareil?.toUpperCase();
 
-    /**
-     * ⏱️ LOGIQUE MULTIMÉDIA (Temps d'utilisation)
-     */
+    // Logique multimédia pour temps d'utilisation
     if (type === 'MULTIMEDIA') {
       const now = new Date();
 
@@ -146,88 +132,90 @@ exports.updateAppareil = async (req, res) => {
       if (updateData.status === 'HORSLIGNE' && appareil.dernierAllumage) {
         const diff = now - new Date(appareil.dernierAllumage);
         const minutes = Math.round(diff / 60000);
-
-        updateData.tempsUtilisationTotal = (appareil.tempsUtilisationTotal || 0) + minutes;
+        updateData.tempsUtilisationTotal =
+          (appareil.tempsUtilisationTotal || 0) + minutes;
         updateData.dernierAllumage = null;
       }
     }
 
-    /**
-     * UPDATE DB
-     */
+    // Sauvegarde DB
     const updated = await Appareil.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { returnDocument: 'after', runValidators: true } // Correction du warning de dépréciation {new: true}
+      { returnDocument: 'after', runValidators: true }
     );
 
-    /**
-     * =========================================================
-     * 📡 CORRECTION CRITIQUE MQTT : ALIGNEMENT SUR LE FAKE ESP32
-     * =========================================================
-     */
-    
-    // 1️⃣ TOPIC CENTRALISÉ : Utilisation du canal unique écouté par le Fake ESP32
-    const TOPIC_COMMANDES = 'smart/home/appareils/commandes';
-
-    // 2️⃣ PAYLOAD HARMONISÉ : Traduction du statut en action claire pour le script de l'ESP32
-    // Le Fake ESP32 bascule l'état interne (RAM) lorsque l'action reçue est "TOGGLE" ou liée au statut
     const isEnLigne = updated.status === 'ENLIGNE';
+
+    // ─────────────────────────────────────────────
+    // MQTT COMMANDES (ESP32 CENTRAL TOPIC)
+    // ─────────────────────────────────────────────
+    const TOPIC_COMMANDES = 'smart/home/appareils/commandes';
 
     const basePayload = {
       deviceId: id,
       type: type,
-      action: "TOGGLE",               // Commande standard de bascule pour le Fake ESP32
-      valeur: isEnLigne,              // true si ENLIGNE, false si HORSLIGNE
+      action: "TOGGLE",
+      valeur: isEnLigne,
       data: {}
     };
 
-    /**
-     * 🔌 LOGIQUE DE CHARGE EXTRACT PAR TYPE D'ÉQUIPEMENT
-     */
-    if (type === 'ECLAIRAGE') {
-      basePayload.data = { intensite: updated.intensite || 100 };
-    } 
-    else if (type === 'CAMERA') {
-      basePayload.data = { recording: updated.estEnregistrement || false };
-    } 
-    else if (type === 'ASPIRATEUR') {
-      basePayload.data = { mode: updated.modeNettoyage };
-    } 
-    else if (type === 'THERMIQUE') {
-      basePayload.data = { 
-        mode: updated.mode, 
-        temperature: updated.temperatureCible 
-      };
-    } 
-    else if (type === 'MOTORISE') {
-      basePayload.data = { pourcentage: updated.pourcentageOuverture };
-    } 
+    if (type === 'ECLAIRAGE') basePayload.data = { intensite: updated.intensite || 100 };
+    else if (type === 'CAMERA') basePayload.data = { recording: updated.estEnregistrement || false };
+    else if (type === 'ASPIRATEUR') basePayload.data = { mode: updated.modeNettoyage };
+    else if (type === 'THERMIQUE') basePayload.data = { mode: updated.mode, temperature: updated.temperatureCible };
+    else if (type === 'MOTORISE') basePayload.data = { pourcentage: updated.pourcentageOuverture };
     else if (type === 'MULTIMEDIA') {
       basePayload.data = {
         app: updated.application,
         volume: updated.volume,
-        channel: updated.chaineActuelle,
         play: updated.lectureActive
       };
     }
 
-    // 📤 ENVOI DE LA COMMANDE SUR LE TOPIC CENTRAL
     mqttService.publish(TOPIC_COMMANDES, JSON.stringify(basePayload));
-    console.log(`📤 [MQTT PUBLISH] Commande routée vers [${TOPIC_COMMANDES}] pour l'appareil [${id}] (Statut: ${updated.status})`);
+
+    // ─────────────────────────────────────────────
+    // MQTT SIMULATOR 
+    // ─────────────────────────────────────────────
+
+    const deviceTopic = `smart/home/appareil/${id}`;
+
+    let simplePayload = "OFF";
+
+    if (isEnLigne) {
+      if (type === 'ECLAIRAGE' || type === 'ASPIRATEUR' || type === 'THERMIQUE') {
+        simplePayload = "ON";
+      } else if (type === 'CAMERA') {
+        simplePayload = updated.estEnregistrement ? "REC" : "ON";
+      } else if (type === 'MOTORISE') {
+        simplePayload = (updated.pourcentageOuverture ?? 100).toString();
+      } else if (type === 'MULTIMEDIA') {
+        if (updated.application === 'NETFLIX') simplePayload = "NETFLIX";
+        else if (updated.application === 'SPOTIFY') simplePayload = "SPOTIFY";
+        else simplePayload = "ON";
+      } else {
+        simplePayload = "ON";
+      }
+    } else {
+      simplePayload = (type === 'MOTORISE') ? "0" : "OFF";
+    }
+
+    
+    mqttService.publish(deviceTopic, simplePayload);
+
+    console.log(`📤 MQTT SENT -> ${TOPIC_COMMANDES}`);
+    console.log(`📤 MQTT SIM -> ${deviceTopic} : ${simplePayload}`);
 
     return res.json({
       success: true,
-      message: "Appareil mis à jour et commande MQTT synchronisée",
+      message: "Appareil mis à jour et commandes MQTT synchronisées",
       data: updated
     });
 
   } catch (error) {
-    console.error("❌ Erreur lors de la mise à jour de l'appareil :", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur"
-    });
+    console.error("❌ Erreur de mise à jour :", error.message);
+    return res.status(500).json({ success: false, message: "Erreur serveur" });
   }
 };
 
@@ -238,7 +226,11 @@ exports.updateAppareil = async (req, res) => {
  */
 exports.getAllAppareils = async (req, res) => {
   try {
-    const appareils = await Appareil.find().populate('piece');
+
+    const appareils = await Appareil.find().populate({
+      path: 'piece',
+      select: 'nomPiece' 
+    });
 
     return res.status(200).json({
       success: true,

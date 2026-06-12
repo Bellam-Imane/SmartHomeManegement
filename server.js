@@ -1,23 +1,20 @@
 // -----------------------------------------------------------------------------
+// IMPORTATIONS DES MODULES DE BASE (CORRECTIF : AJOUT DES MODULES MANQUANTS)
+// -----------------------------------------------------------------------------
+require('dotenv').config();
+const express = require('express');
+const http = require('http');
+const cors = require('cors');
+
+
+// -----------------------------------------------------------------------------
 // CHARGEMENT DES CONFIGURATIONS ET VARIABLES D'ENVIRONNEMENT
 // -----------------------------------------------------------------------------
-// Permet de lire le fichier .env et de charger les variables (ex: PORT, MONGO_URI)
-require('dotenv').config();
-
-const express = require('express');
-const cors = require('cors');
-const http = require('http');
-
-// -----------------------------------------------------------------------------
-// PRÉ-CHARGEMENT DES MODÈLES MONGOOSE
-// -----------------------------------------------------------------------------
-// Obligatoire pour enregistrer les Schémas dans Mongoose avant leur utilisation 
-// dans d'autres services (comme le service MQTT)
-require('./src/models/Appareil');
-require('./src/models/Piece');
 require('./src/models/Maison');
+require('./src/models/Appareil'); // Ajout sécurisé pour les routes de l'API
 require('./src/models/SystemeGestionEnergetique');
 require('./src/models/HistoriqueConsommation');
+require('./src/models/Notifications');
 
 // -----------------------------------------------------------------------------
 // CONNEXIONS AUX BASES DE DONNÉES (MONGOOSE + POSTGRESQL)
@@ -39,6 +36,7 @@ const pieceRoutes = require('./src/routes/pieceRoutes');
 const appareilRoutes = require('./src/routes/appareilRoutes');
 const securityRoutes = require('./src/routes/securityRoutes');
 const userRoutes = require('./src/routes/userRoutes');
+const automationRoutes = require('./src/routes/automationRoutes');
 
 // -----------------------------------------------------------------------------
 // INITIALISATION DE L'APPLICATION EXPRESS
@@ -96,6 +94,8 @@ app.use('/api/pieces', pieceRoutes);
 app.use('/api/appareils', appareilRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/automation', automationRoutes);
+
 
 // -----------------------------------------------------------------------------
 // ROUTE DE VÉRIFICATION DE SANTÉ (HEALTH CHECK)

@@ -1,143 +1,117 @@
 {
   "version": 1,
-  "author": "Imane Bellam",
+  "author": "Smart Home Management",
   "editor": "wokwi",
-  "parts": [ 
-    { 
+  "parts": [
+    {
       "type": "board-esp32-devkit-c-v4",
-      "id": "esp", "top": 0, 
-      "left": 0, 
-      "attrs": {} 
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
     },
     {
       "type": "wokwi-lcd1602",
       "id": "lcd",
-      "top": -150,
-      "left": -120,
+      "top": -180,
+      "left": -140,
       "attrs": {
-        "pins": "i2c"
+        "pins": "i2c",
+        "i2cAddress": "0x27",
+        "background": "green"
       }
     },
     {
       "type": "wokwi-dht11",
       "id": "dht",
-      "top": -150,
-      "left": 220,
+      "top": -180,
+      "left": 200,
       "attrs": {}
     },
     {
       "type": "wokwi-led",
       "id": "led_salon",
-      "top": 400,
-      "left": -260,
+      "top": 380,
+      "left": -300,
       "attrs": { "color": "red", "label": "Salon" }
     },
     {
       "type": "wokwi-led",
-      "id": "led_chambre",
-      "top": 400,
-      "left": -180,
-      "attrs": { "color": "green", "label": "Chambre" }
-    },
-    {
-      "type": "wokwi-led",
-      "id": "led_cuisine",
-      "top": 400,
-      "left": -100,
-      "attrs": { "color": "blue", "label": "Cuisine" }
-    },
-    {
-      "type": "wokwi-led",
       "id": "cam_power",
-      "top": 500,
-      "left": -260,
-      "attrs": { "color": "yellow", "label": "Cam Power" }
+      "top": 480,
+      "left": -300,
+      "attrs": { "color": "yellow", "label": "Camera" }
     },
     {
       "type": "wokwi-led",
       "id": "cam_rec",
-      "top": 500,
-      "left": -170,
-      "attrs": { "color": "red", "label": "Cam REC" }
+      "top": 480,
+      "left": -200,
+      "attrs": { "color": "red", "label": "REC" }
     },
     {
       "type": "wokwi-led",
       "id": "vac_power",
-      "top": 600,
-      "left": -260,
-      "attrs": { "color": "orange", "label": "Vacuum" }
-    },
-    {
-      "type": "wokwi-led",
-      "id": "vac_mode",
-      "top": 600,
-      "left": -170,
-      "attrs": { "color": "purple", "label": "Vac PWM" }
+      "top": 580,
+      "left": -300,
+      "attrs": { "color": "orange", "label": "Aspirateur" }
     },
     {
       "type": "wokwi-led",
       "id": "cli_power",
-      "top": 400,
-      "left": 180,
-      "attrs": { "color": "cyan", "label": "Clima" }
+      "top": 380,
+      "left": 160,
+      "attrs": { "color": "cyan", "label": "Clima ON" }
     },
     {
       "type": "wokwi-led",
       "id": "cli_temp",
-      "top": 400,
-      "left": 280,
-      "attrs": { "color": "white", "label": "Temp" }
+      "top": 380,
+      "left": 260,
+      "attrs": { "color": "white", "label": "Clima Temp" }
     },
     {
       "type": "wokwi-led",
       "id": "rideau",
-      "top": 500,
-      "left": 220,
+      "top": 480,
+      "left": 200,
       "attrs": { "color": "yellow", "label": "Rideau" }
     },
     {
       "type": "wokwi-rgb-led",
       "id": "rgb",
-      "top": 600,
-      "left": 220,
-      "attrs": { "common": "cathode" }
+      "top": 580,
+      "left": 200,
+      "attrs": { "common": "cathode", "label": "TV RGB" }
     }
-
-   ],
+  ],
   "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
     [ "esp:3V3", "lcd:VCC", "red", [] ],
-    [ "esp:GND", "lcd:GND", "black", [] ],
+    [ "esp:GND.1", "lcd:GND", "black", [] ],
     [ "esp:21", "lcd:SDA", "green", [] ],
     [ "esp:22", "lcd:SCL", "blue", [] ],
     [ "esp:3V3", "dht:VCC", "red", [] ],
-    [ "esp:GND", "dht:GND", "black", [] ],
+    [ "esp:GND.1", "dht:GND", "black", [] ],
     [ "esp:23", "dht:SDA", "yellow", [] ],
     [ "esp:2", "led_salon:A", "red", [] ],
-    [ "esp:GND", "led_salon:C", "black", [] ],
-    [ "esp:4", "led_chambre:A", "green", [] ],
-    [ "esp:GND", "led_chambre:C", "black", [] ],
-    [ "esp:5", "led_cuisine:A", "blue", [] ],
-    [ "esp:GND", "led_cuisine:C", "black", [] ],
+    [ "esp:GND.1", "led_salon:C", "black", [] ],
     [ "esp:26", "cam_power:A", "yellow", [] ],
-    [ "esp:GND", "cam_power:C", "black", [] ],
+    [ "esp:GND.1", "cam_power:C", "black", [] ],
     [ "esp:14", "cam_rec:A", "red", [] ],
-    [ "esp:GND", "cam_rec:C", "black", [] ],
+    [ "esp:GND.1", "cam_rec:C", "black", [] ],
+    [ "esp:19", "vac_power:A", "orange", [] ],
+    [ "esp:GND.1", "vac_power:C", "black", [] ],
     [ "esp:13", "cli_power:A", "cyan", [] ],
-    [ "esp:GND", "cli_power:C", "black", [] ],
+    [ "esp:GND.1", "cli_power:C", "black", [] ],
     [ "esp:12", "cli_temp:A", "white", [] ],
-    [ "esp:GND", "cli_temp:C", "black", [] ],
+    [ "esp:GND.1", "cli_temp:C", "black", [] ],
     [ "esp:27", "rideau:A", "yellow", [] ],
-    [ "esp:GND", "rideau:C", "black", [] ],
+    [ "esp:GND.1", "rideau:C", "black", [] ],
     [ "esp:32", "rgb:R", "red", [] ],
     [ "esp:33", "rgb:G", "green", [] ],
     [ "esp:25", "rgb:B", "blue", [] ],
-    [ "esp:GND", "rgb:COM", "black", [] ],
-    [ "esp:19", "vac_mode:A", "purple", [] ],
-    [ "esp:GND", "vac_mode:C", "black", [] ]
-  ],
-  "dependencies": {
-    "PubSubClient": "2.8",
-    "DHT sensor library": "1.4.4",
-    "LiquidCrystal I2C": "1.1.2"
-  }
+    [ "esp:GND.1", "rgb:COM", "black", [] ]
+  ]
 }
