@@ -1,14 +1,24 @@
 const mqtt = require('mqtt');
 const mongoose = require('mongoose');
 
+<<<<<<< HEAD
 // Importations des services d'archivage InfluxDB
 const { saveSensorData, saveDeviceConsumption } = require('../services/influxService'); 
+=======
+// Broker URL from .env — defaults to EMQX public broker (Wokwi ESP32 compatible)
+const MQTT_BROKER = process.env.MQTT_BROKER_URL || 'mqtt://broker.emqx.io:1883';
+const TOPIC_CLIMA_PUB = "smart/home/climatiseur/mesures"; // Température DHT11
+const TOPIC_HUMI_PUB = "smart/home/capteurs/humidite";   // Humidité
+const TOPIC_AIR_PUB = "smart/home/capteurs/air";         // Qualité de l'air (CO2 / PPM)
+const TOPIC_CONSO_ACK = "smart/home/appareils/consommation"; // ESP32 acknowledgment
+>>>>>>> fe1878892fac09c41be180a9d6a9c6e4d21addbf
 
 // Chargement des modèles nécessaires
 const Appareil = require('../models/Appareil');
 const SystemeGestionEnergetique = require('../models/SystemeGestionEnergetique');
 const Regle = require('../models/Regle'); // 💡 Ajout du modèle Regle pour l'automation événementielle
 
+<<<<<<< HEAD
 // Configurations du Broker MQTT
 const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://broker.emqx.io';
 const MQTT_PORT = process.env.MQTT_PORT || 1883;
@@ -46,6 +56,34 @@ const initializeMqtt = (io) => {
         // Souscription aux flux de commandes (Pour la synchronisation bidirectionnelle)
         client.subscribe(TOPIC_COMMANDES, (err) => {
             if (!err) console.log(`🔄 Topic commandes : ${TOPIC_COMMANDES}`);
+=======
+const initializeMqtt = () => {
+    console.log(`⏳ Connexion au Broker MQTT: ${MQTT_BROKER}...`);
+    mqttClient = mqtt.connect(MQTT_BROKER);
+
+    mqttClient.on('connect', () => {
+        console.log(`📡 ✅ Connecté avec succès au Broker MQTT (${MQTT_BROKER}) !`);
+
+        mqttClient.subscribe(TOPIC_CLIMA_PUB, { qos: 1 }, (err) => {
+            if (!err) {
+                console.log(`📥 Abonné avec succès au flux DHT11 : ${TOPIC_CLIMA_PUB}`);
+            } else {
+                console.error(`❌ Échec d'abonnement au topic ${TOPIC_CLIMA_PUB}:`, err.message);
+            }
+>>>>>>> fe1878892fac09c41be180a9d6a9c6e4d21addbf
+        });
+
+        // Nouveaux topics Phase 3
+        mqttClient.subscribe(TOPIC_HUMI_PUB, { qos: 1 }, (err) => {
+            if (!err) console.log(`📥 Abonné au flux Humidité : ${TOPIC_HUMI_PUB}`);
+        });
+        mqttClient.subscribe(TOPIC_AIR_PUB, { qos: 1 }, (err) => {
+            if (!err) console.log(`📥 Abonné au flux Qualité Air : ${TOPIC_AIR_PUB}`);
+        });
+
+        // ESP32 consumption acknowledgment
+        mqttClient.subscribe(TOPIC_CONSO_ACK, { qos: 1 }, (err) => {
+            if (!err) console.log(`📥 Abonné à l'accusé de réception : ${TOPIC_CONSO_ACK}`);
         });
     });
 
@@ -65,6 +103,7 @@ const initializeMqtt = (io) => {
 
                     const appareilsEnBase = await Appareil.find({}, 'status');
 
+<<<<<<< HEAD
                     // Renvoi de l'état actuel de la DB à l'appareil demandeur
                     appareilsEnBase.forEach(app => {
                         client.publish(TOPIC_COMMANDES, JSON.stringify({
@@ -73,6 +112,15 @@ const initializeMqtt = (io) => {
                             valeur: app.status === 'ENLIGNE'
                         }));
                     });
+=======
+                            if (tempAmbiante > 26.0) {
+                                nouvelleCible = 18;
+                            } else if (tempAmbiante < 20.0) {
+                                nouvelleCible = 28;
+                            } else {
+                                nouvelleCible = 24;
+                            }
+>>>>>>> fe1878892fac09c41be180a9d6a9c6e4d21addbf
 
                     return;
                 }
@@ -217,8 +265,49 @@ async function verifierEtExecuterRegles(appareil, io) {
                 }
             }
         }
+<<<<<<< HEAD
     } catch (err) {
         console.error("❌ Erreur au niveau du moteur d'automatisation (Regles) :", err.message);
+=======
+
+        // --- Phase 3 : Nouveaux capteurs ---
+
+        // Topic Humidité : payload attendu ex: "HUMI:65.3"
+        if (topic === TOPIC_HUMI_PUB) {
+            if (payload.startsWith("HUMI:")) {
+                const humidite = parseFloat(payload.split(":")[1]);
+                if (!isNaN(humidite)) {
+                    await saveSensorData('dht11_salon', 'humidite', humidite);
+                }
+            }
+        }
+
+        // Topic Qualité de l'air : payload attendu ex: "AIR:420"
+        if (topic === TOPIC_AIR_PUB) {
+            if (payload.startsWith("AIR:")) {
+                const ppm = parseFloat(payload.split(":")[1]);
+                if (!isNaN(ppm)) {
+                    await saveSensorData('mq135_salon', 'qualite_air', ppm);
+                }
+            }
+        }
+
+        // Topic Consommation : ESP32 acknowledgment (payload: "OK")
+        if (topic === TOPIC_CONSO_ACK) {
+            console.log(`✅ [CONSO ACK] ESP32 confirme la réception -> ${payload}`);
+        }
+    });
+
+    mqttClient.on('error', (err) => {
+        console.error("❌ Erreur de connexion MQTT :", err.message);
+    });
+};
+
+const publishMessage = (topic, message) => {
+    if (!mqttClient || !mqttClient.connected) {
+        console.error("⚠️ Impossible d'envoyer le message : le client MQTT n'est pas connecté.");
+        return;
+>>>>>>> fe1878892fac09c41be180a9d6a9c6e4d21addbf
     }
 }
 

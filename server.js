@@ -37,6 +37,9 @@ const appareilRoutes = require('./src/routes/appareilRoutes');
 const securityRoutes = require('./src/routes/securityRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const automationRoutes = require('./src/routes/automationRoutes');
+const historyRoutes = require('./src/routes/historyRoutes');
+const dashboardRoutes = require('./src/routes/dashboardRoutes');
+const reportRoutes = require('./src/routes/reportRoutes');
 
 // -----------------------------------------------------------------------------
 // INITIALISATION DE L'APPLICATION EXPRESS
@@ -87,14 +90,17 @@ app.use((req, res, next) => {
 });
 
 // -----------------------------------------------------------------------------
-// ENREGISTREMENT DES ROUTES API MIDDLEWARES (CORRECTIF : ROUTE AUTOMATION ACCESSIBLE DIRECTEMENT SUR /api)
+// ENREGISTREMENT DES ROUTES API MIDDLEWARES
 // -----------------------------------------------------------------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/pieces', pieceRoutes);
 app.use('/api/appareils', appareilRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api', automationRoutes); // 💡 التغيير هنا: رديناها ديريكت تحت /api باش تتوافق مع /api/scenes و /api/rules دون مشاكل 404
+app.use('/api', automationRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
 
 
 // -----------------------------------------------------------------------------

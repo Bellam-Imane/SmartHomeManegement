@@ -1,3 +1,7 @@
+/**
+ * influxService.js
+ * Service pour gérer l'écriture des données capteurs dans InfluxDB.
+ */
 const { Point } = require('@influxdata/influxdb-client');
 // ── Importation de l'objet global db au lieu de writeApi directement ──
 const dbConfig = require('../config/db'); 
@@ -78,7 +82,4 @@ const saveDeviceConsumption = async (deviceId, deviceType, watts) => {
     }
 };
 
-module.exports = {
-    saveSensorData,
-    saveDeviceConsumption
-};
+module.exports = { saveSensorData };
