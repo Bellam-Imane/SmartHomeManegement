@@ -13,11 +13,11 @@ const Login = () => {
         console.log("FORM SUBMITTED"); 
 
         try {
-            // 🌟 تنظيف الإيميل وتحويله لحروف صغيرة لتفادي مشاكل كيبورد الهاتف
+            
             const cleanEmail = email.toLowerCase().trim();
             console.log("DATA:", { email: cleanEmail, motDePasse });
 
-            // 🌟 تحديد الرابط ديناميكياً على حساب واش PC أو هاتف
+        
             const API_BASE_URL = window.location.hostname === 'localhost' 
                 ? 'http://localhost:5000' 
                 : 'http://192.168.0.107:5000';

@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 import axios from 'axios';
 
+
 import VoiceControlButton from '../components/VoiceControlButton';
 import RoomCard from '../components/RoomCard';
 import AddRoomModal from '../components/AddRoomModal';
-import FilterDropdown from '../components/FilterDropDown';
+import FilterDropdown from '../components/FilterDropDown'; 
 import EditRoomModal from '../components/EditRoomModal'; 
-import CurtainsCard from '../components/CurtainsCard'; 
-
 
 // Importation des images des pièces depuis les assets
 import salonImg from '../assets/images/salonImg.png';
@@ -26,8 +25,6 @@ const roomImages = {
 };
 
 const Rooms = () => {
-  
-
   // États pour stocker les données, le chargement et les modaux/filtres
   const [pieces, setPieces] = useState([]); 
   const [loading, setLoading] = useState(true);
@@ -39,7 +36,7 @@ const Rooms = () => {
 
   // États pour la gestion de la modification de la pièce
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); 
-  const [selectedRoomId, setSelectedRoomId] = useState(null);  
+  const [selectedRoomId, setSelectedRoomId] = useState(null);   
 
   /**
    * Fonction pour récupérer toutes les pièces depuis le backend
@@ -51,11 +48,14 @@ const Rooms = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (response.data.success) {
-        setPieces(response.data.pieces); 
+      
+      if (response.data?.success) {
+        const rawPieces = response.data?.data?.pieces ?? response.data?.pieces ?? [];
+        setPieces(Array.isArray(rawPieces) ? rawPieces : []); 
       }
     } catch (err) {
       console.error("Erreur lors de la récupération des pièces:", err.response?.data || err.message);
+      setPieces([]);
     } finally {
       setLoading(false); 
     }
@@ -75,7 +75,7 @@ const Rooms = () => {
    */
   const handleEditRoom = (id) => {
     setSelectedRoomId(id);
-    setIsEditModalOpen(true); // Active l'affichage du modal
+    setIsEditModalOpen(true);
   };
 
   /**
@@ -90,7 +90,6 @@ const Rooms = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        // Filtrer l'état local pour retirer la pièce supprimée sans refaire d'appel API
         setPieces(pieces.filter(room => room._id !== id));
         alert("Pièce supprimée avec succès !");
         
@@ -105,9 +104,10 @@ const Rooms = () => {
    * Logique de filtrage et de recherche combinée sur la liste des pièces
    */
   const filtredRooms = pieces.filter(room => {
+    if (!room) return false;
     const matchesType = filtrerType === "Tous" || room.type === filtrerType;
     const matchesEtage = filtrerEtage === "Tous" || room.etage === Number(filtrerEtage);
-    const matchesSearch = room.nomPiece.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (room.nomPiece || "").toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesType && matchesEtage && matchesSearch;
   });
@@ -120,12 +120,13 @@ const Rooms = () => {
           <h1 className="text-3xl font-bold text-gray-800">Mes Pièces</h1>
           <p className="text-gray-500 mt-1 text-sm font-medium">Gérez les appareils de chaque pièce.</p>
         </div>
-        <VoiceControlButton onClick={handleVoiceClick} />
+        {VoiceControlButton && typeof VoiceControlButton === 'function' ? (
+          <VoiceControlButton onClick={handleVoiceClick} />
+        ) : null}
       </header>
 
       {/* --- Barre d'actions (Recherche, Ajout, Filtres) --- */}
       <div className="mt-10 flex items-center justify-end gap-4">
-        {/* Champ de recherche par texte */}
         <div className="relative w-full max-w-[300px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
@@ -137,7 +138,6 @@ const Rooms = () => {
           />
         </div>
         
-        {/* Bouton et Modal d'ajout d'une nouvelle pièce */}
         <div>
           <button 
             onClick={() => setIsModalOpen(true)}
@@ -147,14 +147,15 @@ const Rooms = () => {
             <span>Ajouter une pièce</span>
           </button>
           
-          <AddRoomModal 
-            isOpen={isModalOpen} 
-            onClose={() => setIsModalOpen(false)} 
-            onRoomAdded={fetchPieces} 
-          />
+          {AddRoomModal && typeof AddRoomModal === 'function' && (
+            <AddRoomModal 
+              isOpen={isModalOpen} 
+              onClose={() => setIsModalOpen(false)} 
+              onRoomAdded={fetchPieces} 
+            />
+          )}
         </div>
         
-        {/* Bouton et Menu déroulant pour les filtres */}
         <div className="relative">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -162,14 +163,16 @@ const Rooms = () => {
             <SlidersHorizontal size={24} />
           </button>
 
-          <FilterDropdown
-            isOpen={isFilterOpen}
-            selectedType={filtrerType}   
-            selectedEtage={filtrerEtage} 
-            onSelectType={(type) => setFiltrerType(type)} 
-            onSelectEtage={(etage) => setFiltrerEtage(etage)} 
-            onClose={() => setIsFilterOpen(false)} 
-          />
+          {FilterDropdown && typeof FilterDropdown === 'function' && (
+            <FilterDropdown
+              isOpen={isFilterOpen}
+              selectedType={filtrerType}   
+              selectedEtage={filtrerEtage} 
+              onSelectType={(type) => setFiltrerType(type)} 
+              onSelectEtage={(etage) => setFiltrerEtage(etage)} 
+              onClose={() => setIsFilterOpen(false)} 
+            />
+          )}
         </div>
       </div>
 
@@ -181,21 +184,23 @@ const Rooms = () => {
       ) : (
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filtredRooms.map((room) => (
-            <RoomCard 
-              key={room._id} 
-              id={room._id}
-              name={room.nomPiece} 
-              devices={room.appareils?.length || 0} 
-              image={roomImages[room.type] || defaultImg} 
-              onEdit={handleEditRoom}
-              onDelete={handleDeleteRoom}
-            />
+            RoomCard && typeof RoomCard === 'function' ? (
+              <RoomCard 
+                key={room._id} 
+                id={room._id}
+                name={room.nomPiece} 
+                devices={room.appareils?.length || 0} 
+                image={roomImages[room.type] || defaultImg} 
+                onEdit={handleEditRoom}
+                onDelete={handleDeleteRoom}
+              />
+            ) : null
           ))}
         </div>
       )}
 
-      {/* --- ✅ MODAL AVEC RESET AUTOMATIQUE CORRIGÉ --- */}
-      {isEditModalOpen && selectedRoomId && (
+      {/* --- MODAL DE MODIFICATION --- */}
+      {isEditModalOpen && selectedRoomId && EditRoomModal && typeof EditRoomModal === 'function' && (
         <EditRoomModal 
           key={selectedRoomId} 
           isOpen={isEditModalOpen}

@@ -14,14 +14,12 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
   const items = Array.isArray(acData) ? acData : [];
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Réinitialiser l'index si la liste change ou devient plus petite
   useEffect(() => {
     if (currentIndex >= items.length) {
       setCurrentIndex(0);
     }
   }, [items.length, currentIndex]);
 
-  // Affichage de chargement si aucune donnée n'est disponible
   if (items.length === 0) {
     return (
       <div className="w-full h-[230px] rounded-[45px] bg-[#f4ebe1] flex items-center justify-center font-bold italic text-gray-500">
@@ -30,12 +28,12 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
     );
   }
 
-  const currentAc = items[currentIndex];
-  const isOn = currentAc?.status === 'ENLIGNE';
-  const temperature = currentAc?.temperatureCible || 25;
-  const mode = currentAc?.mode || 'AUTO'; 
+  const currentAc = items[currentIndex] || {};
 
-  // 📝 DICTIONNAIRE DES DESCRIPTIONS POUR LES MODES DU CLIMATISEUR
+  const isOn = currentAc?.status === 'ENLIGNE';
+  const temperature = currentAc?.temperatureCible ?? 25;
+  const mode = currentAc?.mode ?? 'AUTO';
+
   const modeDescriptions = {
     AUTO: "Régulation intelligente et automatique de la température.",
     FROID: "Refroidissement actif pour baisser la température de la pièce.",
@@ -43,7 +41,6 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
     MANUEL: "Contrôle manuel de la température par l'utilisateur."
   };
 
-  // Fonctions de navigation pour changer de climatiseur
   const nextAc = () => {
     if (items.length <= 1) return;
     setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
@@ -54,7 +51,6 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
     setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
-  // Envoi d'une modification générique à RoomDetails
   const updateAcProperty = (property, value) => {
     if (onUpdateAppareil && currentAc) {
       onUpdateAppareil(currentAc._id || currentAc.id, {
@@ -63,45 +59,41 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
     }
   };
 
-  // Gestion de l'alimentation (On / Off)
   const togglePower = () => {
     const nextStatus = isOn ? 'HORSLIGNE' : 'ENLIGNE';
     updateAcProperty('status', nextStatus);
   };
 
-  // 🌟 AUGMENTATION DE LA TEMPÉRATURE : Désactive tous les modes (Passe en MANUEL)
   const incrementTemp = () => {
-    if (temperature < 30 && onUpdateAppareil && currentAc) {
+    if (!onUpdateAppareil || !currentAc) return;
+
+    if (temperature < 30) {
       onUpdateAppareil(currentAc._id || currentAc.id, {
         temperatureCible: temperature + 1,
-        mode: 'MANUEL' // Désactive les presets pour laisser l'utilisateur gérer manuellement
+        mode: 'MANUEL'
       });
     }
   };
 
-  // 🌟 DIMINUTION DE LA TEMPÉRATURE : Désactive tous les modes (Passe en MANUEL)
   const decrementTemp = () => {
-    if (temperature > 16 && onUpdateAppareil && currentAc) {
+    if (!onUpdateAppareil || !currentAc) return;
+
+    if (temperature > 16) {
       onUpdateAppareil(currentAc._id || currentAc.id, {
         temperatureCible: temperature - 1,
-        mode: 'MANUEL' // Désactive les presets pour laisser l'utilisateur gérer manuellement
+        mode: 'MANUEL'
       });
     }
   };
 
-  // CHANGEMENT DE MODE : Applique le mode et configure automatiquement la température idéale (Preset)
   const changeMode = (newMode) => {
     if (!onUpdateAppareil || !currentAc) return;
 
     let idealTemp = temperature;
-    
-    if (newMode === 'FROID') {
-      idealTemp = 18; // Température préréglée pour le mode FROID
-    } else if (newMode === 'CHAUD') {
-      idealTemp = 28; // Température préréglée pour le mode CHAUD
-    } else if (newMode === 'AUTO') {
-      idealTemp = 24; // Température préréglée pour le mode AUTO
-    }
+
+    if (newMode === 'FROID') idealTemp = 18;
+    else if (newMode === 'CHAUD') idealTemp = 28;
+    else if (newMode === 'AUTO') idealTemp = 24;
 
     onUpdateAppareil(currentAc._id || currentAc.id, {
       mode: newMode,
@@ -112,7 +104,7 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
   return (
     <div className={`relative w-full h-[230px] bg-[#f4ebe1] rounded-[45px] p-6 shadow-xl flex flex-col justify-between transition-all duration-500 select-none ${className}`}>
       
-      {/* ================= SECTION HEADER ================= */}
+      {/* HEADER */}
       <div className="flex justify-between items-center w-full">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
@@ -133,14 +125,16 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-1' : 'left-1'}`} />
           </button>
+
           <button className="text-gray-700 hover:bg-black/5 p-1 rounded-full transition-colors">
             <MoreVertical size={18} />
           </button>
         </div>
       </div>
 
-      {/* ================= SECTION CENTRALE ================= */}
+      {/* CENTER */}
       <div className="flex items-center justify-between w-full h-full mt-2 relative">
+
         <button 
           onClick={prevAc} 
           className={`p-1.5 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}
@@ -150,7 +144,7 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
 
         <div className="flex-1 grid grid-cols-3 items-center justify-items-center h-full px-2">
           
-          {/* 1. Visuel du Climatiseur */}
+          {/* IMAGE */}
           <div className="relative w-full max-w-[130px] flex items-center justify-center">
             <img 
               src={acImage} 
@@ -159,7 +153,7 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
             />
           </div>
 
-          {/* 2. Thermostat Circulaire */}
+          {/* THERMOSTAT */}
           <div className={`relative w-28 h-28 flex items-center justify-center transition-opacity duration-300 ${!isOn && 'opacity-30 pointer-events-none'}`}>
             <div className="absolute inset-0 rounded-full border-4 border-gray-300/40 flex items-center justify-center">
               <div 
@@ -172,27 +166,28 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
 
             <div className="z-10 flex flex-col items-center justify-center bg-[#f4ebe1] rounded-full w-22 h-22 shadow-inner">
               <span className="text-xl font-black text-gray-800">{temperature}°C</span>
+
               <div className="flex items-center gap-2 mt-1">
-                <button onClick={decrementTemp} className="p-0.5 bg-white hover:bg-gray-100 rounded shadow-sm border border-gray-200 text-gray-600 active:scale-90 transition-all">
+                <button onClick={decrementTemp} className="p-0.5 bg-white hover:bg-gray-100 rounded shadow-sm border border-gray-200 text-gray-600">
                   <Minus size={10} />
                 </button>
-                <button onClick={incrementTemp} className="p-0.5 bg-white hover:bg-gray-100 rounded shadow-sm border border-gray-200 text-gray-600 active:scale-90 transition-all">
+                <button onClick={incrementTemp} className="p-0.5 bg-white hover:bg-gray-100 rounded shadow-sm border border-gray-200 text-gray-600">
                   <Plus size={10} />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* 3. Sélecteurs de Modes & Zone de Description */}
+          {/* MODES */}
           <div className="flex flex-col items-center justify-center w-full">
             <div className={`flex flex-row gap-2 justify-center w-full transition-opacity duration-300 ${!isOn && 'opacity-30 pointer-events-none'}`}>
               {['AUTO', 'FROID', 'CHAUD'].map((m) => (
                 <button 
                   key={m}
                   onClick={() => changeMode(m)}
-                  className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl border transition-all ${mode === m ? 'bg-white border-white shadow-md' : 'bg-transparent border-transparent hover:bg-black/5'}`}
+                  className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl border transition-all ${mode === m ? 'bg-white shadow-md' : 'hover:bg-black/5'}`}
                 >
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${m === 'FROID' && mode === m ? 'bg-blue-100 text-blue-600' : m === 'CHAUD' && mode === m ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-600">
                     {m === 'AUTO' && <Settings size={14} />}
                     {m === 'FROID' && <Snowflake size={14} />}
                     {m === 'CHAUD' && <Flame size={14} />}
@@ -202,23 +197,23 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
               ))}
             </div>
 
-            {/* 📝 DESCRIPTION DYNAMIQUE (Affiche le mode actuel ou Manuel) */}
+            {/* DESCRIPTION (FIX IMPORTANT) */}
             {isOn && (
-              <p className="text-[10px] text-gray-400 font-medium italic mt-2 px-1 text-center max-w-[160px] leading-tight transition-all duration-300">
-                {modeDescriptions[mode.toUpperCase()] || modeDescriptions.MANUEL}
+              <p className="text-[10px] text-gray-400 font-medium italic mt-2 px-1 text-center max-w-[160px] leading-tight">
+                {modeDescriptions[String(mode || 'AUTO').toUpperCase()] || modeDescriptions.MANUEL}
               </p>
             )}
           </div>
 
         </div>
 
-        {/* Bouton Suivant */}
         <button 
           onClick={nextAc} 
           className={`p-1.5 hover:bg-black/5 rounded-full transition-colors z-10 shrink-0 ${items.length <= 1 && 'opacity-0 pointer-events-none'}`}
         >
           <ChevronRight size={24} className="text-gray-600" />
         </button>
+
       </div>
     </div>
   );

@@ -5,7 +5,7 @@
  */
 const User = require('../models/User'); 
 const Appareil = require('../models/Appareil'); 
-const jwt = require('jsonwebtoken'); // زِدنا الجافا توكن باش نقراو شكون اللي فاتح الأبليكيشن دابا
+const jwt = require('jsonwebtoken'); 
 
 // =============================================================================
 // 1️⃣ RÉCUPÉRER LE PROFIL UTILISATEUR
@@ -82,7 +82,7 @@ exports.updateUserProfile = async (req, res) => {
 // @access  Public / Repère le Token de manière optionnelle
 exports.getMembres = async (req, res) => {
     try {
-        // 🌟 1️⃣ محاولة معرفة شكون المستخدم لي دات دابا فاتح المتصفح وكيدير Refresh
+        
         let currentUserId = null;
         const authHeader = req.headers.authorization;
         
@@ -90,17 +90,17 @@ exports.getMembres = async (req, res) => {
             try {
                 const token = authHeader.split(' ')[1];
                 const decoded = jwt.verify(token, process.env.JWT_SECRET || 'votre_secret_jwt');
-                currentUserId = decoded.id; // هاهو الـ ID ديال لي فاتح الأبليكيشن دابا بالظبط!
+                currentUserId = decoded.id; 
             } catch (err) {
-                // إذا كان التوكن منتهي أو فيه مشكل ما نتبلكاوش
+                
                 console.log("ℹ️ Token non valide ou absent dans les headers, lecture par défaut.");
             }
         }
 
-        // 2️⃣ جلب جميع المستخدمين من قاعدة البيانات
+
         const users = await User.find({});
 
-        // 3️⃣ جلب كاع الأجهزة لي ف قاعدة البيانات باش نقدروا نفلتروا بهم ديناميكياً
+        
         let allDevicesInDB = [];
         try {
             allDevicesInDB = await Appareil.find({});
@@ -112,14 +112,13 @@ exports.getMembres = async (req, res) => {
             const prenomLower = user.profile?.prenom?.toLowerCase() || "";
             const emailLower = user.email?.toLowerCase() || "";
 
-            // تحديد حالة الـ Online المستقرة (النشط دايما متصل، والمجمد منفصل)
+            
             const isRihamOrActive = emailLower.includes("riham") || prenomLower.includes("riham") || (prenomLower.includes("ghizlane") && prenomLower.includes("e"));
             let finalOnlineStatus = isRihamOrActive ? true : false;
 
             let devicesCount = 0;
 
-            // 🌟 4️⃣ الحساب الأتوماتيكي الحقيقي والذكي مية ف المية:
-            // أ) إذا كان هاد العضو هو نيت الشخص لي فاتح الأبليكيشن دابا (يعني دار ريفريش):
+            
             if (currentUserId && user._id.toString() === currentUserId.toString()) {
                 // السيرفر كيمشي للـ Collection ديال الأجهزة ويحسب بالظبط شحال من جهاز مربوط بـ الـ ID ديالو
                 const userDevices = allDevicesInDB.filter(device => 
@@ -129,11 +128,11 @@ exports.getMembres = async (req, res) => {
                 
                 devicesCount = userDevices.length > 0 ? userDevices.length : (user.appareilsAutorises?.length || 0);
             } else {
-                // ب) بالنسبة للحسابات الأخرى لي باينة ف اللائحة، كيجيب شحال مسجل عندهم ف الـ Array ديالهم ف قاعدة البيانات ديريكت
+     
                 devicesCount = user.appareilsAutorises ? user.appareilsAutorises.length : 0;
             }
 
-            // 💡 ملاحظة للعرض فقط: إذا كانت الداتابيز خاوية تماماً وباقي ما فيهاش ربط (0 أجهزة)، غانخلوا السيستم ديناميكي بناءً على الحساب
+            
             if (devicesCount === 0 && isRihamOrActive) {
                 // كيشوف شحال الإجمالي ديال الأجهزة ف الداتابيز (يلا لقانا زدنا الـ Aspirateur ف الـ page الكاميرات غايعطي 3، يلا حيدناه غايعطي 2)
                 devicesCount = allDevicesInDB.length > 0 ? allDevicesInDB.length : 2;
