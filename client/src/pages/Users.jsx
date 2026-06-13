@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Bell, Mic, Pencil, Trash2, Lock, Lightbulb, Thermometer, Video, ShieldCheck, User, Users, UserPlus, RefreshCw } from "lucide-react";
+import { Bell, Mic, Pencil, Trash2, Lock, Lightbulb, Thermometer, Video, ShieldCheck, User, Users, UserPlus, RefreshCw, Ban, CheckCircle } from "lucide-react";
 import VoiceControlButton from "../components/VoiceControlButton";
 import { useNavigate } from "react-router-dom";
-
+import axios from "axios";
+import { QRCodeSVG } from 'qrcode.react'; 
 
 const { translations } = require("../translations");
 
@@ -36,7 +37,10 @@ function Badge({ label }) {
 }
 
 // ─── COMPONENT: Status Dot ───────────────────────────────────────────────────
-function StatusDot({ online }) {
+function StatusDot({ online, status }) {
+  if (status === "BLOCKED") {
+    return <span className="mx-1.5 inline-block h-2 w-2 rounded-full bg-red-500" title="Bloqué" />;
+  }
   return (
     <span
       className={`mx-1.5 inline-block h-2 w-2 rounded-full ${
@@ -51,57 +55,113 @@ function Avatar({ src, name, bg, color }) {
   return (
     <div
       className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold overflow-hidden shadow-sm border border-gray-100"
-      style={{ backgroundColor: bg, color }}
+      style={{ backgroundColor: bg || "#BFDBFE", color: color || "#1E40AF" }}
     >
       {src ? (
         <img src={src} alt={name} className="h-full w-full object-cover" />
       ) : (
-        name[0]
+        name ? name[0].toUpperCase() : "U"
       )}
     </div>
   );
 }
 
 // ─── COMPONENT: Member Card ──────────────────────────────────────────────────
-function MemberCard({ member, t }) {
-  
+function MemberCard({ member, t, onDelete, onEdit }) {
   const getTranslatedRole = (role) => {
+    if (!role) return t.roles.membre.label;
     if (role.toLowerCase().includes("admin")) return t.roles.admin.label;
     if (role.toLowerCase().includes("mem") || role.toLowerCase().includes("عضو")) return t.roles.membre.label;
     return t.roles.invite.label;
   };
 
+  const name = member.profile ? `${member.profile.prenom} ${member.profile.nom}` : member.email;
+  const image = member.profile?.photo || null;
+  const devicesCount = member.appareilsAutorises ? member.appareilsAutorises.length : 0;
+  const isBlocked = member.status === "BLOCKED";
+
   return (
     <div
-      className="flex items-center justify-between rounded-2xl bg-white px-5 py-4 transition-transform duration-200 hover:-translate-y-0.5"
+      className={`flex items-center justify-between rounded-2xl bg-white px-5 py-4 transition-transform duration-200 hover:-translate-y-0.5 ${isBlocked ? "opacity-60 border border-red-100 bg-red-50/10" : ""}`}
       style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-center gap-4">
-        <Avatar 
-          src={member.image} 
-          name={member.name} 
-          bg={member.avatarBg} 
-          color={member.avatarColor} 
-        />
+        <Avatar src={image} name={name} />
         <div>
           <div className="flex items-center text-sm font-semibold text-gray-900">
-            {member.name}
-            <Badge label={getTranslatedRole(member.role)} />
+            {name}
+            <Badge label={getTranslatedRole(member.roleType)} />
+            {isBlocked && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md font-bold">Bloqué</span>}
           </div>
           <div className="mt-1 flex items-center text-xs text-gray-400">
-            <StatusDot online={member.online} />
-            {member.online ? t.online : t.offline}
+            <StatusDot online={member.isOnline} status={member.status} />
+            {isBlocked ? "Compte Gelé" : (member.isOnline ? t.online : t.offline)}
             &nbsp;•&nbsp;
-            {member.devices} {t.deviceCount}
+            {devicesCount} {t.deviceCount}
           </div>
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button className="text-gray-300 transition-colors hover:text-gray-600">
+        <button onClick={() => onEdit(member)} className="text-gray-400 transition-colors hover:text-gray-700">
           <Pencil size={14} />
         </button>
-        <button className="text-red-300 transition-colors hover:text-red-500">
+        <button 
+          onClick={() => onDelete(member._id)} 
+          className="text-red-300 transition-colors hover:text-red-500"
+        >
           <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── COMPONENT: Edit Member Modal (✏️) ─────────────────────────────────────────
+function EditMemberModal({ member, onClose, onSaveStatus, onSaveRole }) {
+  const [role, setRole] = useState(member.roleType || "MEMBRE");
+  const name = member.profile ? `${member.profile.prenom} ${member.profile.nom}` : member.email;
+  const isBlocked = member.status === "BLOCKED";
+
+  return (
+    <div className="w-[450px] rounded-3xl bg-white p-6 shadow-2xl animate-fade-in">
+      <h3 className="text-lg font-bold text-gray-900 mb-2">Modifier le membre</h3>
+      <p className="text-sm text-gray-400 mb-5">Gestion du compte de <strong>{name}</strong></p>
+      
+      {/* Changer le Rôle */}
+      <div className="mb-6">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Rôle de l'utilisateur</label>
+        <select 
+          value={role} 
+          onChange={(e) => {
+            setRole(e.target.value);
+            onSaveRole(member._id, e.target.value);
+          }}
+          className="w-full rounded-xl border border-gray-200 p-2.5 text-sm focus:border-gray-900 focus:outline-none"
+        >
+          <option value="ADMIN">Administrateur</option>
+          <option value="MEMBRE">Membre de la famille</option>
+          <option value="INVITE">Invité (Temporaire)</option>
+        </select>
+      </div>
+
+      {/* Bloquer / Activer le Statut */}
+      <div className="mb-6 rounded-2xl bg-gray-50 p-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-gray-800">{isBlocked ? "Activer le compte" : "Geler le compte"}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{isBlocked ? "Permettre l'accès à la maison" : "Bloquer l'accès temporairement"}</p>
+        </div>
+        <button 
+          onClick={() => onSaveStatus(member._id)}
+          className={`flex h-9 items-center gap-2 rounded-xl px-4 text-xs font-bold transition-colors ${isBlocked ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
+        >
+          {isBlocked ? <CheckCircle size={15} /> : <Ban size={15} />}
+          {isBlocked ? "Activer" : "Bloquer"}
+        </button>
+      </div>
+
+      <div className="flex justify-end border-t border-gray-100 pt-4">
+        <button onClick={onClose} className="rounded-xl bg-gray-900 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-800">
+          Fermer
         </button>
       </div>
     </div>
@@ -110,62 +170,36 @@ function MemberCard({ member, t }) {
 
 // ─── COMPONENT: Permission Row ───────────────────────────────────────────────
 function PermRow({ device, permissions, onChange, t }) {
+  const getIcon = (type) => {
+    switch (type?.toLowerCase()) {
+      case "serrure": case "lock": return <Lock size={18} />;
+      case "lumiere": case "light": case "lamp": return <Lightbulb size={18} />;
+      case "thermostat": case "climatiseur": return <Thermometer size={18} />;
+      case "camera": return <Video size={18} />;
+      default: return <Lightbulb size={18} />;
+    }
+  };
+
   return (
     <div className="flex items-center border-b border-gray-100 py-4 last:border-none">
       <div className="flex flex-1 items-center gap-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
-          {device.icon}
+          {getIcon(device.type || device.id)}
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-900">{t.deviceNames[device.id] || device.name}</p>
-          <p className="text-xs text-gray-400">{t.roomsNames[device.room.toLowerCase()] || device.room}</p>
+          <p className="text-sm font-medium text-gray-900">{t.deviceNames[device.id] || device.nom || device.name}</p>
+          <p className="text-xs text-gray-400">{t.roomsNames[device.piece?.toLowerCase()] || device.piece || device.room || "Salon"}</p>
         </div>
       </div>
       {["admin", "membre", "invite"].map((role) => (
         <div key={role} className="flex w-28 justify-center">
           <Toggle
-            checked={permissions[role]}
-            onChange={(val) => onChange(device.id, role, val)}
+            checked={permissions ? permissions[role] : false}
+            onChange={(val) => onChange(device._id || device.id, role, val)}
           />
         </div>
       ))}
     </div>
-  );
-}
-
-// ─── COMPONENT: QR Code Placeholder ──────────────────────────────────────────
-function QRCodePlaceholder() {
-  const modules = [
-    [90,10],[100,10],[110,10],[90,20],[110,20],[100,30],[90,40],[100,40],
-    [90,50],[110,50],[90,60],[100,60],[110,60],
-    [10,90],[30,90],[50,90],[20,100],[40,100],[10,110],[30,110],[50,110],
-    [10,120],[50,120],[20,130],[30,140],[40,140],
-    [80,80],[90,80],[100,80],[110,80],[120,80],
-    [80,90],[100,90],[120,90],[80,100],[90,100],[110,100],[120,100],
-    [80,110],[100,110],[120,110],[80,120],[90,120],[110,120],
-    [130,80],[150,80],[170,80],[190,80],
-    [140,90],[160,90],[180,90],[130,100],[150,100],[170,100],
-    [140,110],[160,110],[130,120],[150,120],[170,120],[190,120],
-    [80,130],[100,130],[120,130],[80,140],[90,140],[110,140],
-    [80,150],[100,150],[120,150],[80,160],[90,160],[110,160],[120,160],
-    [80,170],[100,170],[120,170],[80,180],[90,180],[110,180],
-    [130,130],[150,130],[170,130],[190,130],
-    [140,140],[160,140],[180,140],[130,150],[170,150],
-    [140,160],[160,160],[130,170],[150,170],[170,170],[190,170],
-    [140,180],[160,180],[180,180],
-  ];
-  return (
-    <svg viewBox="0 0 200 200" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
-      <rect x="10" y="10" width="60" height="60" rx="4" fill="none" stroke="#111" strokeWidth="6"/>
-      <rect x="24" y="24" width="32" height="32" rx="2" fill="#111"/>
-      <rect x="130" y="10" width="60" height="60" rx="4" fill="none" stroke="#111" strokeWidth="6"/>
-      <rect x="144" y="24" width="32" height="32" rx="2" fill="#111"/>
-      <rect x="10" y="130" width="60" height="60" rx="4" fill="none" stroke="#111" strokeWidth="6"/>
-      <rect x="24" y="144" width="32" height="32" rx="2" fill="#111"/>
-      {modules.map(([x, y], i) => (
-        <rect key={i} x={x} y={y} width="8" height="8" fill="#111" />
-      ))}
-    </svg>
   );
 }
 
@@ -193,7 +227,7 @@ function RoleSelectionModal({ onClose, onNext, t }) {
   const ROLES_LIST = [
     { key: "admin", Icon: ShieldCheck, data: t.roles.admin },
     { key: "membre", Icon: User, data: t.roles.membre },
-    { key: "invite", Icon: UserPlus, data: t.roles.invite },
+    { key: "invite", Icon: Users, data: t.roles.invite },
   ];
 
   return (
@@ -228,12 +262,18 @@ function RoleSelectionModal({ onClose, onNext, t }) {
   );
 }
 
-// ─── COMPONENT: QR Code Modal ─────────────────────────────────────────────────
+// ─── COMPONENT: QR Code Modal ────────────────────────────────────────────────
 const TIMER_TOTAL = 5 * 60;
 
-function QRCodeModal({ onClose, t, language }) {
+function QRCodeModal({ onClose, t, language, selectedRole }) {
   const [seconds, setSeconds] = useState(TIMER_TOTAL);
   const intervalRef = useRef(null);
+
+  const idMaison = localStorage.getItem('houseId') || 'maison_test_123';
+  
+  // 🌟 هنا درنا الـ IP ديالك ذكي: يلا التلفون فـ نفس الـ Wifi غايقرى الـ IP ديال السيرفر نيشان
+  const localIP = window.location.hostname === 'localhost' ? '192.168.0.107' : window.location.hostname;
+  const registerLink = `http://${localIP}:3000/register?houseId=${idMaison}&role=${selectedRole}`; 
 
   const startTimer = () => {
     clearInterval(intervalRef.current);
@@ -254,8 +294,14 @@ function QRCodeModal({ onClose, t, language }) {
     <div className="w-[600px] rounded-3xl bg-white p-8 shadow-2xl" dir={language === "العربية" ? "rtl" : "ltr"}>
       <div className="flex flex-row items-center gap-10">
         <div className={`flex flex-col items-center gap-4 ${language === "العربية" ? "border-l pl-10" : "border-r pr-10"} border-gray-100`}>
-          <div className="rounded-2xl border border-gray-100 p-4 shadow-sm bg-white">
-            <QRCodePlaceholder />
+          <div className="rounded-2xl border border-gray-100 p-4 shadow-sm bg-white flex items-center justify-center">
+            <QRCodeSVG 
+              value={registerLink} 
+              size={160} 
+              bgColor={"#FFFFFF"}
+              fgColor={"#111111"}
+              includeMargin={false} 
+            />
           </div>
           <div className="rounded-full bg-gray-900 px-5 py-1.5 text-sm font-bold tabular-nums text-white tracking-widest">
             {fmt(seconds)}
@@ -290,33 +336,132 @@ function QRCodeModal({ onClose, t, language }) {
   );
 }
 
-// ─── DATA: Members & Devices ──────────────────────────────────────────────────
-const MEMBERS = [
-  { id: 1, name: "Alisha H.", role: "Admin", online: true, devices: 8, avatarBg: "#FDE68A", avatarColor: "#92400E", image: "/assets/user1.jpg" },
-  { id: 2, name: "Miguel", role: "Membre", online: true, devices: 3, avatarBg: "#BFDBFE", avatarColor: "#1E40AF", image: "/assets/user2.jpg" },
-  { id: 3, name: "Sofia", role: "Membre", online: true, devices: 2, avatarBg: "#BFDBFE", avatarColor: "#1E40AF", image: "/assets/user1.jpg" },
-  { id: 4, name: "Karim", role: "Membre", online: false, devices: 1, avatarBg: "#BFDBFE", avatarColor: "#1E40AF", image: "/assets/user2.jpg" },
-  { id: 5, name: "Sarah", role: "Invité", online: true, devices: 1, avatarBg: "#FCE7F3", avatarColor: "#9D174D", image: "/assets/user1.jpg" },
-  { id: 6, name: "Amine", role: "Invitée", online: true, devices: 2, avatarBg: "#BFDBFE", avatarColor: "#1E40AF", image: "/assets/user2.jpg" },
-];
-
 const INITIAL_DEVICES = [
-  { id: "serrure", name: "Serrure porte entrée", room: "entree", icon: <Lock size={18} />, permissions: { admin: true, membre: true, invite: true } },
-  { id: "lumieres", name: "Lumières du salon", room: "salon", icon: <Lightbulb size={18} />, permissions: { admin: true, membre: true, invite: false } },
-  { id: "thermostat", name: "Thermostat intelligent", room: "couloir", icon: <Thermometer size={18} />, permissions: { admin: true, membre: false, invite: false } },
-  { id: "camera", name: "Caméra de l'allée", room: "exterieur", icon: <Video size={18} />, permissions: { admin: true, membre: true, invite: false } },
+  { id: "serrure", name: "Serrure porte entrée", room: "entree", permissions: { admin: true, membre: true, invite: true } },
+  { id: "lumieres", name: "Lumières du salon", room: "salon", permissions: { admin: true, membre: true, invite: false } },
+  { id: "thermostat", name: "Thermostat intelligent", room: "couloir", permissions: { admin: true, membre: false, invite: false } },
+  { id: "camera", name: "Caméra de l'allée", room: "exterieur", permissions: { admin: true, membre: true, invite: false } },
 ];
 
 // ─── MAIN PAGE COMPONENT ─────────────────────────────────────────────────────
 export default function UsersPage() {
+  const [membres, setMembres] = useState([]);
   const [search, setSearch] = useState("");
-  const [devices, setDevices] = useState(INITIAL_DEVICES);
+  const [devices, setDevices] = useState(() => {
+    const savedFallback = localStorage.getItem("fallback_matrix_permissions");
+    return savedFallback ? JSON.parse(savedFallback) : INITIAL_DEVICES;
+  });
   const [modalStep, setModalStep] = useState(null);
+  const [editingMember, setEditingMember] = useState(null); 
+  const [chosenRole, setChosenRole] = useState("membre"); 
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [language, setLanguage] = useState("Français");
+  const [currentUserRole, setCurrentUserRole] = useState("MEMBRE"); 
   const navigate = useNavigate();
 
+  // 🌟 الـ URL غايبدل راسو أوتوماتيكياً على حساب المتصفح/الهاتف
+  const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000' 
+    : 'http://192.168.0.107:5000';
+
+  const fetchMembres = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_BASE_URL}/api/users/membres`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setMembres(res.data.data);
+      }
+    } catch (error) {
+      console.error("Erreur lors du fetch des membres:", error);
+    }
+  };
+
+  const fetchDevices = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_BASE_URL}/api/appareils`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.length > 0) {
+        setDevices(res.data);
+      }
+    } catch (error) {
+      console.log("Using local matrix fallback.");
+    }
+  };
+
+  const handleDeleteMembre = async (id) => {
+    if (window.confirm("Voulez-vous vraiment supprimer ce membre ?")) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.delete(`${API_BASE_URL}/api/users/membres/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+          setMembres((prev) => prev.filter((m) => m._id !== id));
+        }
+      } catch (error) {
+        console.error("Erreur lors de la suppression:", error);
+      }
+    }
+  };
+
+  const handleToggleStatus = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(`${API_BASE_URL}/api/users/membres/${id}/status`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setMembres((prev) => prev.map((m) => m._id === id ? { ...m, status: res.data.data.status } : m));
+        setEditingMember((prev) => prev ? { ...prev, status: res.data.data.status } : null);
+      }
+    } catch (error) {
+      setMembres((prev) => prev.map((m) => m._id === id ? { ...m, status: m.status === "ACTIVE" ? "BLOCKED" : "ACTIVE" } : m));
+      setEditingMember((prev) => prev ? { ...prev, status: prev.status === "ACTIVE" ? "BLOCKED" : "ACTIVE" } : null);
+    }
+  };
+
+  const handleUpdateRole = async (id, newRole) => {
+    setMembres((prev) => prev.map((m) => m._id === id ? { ...m, roleType: newRole } : m));
+  };
+
+  const handleToggle = async (deviceId, role, value) => {
+    let updatedDevices = [];
+    setDevices((prev) => {
+      updatedDevices = prev.map((d) => {
+        const dId = d._id || d.id;
+        return dId === deviceId ? { ...d, permissions: { ...d.permissions, [role]: value } } : d;
+      });
+      localStorage.setItem("fallback_matrix_permissions", JSON.stringify(updatedDevices));
+      return updatedDevices;
+    });
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`${API_BASE_URL}/api/users/membres/permissions`, {
+        deviceId,
+        role,
+        value
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error("Erreur permissions", error);
+    }
+  };
+
   useEffect(() => {
+    fetchMembres();
+    fetchDevices();
+
+    const savedRole = localStorage.getItem("roleType");
+    if (savedRole) {
+      setCurrentUserRole(savedRole.toUpperCase());
+    }
+
     const handleStorageChange = () => {
       const savedLang = localStorage.getItem("language");
       if (savedLang) setLanguage(savedLang);
@@ -330,14 +475,20 @@ export default function UsersPage() {
   const t = translations[language] || translations["Français"];
 
   const openModal = () => setModalStep("role");
-  const closeModal = () => setModalStep(null);
-  const goToQR = () => setModalStep("qr");
-
-  const handleToggle = (deviceId, role, value) => {
-    setDevices((prev) => prev.map((d) => d.id === deviceId ? { ...d, permissions: { ...d.permissions, [role]: value } } : d));
+  const closeModal = () => {
+    setModalStep(null);
+    setEditingMember(null);
+  };
+  
+  const goToQR = (role) => {
+    setChosenRole(role);
+    setModalStep("qr");
   };
 
-  const filtered = MEMBERS.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = membres.filter((m) => {
+    const fullName = m.profile ? `${m.profile.prenom} ${m.profile.nom}` : m.email;
+    return fullName.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
     <>
@@ -348,12 +499,21 @@ export default function UsersPage() {
       )}
       {modalStep === "qr" && (
         <ModalBackdrop onClose={closeModal}>
-          <QRCodeModal onClose={closeModal} t={t} language={language} />
+          <QRCodeModal onClose={closeModal} t={t} language={language} selectedRole={chosenRole} />
+        </ModalBackdrop>
+      )}
+      {editingMember && (
+        <ModalBackdrop onClose={closeModal}>
+          <EditMemberModal 
+            member={editingMember} 
+            onClose={closeModal} 
+            onSaveStatus={handleToggleStatus} 
+            onSaveRole={handleUpdateRole}
+          />
         </ModalBackdrop>
       )}
 
-      <div className="min-h-screen font-sans text-gray-900 bg-white" dir={language === "العربية" ? "rtl" : "ltr"}>
-        {/* Header Section */}
+      <div className="w-full min-h-screen font-sans text-gray-900 bg-white" dir={language === "العربية" ? "rtl" : "ltr"}>
         <div className="flex items-center justify-between border-b border-gray-100 bg-white px-8 py-5">
           <div className="flex items-center gap-6">
             <div>
@@ -369,23 +529,32 @@ export default function UsersPage() {
         </div>
 
         <div className="mx-auto max-w-5xl px-8 py-8 space-y-6">
-          {/* Active Members Section */}
           <div className="rounded-2xl bg-white p-7 shadow-sm border border-gray-50">
             <div className="mb-6 flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">{t.activeMembers}</h2>
                 <p className="mt-1 text-xs text-gray-400">{t.manageAccess}</p>
               </div>
-              <button onClick={openModal} className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors shadow-sm">
-                {t.addMember}
-              </button>
+              
+              {currentUserRole === "ADMIN" && (
+                <button onClick={openModal} className="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors shadow-sm">
+                  {t.addMember}
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-5">
-              {filtered.map((m) => (<MemberCard key={m.id} member={m} t={t} />))}
+              {filtered.map((m) => (
+                <MemberCard 
+                  key={m._id} 
+                  member={m} 
+                  t={t} 
+                  onDelete={handleDeleteMembre} 
+                  onEdit={(mem) => setEditingMember(mem)}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Permissions Matrix Section */}
           <div className="rounded-2xl bg-white p-7 shadow-sm border border-gray-50">
             <h2 className="text-lg font-bold text-gray-900">{t.matrixTitle}</h2>
             <p className="mt-1 mb-5 text-xs text-gray-400">{t.matrixDesc}</p>
@@ -398,7 +567,15 @@ export default function UsersPage() {
                 </div>
               ))}
             </div>
-            {devices.map((device) => (<PermRow key={device.id} device={device} permissions={device.permissions} onChange={handleToggle} t={t} />))}
+            {devices.map((device) => (
+              <PermRow 
+                key={device._id || device.id} 
+                device={device} 
+                permissions={device.permissions} 
+                onChange={handleToggle} 
+                t={t} 
+              />
+            ))}
           </div>
         </div>
       </div>

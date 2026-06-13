@@ -1,18 +1,16 @@
 // -----------------------------------------------------------------------------
-// IMPORTATIONS DES MODULES DE BASE (CORRECTIF : AJOUT DES MODULES MANQUANTS)
+// IMPORTATIONS DES MODULES DE BASE
 // -----------------------------------------------------------------------------
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
-
 
 // -----------------------------------------------------------------------------
-// CHARGEMENT DES CONFIGURATIONS ET VARIABLES D'ENVIRONNEMENT
+// CHARGEMENT DES CONFIGURATIONS ET VARIABLES D'ENVIRONNEMENT (MODELS)
 // -----------------------------------------------------------------------------
 require('./src/models/Maison');
-require('./src/models/Appareil'); // Ajout sécurisé pour les routes de l'API
+require('./src/models/Appareil'); 
 require('./src/models/SystemeGestionEnergetique');
 require('./src/models/HistoriqueConsommation');
 require('./src/models/Notifications');
@@ -44,73 +42,44 @@ const reportRoutes = require('./src/routes/reportRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
 
 // -----------------------------------------------------------------------------
-// INITIALISATION DE L'APPLICATION EXPRESS
+// INITIALISATION DE L'APPLICATION EXPRESS ET HTTP SERVER
 // -----------------------------------------------------------------------------
 const app = express();
 const port = process.env.PORT || 5000;
+const server = http.createServer(app);
 
 // -----------------------------------------------------------------------------
 // CONFIGURATION DE SOCKET.IO (MOTEUR TEMPS RÉEL)
 // -----------------------------------------------------------------------------
-// Express a besoin d'un serveur HTTP natif pour faire fonctionner Socket.IO
-const server = http.createServer(app);
-
 const io = require('socket.io')(server, {
     cors: {
-        origin: 'http://localhost:3000', // Autorise uniquement votre Frontend React
+        origin: 'http://localhost:3000', 
         methods: ['GET', 'POST']
     }
 });
 
-// Partage de l'instance Socket.IO dans l'application Express pour y accéder ailleurs
 app.set('io', io);
 
-// -----------------------------------------------------------------------------
-// ÉCOUTEUR DE CONNEXIONS SOCKET.IO (CLIENTS REACTIONNEL)
-// Authentification JWT + attribution de rooms par utilisateur
-// -----------------------------------------------------------------------------
 io.on('connection', (socket) => {
-    const token = socket.handshake.auth?.token;
-    let userId = null;
-
-    if (token) {
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            userId = decoded.id;
-            socket.join(`user:${userId}`);
-            console.log(`[SOCKET.IO] Client connecté : ${socket.id} -> user:${userId}`);
-        } catch (err) {
-            console.warn(`[SOCKET.IO] Token invalide pour ${socket.id}: ${err.message}`);
-        }
-    } else {
-        console.log(`[SOCKET.IO] Client connecté (sans token) : ${socket.id}`);
-    }
-
-    // Stocker le userId sur le socket pour usage interne
-    socket.userId = userId;
-
+    console.log(`🔌 [SOCKET.IO] Client connecté de manière bidirectionnelle : ${socket.id}`);
     socket.on('disconnect', () => {
-        console.log(`[SOCKET.IO] Client déconnecté : ${socket.id}`);
+        console.log(`🔌 [SOCKET.IO] Client déconnecté du serveur`);
     });
 });
 
 // -----------------------------------------------------------------------------
-// MIDDLEWARES DE SÉCURITÉ ET DE PARSING
+// MIDDLEWARES GLOBAUX
 // -----------------------------------------------------------------------------
-// Protection CORS pour autoriser les requêtes HTTP depuis le Frontend React
 app.use(cors({ origin: 'http://localhost:3000' }));
-
-// Permet à Express de lire et parser le format JSON reçu dans req.body
 app.use(express.json());
 
-// Logger global : Affiche toutes les requêtes HTTP reçues dans le terminal
 app.use((req, res, next) => {
     console.log(`👉 [HTTP REQUEST] ${req.method} ${req.url}`);
     next();
 });
 
 // -----------------------------------------------------------------------------
-// ENREGISTREMENT DES ROUTES API MIDDLEWARES
+// ENREGISTREMENT DES ROUTES API
 // -----------------------------------------------------------------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/pieces', pieceRoutes);
@@ -123,64 +92,44 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-
-// -----------------------------------------------------------------------------
-// ROUTE DE VÉRIFICATION DE SANTÉ (HEALTH CHECK)
-// -----------------------------------------------------------------------------
 app.get('/test-health', (req, res) => {
-    res.json({
-        message: "Services are running!",
-        status: "All systems operational"
-    });
+  res.json({ message: "Services are running!", status: "All systems operational" });
 });
 
-// -----------------------------------------------------------------------------
-// GESTIONNAIRE GLOBAL DES ERREURS INTERNES (CATCH-ALL)
-// -----------------------------------------------------------------------------
-// Sécurité : Évite le crash du serveur si une route lève une exception non gérée
 app.use((err, req, res, next) => {
     console.error("❌ [ERREUR SERVEUR]:", err.stack);
-
-    res.status(500).json({
-        message: "Erreur interne du serveur",
-        error: err.message
-    });
+    res.status(500).json({ message: "Erreur interne du serveur", error: err.message });
 });
 
 // -----------------------------------------------------------------------------
-// DÉMARRAGE DU SYSTÈME APRÈS VÉRIFICATION DES BASES DE DONNÉES
+// DÉMARRAGE DU SYSTÈME
 // -----------------------------------------------------------------------------
 connectDatabases()
     .then(async () => {
-        // Étape A : Initialisation de la base SQL (PostgreSQL) si nécessaire
         try {
             await initializePostgres();
         } catch (err) {
             console.error("❌ Erreur lors de l'initialisation PostgreSQL:", err.message);
         }
 
-        // Étape B : Lancement effectif de l'écoute du serveur HTTP
-        server.listen(port, () => {
-            console.log(`✅ Serveur démarré avec succès sur http://localhost:${port}`);
+        // Écoute sur 0.0.0.0 pour ton IP Mobile
+        server.listen(port, '0.0.0.0', () => {
+            console.log(`✅ Serveur démarré avec succès sur http://192.168.0.107:${port}`);
             console.log(`🚀 Bases de données connectées et prêtes`);
 
-            // Étape C : Démarrage des tâches de fond automatiques (Cron)
-            console.log("⏰ Démarrage du Cron Service (Planification)...");
+            console.log("⏰ Démarrage du Cron Service...");
             initializeMonthlyResetCron();
             initializePlanningCron();
 
-            // Étape D : Lancement du service d'écoute MQTT (Fake ESP32)
             console.log("⚡ Démarrage du service d'écoute MQTT...");
             const ioInstance = app.get('io');
-
             if (ioInstance) {
                 initializeMqtt(ioInstance);
             } else {
-                console.warn("⚠️ Socket.IO pas encore totalement disponible lors de l'initialisation MQTT");
                 initializeMqtt(io);
             }
         });
     })
     .catch(err => {
-        console.error("❌ Échec critique du démarrage du système complet:", err.message);
+        console.error("❌ Échec critique du démarrage du système:", err.message);
     });
