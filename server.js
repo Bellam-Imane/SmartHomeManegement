@@ -5,6 +5,7 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 
 
 // -----------------------------------------------------------------------------
@@ -65,12 +66,30 @@ app.set('io', io);
 
 // -----------------------------------------------------------------------------
 // ÉCOUTEUR DE CONNEXIONS SOCKET.IO (CLIENTS REACTIONNEL)
+// Authentification JWT + attribution de rooms par utilisateur
 // -----------------------------------------------------------------------------
 io.on('connection', (socket) => {
-    console.log(`🔌 [SOCKET.IO] Client connecté de manière bidirectionnelle : ${socket.id}`);
+    const token = socket.handshake.auth?.token;
+    let userId = null;
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            userId = decoded.id;
+            socket.join(`user:${userId}`);
+            console.log(`[SOCKET.IO] Client connecté : ${socket.id} -> user:${userId}`);
+        } catch (err) {
+            console.warn(`[SOCKET.IO] Token invalide pour ${socket.id}: ${err.message}`);
+        }
+    } else {
+        console.log(`[SOCKET.IO] Client connecté (sans token) : ${socket.id}`);
+    }
+
+    // Stocker le userId sur le socket pour usage interne
+    socket.userId = userId;
 
     socket.on('disconnect', () => {
-        console.log(`🔌 [SOCKET.IO] Client déconnecté du serveur`);
+        console.log(`[SOCKET.IO] Client déconnecté : ${socket.id}`);
     });
 });
 

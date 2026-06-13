@@ -2,11 +2,14 @@
  * dashboardController.js
  * Provides dashboard data: live sensor readings, device states,
  * energy metrics, and unread notification count.
+ *
+ * SECURITY: All queries are scoped to the logged-in user's Maison.
  */
 const { Appareil } = require('../models/Appareil');
 const User = require('../models/User');
 const { getLatestSensorData, getEnergyAggregated } = require('../services/influxService');
 const { getSecurityNotifications } = require('../services/historyService');
+const { getAppareilFilter } = require('../utils/userScope');
 
 /**
  * @desc    Dashboard summary — all data for the main dashboard page
@@ -20,33 +23,38 @@ exports.getDashboardSummary = async (req, res) => {
         // 1. Fetch user info
         const user = await User.findById(userId).populate('maison');
 
-        // 2. Fetch 4 dashboard devices in parallel
+        // 2. Build user-scoped filter (only devices in user's Maison)
+        const userFilter = await getAppareilFilter(userId);
+
+        // 3. Fetch 4 dashboard devices in parallel (scoped to user)
         const [clima, light, lock, aspi] = await Promise.all([
-            Appareil.findOne({ typeAppareil: 'THERMIQUE' }),
-            Appareil.findOne({ typeAppareil: 'ECLAIRAGE' }),
-            Appareil.findOne({ typeAppareil: 'MOTORISE', nomAppareil: /serrure/i })
-                .then(r => r || Appareil.findOne({ typeAppareil: 'PORTE' })),
-            Appareil.findOne({ typeAppareil: 'ASPIRATEUR' })
+            Appareil.findOne({ ...userFilter, typeAppareil: 'THERMIQUE' }),
+            Appareil.findOne({ ...userFilter, typeAppareil: 'ECLAIRAGE' }),
+            Appareil.findOne({ ...userFilter, typeAppareil: 'MOTORISE', nomAppareil: /serrure/i })
+                .then(r => r || Appareil.findOne({ ...userFilter, typeAppareil: 'PORTE' })),
+            Appareil.findOne({ ...userFilter, typeAppareil: 'ASPIRATEUR' })
         ]);
 
-        // 3. Live sensor data from InfluxDB (internal temperature)
+        // 4. Live sensor data from InfluxDB (internal temperature)
         const temperatureInterieure = await getLatestSensorData('temperature', '-1h');
 
-        // 4. Consumed energy: aggregate consommationActuelle from ALL online devices
-        const onlineDevices = await Appareil.find({ status: 'ENLIGNE' }, 'consommationActuelle');
+        // 5. Consumed energy: aggregate consommationActuelle from user's online devices only
+        const onlineDevices = await Appareil.find(
+            { ...userFilter, status: 'ENLIGNE' },
+            'consommationActuelle'
+        );
         const energieConsommee = onlineDevices.reduce(
             (sum, d) => sum + (d.consommationActuelle || 0), 0
         );
 
-        // 5. Solar energy: simulated data (no physical sensor)
-        //    Base production ~1.8 kWh, varies by hour of day (peak at noon)
+        // 6. Solar energy: simulated data (no physical sensor)
         const hour = new Date().getHours();
         const solarFactor = hour >= 6 && hour <= 18
-            ? Math.sin(((hour - 6) / 12) * Math.PI)  // bell curve 6am-6pm
+            ? Math.sin(((hour - 6) / 12) * Math.PI)
             : 0;
         const energieSolaire = Math.round((1.8 * solarFactor) * 100) / 100;
 
-        // 6. Unread notifications count from PostgreSQL
+        // 7. Unread notifications count from PostgreSQL
         let unreadCount = 0;
         try {
             const notifs = await getSecurityNotifications({ userId, unreadOnly: true, limit: 100 });
@@ -55,9 +63,9 @@ exports.getDashboardSummary = async (req, res) => {
             console.warn("[Dashboard] Could not fetch notifications:", e.message);
         }
 
-        // 7. Active devices count
-        const totalDevices = await Appareil.countDocuments();
-        const activeDevices = await Appareil.countDocuments({ status: 'ENLIGNE' });
+        // 8. Active devices count (scoped to user)
+        const totalDevices = await Appareil.countDocuments(userFilter);
+        const activeDevices = await Appareil.countDocuments({ ...userFilter, status: 'ENLIGNE' });
 
         res.status(200).json({
             sensors: {
@@ -77,7 +85,7 @@ exports.getDashboardSummary = async (req, res) => {
                 unreadNotifications: unreadCount
             },
             user: {
-                nom: user?.nom,
+                nom: user?.profile?.nom || user?.nom,
                 email: user?.email,
                 role: user?.role
             }
@@ -98,7 +106,6 @@ exports.getEnergyChart = async (req, res) => {
     try {
         const { range = '-7d', window = '1d' } = req.query;
 
-        // Validate range format (must start with -)
         const validRange = range.startsWith('-') ? range : '-7d';
         const validWindow = ['1h', '6h', '1d', '1w', '1mo'].includes(window) ? window : '1d';
 

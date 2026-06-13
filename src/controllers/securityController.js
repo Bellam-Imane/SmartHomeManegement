@@ -4,6 +4,7 @@ const { sendSecurityAlertEmail } = require('../services/emailService');
 const { logNotification, logDeviceEvent } = require('../services/historyService');
 const { getLatestSensorData } = require('../services/influxService');
 const { publishMessage } = require('../config/mqttService');
+const { getAppareilFilter } = require('../utils/userScope');
 
 // Map lock keys to expected MongoDB device names for PORTE sync
 const LOCK_DEVICE_NAMES = {
@@ -83,19 +84,23 @@ exports.updateSecurityStatus = async (req, res) => {
         if (type === 'locks' && name) {
             const expectedDeviceName = LOCK_DEVICE_NAMES[name];
 
-            // Try exact name match first
+            // SECURITE : Filtrer uniquement les appareils de la maison de l'utilisateur
+            const userFilter = await getAppareilFilter(userId);
+
+            // Try exact name match first (scoped to user's maison)
             let doorDevice = null;
             if (expectedDeviceName) {
                 doorDevice = await Appareil.findOne({
+                    ...userFilter,
                     typeAppareil: 'PORTE',
                     nomAppareil: expectedDeviceName
                 });
             }
 
-            // Fallback: first PORTE or MOTORISE door/lock device
+            // Fallback: first PORTE or MOTORISE door/lock device (scoped to user)
             if (!doorDevice) {
-                doorDevice = await Appareil.findOne({ typeAppareil: 'PORTE' })
-                    || await Appareil.findOne({ typeAppareil: 'MOTORISE', nomAppareil: /serrure|porte|lock/i });
+                doorDevice = await Appareil.findOne({ ...userFilter, typeAppareil: 'PORTE' })
+                    || await Appareil.findOne({ ...userFilter, typeAppareil: 'MOTORISE', nomAppareil: /serrure|porte|lock/i });
             }
 
             if (doorDevice) {
