@@ -27,7 +27,7 @@ const initializePostgres = require('./src/models/initPostgres');
 // SERVICES EXTERNES (MQTT & CRON DE PLANIFICATION)
 // -----------------------------------------------------------------------------
 const { initializeMqtt } = require('./src/config/mqttService');
-const { initializeMonthlyResetCron } = require('./src/services/cronService');
+const { initializeMonthlyResetCron, initializePlanningCron } = require('./src/services/cronService');
 
 // -----------------------------------------------------------------------------
 // IMPORTATION DES ROUTES DE L'API
@@ -41,6 +41,7 @@ const automationRoutes = require('./src/routes/automationRoutes');
 const historyRoutes = require('./src/routes/historyRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 const reportRoutes = require('./src/routes/reportRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
 
 // -----------------------------------------------------------------------------
 // INITIALISATION DE L'APPLICATION EXPRESS
@@ -120,6 +121,7 @@ app.use('/api', automationRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 
 // -----------------------------------------------------------------------------
@@ -165,6 +167,7 @@ connectDatabases()
             // Étape C : Démarrage des tâches de fond automatiques (Cron)
             console.log("⏰ Démarrage du Cron Service (Planification)...");
             initializeMonthlyResetCron();
+            initializePlanningCron();
 
             // Étape D : Lancement du service d'écoute MQTT (Fake ESP32)
             console.log("⚡ Démarrage du service d'écoute MQTT...");

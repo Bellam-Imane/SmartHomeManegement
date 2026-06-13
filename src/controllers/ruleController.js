@@ -1,4 +1,7 @@
 const Rule = require('../models/Regle');
+const { publishMessage } = require('../config/mqttService');
+
+const TOPIC_COMMANDES = 'smart/home/appareils/commandes';
 
 /**
  * 📥 GET ALL RULES
@@ -57,9 +60,61 @@ const updateRule = async (req, res) => {
   }
 };
 
+/**
+ * 🗑️ DELETE RULE
+ * Suppression sécurisée d'une règle appartenant à l'utilisateur connecté
+ */
+const deleteRule = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const ruleSupprimee = await Rule.findOneAndDelete({
+      _id: id,
+      userId: req.user.id
+    });
+
+    if (!ruleSupprimee) {
+      return res.status(404).json({ message: "Règle introuvable ou action non autorisée." });
+    }
+
+    res.status(200).json({ success: true, message: "Règle supprimée avec succès." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * 🔀 TOGGLE RULE (activation / désactivation)
+ * Bascule l'état d'une règle (etat pour EVENT, estActive pour PLANIF)
+ */
+const toggleRule = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const rule = await Rule.findOne({ _id: id, userId: req.user.id });
+    if (!rule) {
+      return res.status(404).json({ message: "Règle introuvable ou action non autorisée." });
+    }
+
+    // Basculer le bon champ selon le type de règle
+    if (rule.isPlanif) {
+      rule.estActive = !rule.estActive;
+    } else {
+      rule.etat = !rule.etat;
+    }
+
+    await rule.save();
+    res.status(200).json(rule);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Exportation des méthodes du controller
 module.exports = {
   getAllRules,
   createRule,
-  updateRule // 💡 Ajout de la méthode PUT pour l'utilisation dans les routes
+  updateRule,
+  deleteRule,
+  toggleRule
 };

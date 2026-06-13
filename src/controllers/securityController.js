@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { Appareil } = require('../models/Appareil');
+const Notification = require('../models/Notifications');
 const { sendSecurityAlertEmail } = require('../services/emailService');
 const { logNotification, logDeviceEvent } = require('../services/historyService');
 const { getLatestSensorData } = require('../services/influxService');
@@ -149,25 +150,62 @@ exports.updateSecurityStatus = async (req, res) => {
         console.log("[DEBUG] Sauvegarde réussie !");
 
         // ==========================================
-        // 2. POSTGRESQL AUDIT TRAIL
+        // 2. NOTIFICATIONS (PostgreSQL audit + MongoDB + Socket.IO)
         // ==========================================
         try {
+            let titre = null, message = null;
+
             if (type === 'alarmActive') {
                 const action = value ? "Système d'alarme ACTIVÉ" : "Système d'alarme DÉSACTIVÉ";
-                await logNotification(userId, "Changement Alarme", action);
+                titre = "Changement Alarme";
+                message = action;
+                await logNotification(userId, titre, message);
                 console.log(`[Security] 📝 Audit log: ${action}`);
             } else if (type === 'locks' && name) {
                 const lockLabel = LOCK_DEVICE_NAMES[name] || name;
                 const action = value ? `${lockLabel} VERROUILLÉ` : `${lockLabel} DÉVERROUILLÉ`;
-                await logNotification(userId, "Changement Verrou", action);
+                titre = "Changement Verrou";
+                message = action;
+                await logNotification(userId, titre, message);
                 console.log(`[Security] 📝 Audit log: ${action}`);
             } else if (type === 'sensors' && name) {
                 const action = value ? `Capteur "${name}" activé` : `Capteur "${name}" désactivé`;
-                await logNotification(userId, "Changement Capteur", action);
+                titre = "Changement Capteur";
+                message = action;
+                await logNotification(userId, titre, message);
                 console.log(`[Security] 📝 Audit log: ${action}`);
             }
+
+            // Créer la notification MongoDB + push Socket.IO
+            if (titre && message) {
+                const notif = await Notification.create({
+                    titre,
+                    message,
+                    type: 'SECURITE',
+                    categorie: 'SECURITE',
+                    priorite: type === 'alarmActive' ? 'HIGH' : 'MEDIUM',
+                    utilisateur: userId
+                });
+
+                // Push en temps réel via Socket.IO
+                const io = req.app.get('io');
+                if (io) {
+                    io.to(`user:${userId}`).emit('new_notification', {
+                        _id: notif._id,
+                        titre: notif.titre,
+                        message: notif.message,
+                        type: notif.type,
+                        categorie: notif.categorie,
+                        priorite: notif.priorite,
+                        dateHeure: notif.dateHeure,
+                        estLue: false
+                    });
+                    // Also update Sidebar badge count
+                    io.to(`user:${userId}`).emit('notifications_changed', { action: 'new' });
+                }
+            }
         } catch (logErr) {
-            console.error("[Security] ⚠️ PostgreSQL audit log failed (non-blocking):", logErr.message);
+            console.error("[Security] ⚠️ Notification creation failed (non-blocking):", logErr.message);
         }
 
         res.status(200).json(user.preferences.securitySettings);
@@ -192,6 +230,8 @@ exports.triggerSecurityAlert = async (req, res) => {
         }
 
         const isEmailAllowed = user.preferences?.notifications?.security?.email ?? true;
+        const alertTitre = "🚨 Alerte de Sécurité";
+        let alertMessage;
 
         if (isEmailAllowed) {
             // Fire email in background (don't block response on SMTP timeout)
@@ -202,16 +242,47 @@ exports.triggerSecurityAlert = async (req, res) => {
                  <b>Date:</b> ${new Date().toLocaleString('fr-FR')}<br>
                  Veuillez vérifier l'application.`
             ).catch(err => console.error("[Email] Background send failed:", err.message));
-            // PHASE 4 : Persist security alert to PostgreSQL
-            console.log(`[DEBUG] triggerSecurityAlert -> userId: "${userId}" | type: ${typeof userId} | length: ${String(userId).length}`);
-            await logNotification(userId, "Alerte de Sécurité", "Événement suspect détecté à votre domicile.");
-            return res.json({ message: "Alerte déclenchée. Émail envoyé avec succès." });
+            alertMessage = "Événement suspect détecté à votre domicile.";
+            await logNotification(userId, alertTitre, alertMessage);
         } else {
-            // PHASE 4 : Persist security alert even if email is disabled
-            console.log(`[DEBUG] triggerSecurityAlert (no email) -> userId: "${userId}" | type: ${typeof userId} | length: ${String(userId).length}`);
-            await logNotification(userId, "Alerte de Sécurité", "Événement suspect détecté (envoi email désactivé).");
-            return res.json({ message: "Alerte déclenchée, mais l'envoi d'émail est désactivé." });
+            alertMessage = "Événement suspect détecté (envoi email désactivé).";
+            await logNotification(userId, alertTitre, alertMessage);
         }
+
+        // Create MongoDB notification + Socket.IO push
+        try {
+            const notif = await Notification.create({
+                titre: alertTitre,
+                message: alertMessage,
+                type: 'SECURITE',
+                categorie: 'SECURITE',
+                priorite: 'CRITICAL',
+                utilisateur: userId
+            });
+
+            const io = req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('new_notification', {
+                    _id: notif._id,
+                    titre: notif.titre,
+                    message: notif.message,
+                    type: notif.type,
+                    categorie: notif.categorie,
+                    priorite: notif.priorite,
+                    dateHeure: notif.dateHeure,
+                    estLue: false
+                });
+                io.to(`user:${userId}`).emit('notifications_changed', { action: 'new' });
+            }
+        } catch (notifErr) {
+            console.error("[Security] ⚠️ Alert notification creation failed (non-blocking):", notifErr.message);
+        }
+
+        return res.json({
+            message: isEmailAllowed
+                ? "Alerte déclenchée. Émail envoyé avec succès."
+                : "Alerte déclenchée, mais l'envoi d'émail est désactivé."
+        });
 
     } catch (error) {
         console.error("Erreur triggerSecurityAlert:", error);

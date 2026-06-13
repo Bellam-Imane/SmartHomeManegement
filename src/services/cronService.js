@@ -6,7 +6,8 @@ const Appareil = mongoose.model('Appareil');
 const SystemeGestionEnergetique = mongoose.model('SystemeGestionEnergetique');
 const HistoriqueConsommation = mongoose.model('HistoriqueConsommation');
 const Notification = mongoose.model('Notification'); 
-const Planification = require('../models/Planification'); // 💡 Importation du modèle Planification
+const User = require('../models/User');
+const Regle = require('../models/Regle'); // 💡 Planifications unifiées dans la collection Regle
 
 const { resetLocalConsumptionCache, publishMqttMessage } = require('../config/mqttService'); // 💡 Récupération sécurisée du client MQTT
 const { getIO } = require('../config/socket');
@@ -44,14 +45,41 @@ const initializeMonthlyResetCron = () => {
                 console.log(`💾 [CRON] Archivage réussi pour le mois ${numeroMoisHumain}/${anneePrecedente} | Archive ID: ${nouvelleArchive._id}`);
 
                 try {
-                    await Notification.create({
+                    // Find first admin user dynamically instead of hardcoded fallback
+                    let userIdCible = systeme.utilisateurPrincipal;
+                    if (!userIdCible) {
+                        const firstAdmin = await User.findOne({ role: 'admin' }).select('_id');
+                        userIdCible = firstAdmin ? firstAdmin._id : null;
+                    }
+                    if (!userIdCible) {
+                        console.warn("⚠️ [CRON WARN] Aucun utilisateur trouvé pour la notification de fin de mois.");
+                        throw new Error("No target user found");
+                    }
+                    const notif = await Notification.create({
                         titre: "🧾 Nouveau bilan disponible",
                         message: `Le rapport du mois ${numeroMoisHumain}/${anneePrecedente} est prêt. Facture estimée : ${nouvelleArchive.factureEstimee.toFixed(2)} DH.`,
-                        type: "INFO",
+                        type: "ENERGIE",
+                        categorie: "ENERGIE",
+                        priorite: "MEDIUM",
                         estLue: false,
-                        utilisateur: systeme.utilisateurPrincipal || "65a123456789abcdef012345"
+                        utilisateur: userIdCible
                     });
                     console.log("🔔 [CRON] Notification de fin de mois enregistrée en base de données.");
+
+                    // Push Socket.IO en temps réel vers l'utilisateur
+                    const ioCron = getIO();
+                    if (ioCron && userIdCible) {
+                        ioCron.to(`user:${userIdCible}`).emit('new_notification', {
+                            _id: notif._id,
+                            titre: notif.titre,
+                            message: notif.message,
+                            type: notif.type,
+                            categorie: notif.categorie,
+                            dateHeure: notif.dateHeure,
+                            estLue: false
+                        });
+                        ioCron.to(`user:${userIdCible}`).emit('notifications_changed', { action: 'new' });
+                    }
                 } catch (notifError) {
                     console.warn("⚠️ [CRON WARN] Échec de la création de la notification :", notifError.message);
                 }
@@ -86,8 +114,7 @@ const initializeMonthlyResetCron = () => {
             const io = getIO();
             if (io) {
                 io.emit('global_energy_update', { consommationTotale: 0, balanceEnergetique: 0 });
-                io.emit('new_notification', { message: "Un nouveau bilan énergétique mensuel est disponible !" });
-                console.log("📡 [CRON] Notification de remise à zéro poussée vers Socket.IO.");
+                console.log("📡 [CRON] Mise à jour énergie globale poussée vers Socket.IO.");
             }
 
             console.log("🎉 [CRON] Le cycle de reset mensuel s'est déroulé avec succès !");
@@ -118,8 +145,11 @@ const initializePlanningCron = () => {
             const joursFr = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
             const jourActuelFr = joursFr[maintenant.getDay()];
 
-            // 2️⃣ Recherche de tous les plannings actifs f الداتابيز
-            const planningsActifs = await Planification.find({ estActive: true });
+            // 2️⃣ Recherche des planifications actives dans la collection Regle (isPlanif = true)
+            const planningsActifs = await Regle.find({ 
+                isPlanif: true, 
+                estActive: true 
+            });
             
             const io = getIO();
 
@@ -129,11 +159,13 @@ const initializePlanningCron = () => {
                 
                 if (!jourCorrespondant) continue;
 
+                // Utiliser la commande définie par l'utilisateur (pas seulement ON/OFF)
+                const commandePlanifiee = plan.action?.commande?.toUpperCase();
                 let actionAFaire = null;
 
                 // Évaluation si c'est l'heure exacte de démarrage (Allumage)
                 if (plan.heureDebut === heureActuelleStr) {
-                    actionAFaire = 'ON';
+                    actionAFaire = commandePlanifiee || 'ON';
                 } 
                 // Évaluation si c'est l'heure exacte d'arrêt (Extinction)
                 else if (plan.heureFin === heureActuelleStr) {
@@ -142,30 +174,39 @@ const initializePlanningCron = () => {
 
                 // 3️⃣ Si une correspondance horaire stricte est validée, exécution de la commande hardware
                 if (actionAFaire) {
-                    const idAppareilStr = plan.idAppareil.toString();
-                    const isTurnOn = actionAFaire === 'ON';
+                    const idAppareilStr = plan.action?.appareilCible?.toString();
+                    if (!idAppareilStr) continue; // Pas d'appareil cible défini
 
-                    console.log(`⏱️ [CRON AUTOMATION] Exécution du plan "${plan.nomPlan || 'Sans Nom'}" pour l'appareil ${idAppareilStr} => Action: ${actionAFaire}`);
+                    // Mapper la commande vers le status MongoDB (supporte toutes les commandes)
+                    const CMD_ON = ['ON','PLAY','OPEN','START','MODE_CHAUD','MODE_FROID','MODE_AUTO','ACTIVER_ALARME','START_RECORD','UNLOCK','ACTIVER_DETECTION','MODE_TURBO','MODE_SILENCIEUX','INTENSITE_50','INTENSITE_100','COULEUR_ROUGE','COULEUR_BLEU','VOLUME_UP','VOLUME_DOWN','APP_NETFLIX','APP_YOUTUBE'];
+                    const CMD_OFF = ['OFF','PAUSE','CLOSE','STOP','DOCK','DESACTIVER_ALARME','STOP_RECORD','LOCK','DESACTIVER_DETECTION'];
+                    const isTurnOn = CMD_ON.includes(actionAFaire);
+
+                    console.log(`⏱️ [CRON AUTOMATION] Exécution du plan "${plan.nomRegle || 'Sans Nom'}" pour l'appareil ${idAppareilStr} => Commande: ${actionAFaire}`);
 
                     // 🛠️ Mise à jour immédiate de l'état du matériel dans MongoDB
                     const appareilMisAJour = await Appareil.findByIdAndUpdate(
                         idAppareilStr,
                         { 
                             status: isTurnOn ? 'ENLIGNE' : 'HORSLIGNE',
-                            consommationActuelle: isTurnOn ? 45 : 0 // Injection d'une charge fictive standard
+                            consommationActuelle: isTurnOn ? 45 : 0
                         },
                         { new: true }
                     );
 
                     if (appareilMisAJour) {
-                        // 🛠️ Publication de l'ordre sur le Broker MQTT pour l'ESP32 Réel (Wokwi) ou Virtuel (fakeEsp32)
+                        // 🛠️ Publication de la commande réelle sur le topic de l'appareil
+                        const deviceTopic = `smart/home/appareil/${idAppareilStr}`;
+                        publishMqttMessage(deviceTopic, actionAFaire);
+
+                        // 🛠️ Publication sur le topic central avec la vraie commande
                         publishMqttMessage(TOPIC_COMMANDES, JSON.stringify({
                             deviceId: idAppareilStr,
-                            action: "TOGGLE",
+                            action: actionAFaire,
                             valeur: isTurnOn
                         }));
 
-                        // 🛠️ Émission instantanée Socket.io pour basculer le switch sur l'interface React
+                        // 🛠️ Émission Socket.io pour mettre à jour l'interface React
                         if (io) {
                             io.emit('appareil_update', {
                                 deviceId: idAppareilStr,

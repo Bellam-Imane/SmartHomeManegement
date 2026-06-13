@@ -14,8 +14,13 @@ exports.getPieces = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // Recherche de la maison appartenant à l'utilisateur connecté
-        const maison = await Maison.findOne({ proprietaire: userId });
+        // Recherche de la maison : proprietaire OU membre
+        const maison = await Maison.findOne({
+            $or: [
+                { proprietaire: userId },
+                { membres: userId }
+            ]
+        });
         
         if (!maison) {
             return res.status(404).json({
@@ -72,7 +77,12 @@ exports.ajouterPiece = async (req, res) => {
             });
         }
 
-        const maison = await Maison.findOne({ proprietaire: userId });
+        const maison = await Maison.findOne({
+            $or: [
+                { proprietaire: userId },
+                { membres: userId }
+            ]
+        });
 
         if (!maison) {
             return res.status(404).json({

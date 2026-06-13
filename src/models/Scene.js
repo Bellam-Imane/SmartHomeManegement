@@ -5,7 +5,13 @@ const sceneSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  
+
+  // Sécurisation : liaison obligatoire à l'utilisateur propriétaire
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
 
   description: String,
 
