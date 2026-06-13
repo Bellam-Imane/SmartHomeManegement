@@ -109,8 +109,10 @@ const RoomDetails = () => {
   // ⚡ CONFIGURATION DU ÉCOUTEUR REACTIONNEL SOCKET.IO (MISE À JOUR CORRECTE)
   // ---------------------------------------------------------------------------
   useEffect(() => {
+    const token = localStorage.getItem('token');
     const socket = io('http://localhost:5000', {
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      auth: { token }
     });
 
     console.log("🔌 [SOCKET.IO] Écouteur activé et connecté");

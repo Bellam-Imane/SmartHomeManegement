@@ -2,36 +2,49 @@ const mqtt = require('mqtt');
 
 // ── 1️⃣ CONFIGURATION DES APPAREILS (ALIGNÉE SUR VOS IDs RÉELS DE LA DATABASE) ──
 const devices = {
-  lampe:       "6a0cf42e7264a021407dae9d", 
-  camera:      "6a0cf43a7264a021407dae9e", 
-  climatiseur: "6a0cf4487264a021407dae9f", 
-  tv:          "6a0e0999a05e12a54e87872b", 
-  rideau1:     "6a10d976513a833a7ea56ecf", 
-  rideau2:     "6a10d99c513a833a7ea56ed0", 
-  vacuum:      "6a10dc92513a833a7ea56ed1"  
+  lampe:            "6a0cf42e7264a021407dae9d", 
+  camera:           "6a0cf43a7264a021407dae9e", 
+  climatiseur:      "6a0cf4487264a021407dae9f", 
+  tv:               "6a0e0999a05e12a54e87872b", 
+  rideau1:          "6a10d976513a833a7ea56ecf", 
+  rideau2:          "6a10d99c513a833a7ea56ed0", 
+  vacuum:           "6a10dc92513a833a7ea56ed1",
+  // Nouveaux appareils de securite (IDs a remplacer par les vrais IDs de votre DB)
+  porte:            "6a2cf42e7264a021407daea0",
+  capteurMouvement: "6a2cf43a7264a021407daea1",
+  capteurFumee:     "6a2cf4487264a021407daea2",
 };
 
-// Puissances nominales de référence
+// Puissances nominales de référence (en Watts)
 const BASE_POWER = {
   [devices.climatiseur]: 350,
   [devices.lampe]: 45,
   [devices.tv]: 120,
   [devices.vacuum]: 200,
-  [devices.camera]: 15
+  [devices.camera]: 15,
+  [devices.rideau1]: 30,   // Rideaux motorisés
+  [devices.rideau2]: 30,
+  [devices.porte]: 5,      // Serrure intelligente (veille)
 };
 
-// Injection d'un état "Pre-Allumé" intelligent par défaut pour court-circuiter le bug du zéro
+// ── 2️⃣ ÉTATS INITIAUX DES APPAREILS ──
 let states = {
-  [devices.lampe]:       { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.lampe] },
-  [devices.camera]:      { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.camera] }, 
-  [devices.climatiseur]: { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.climatiseur], temperatureActuelle: 22, temperatureCible: 22 },
-  [devices.tv]:          { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.tv] },
-  [devices.rideau1]:     { status: "ENLIGNE", position: 40 }, 
-  [devices.rideau2]:     { status: "ENLIGNE", position: 60 },
-  [devices.vacuum]:      { status: "HORSLIGNE", consommationActuelle: 0 } // L'aspirateur reste OFF au démarrage
+  [devices.lampe]:            { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.lampe] },
+  [devices.camera]:           { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.camera] }, 
+  [devices.climatiseur]:      { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.climatiseur], temperatureActuelle: 22, temperatureCible: 22 },
+  [devices.tv]:               { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.tv] },
+  [devices.rideau1]:          { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.rideau1], position: 40 }, 
+  [devices.rideau2]:          { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.rideau2], position: 60 },
+  [devices.vacuum]:           { status: "HORSLIGNE", consommationActuelle: 0 },
+  // Porte intelligente — verrouillée par défaut, faible consommation de veille
+  [devices.porte]:            { status: "ENLIGNE", consommationActuelle: BASE_POWER[devices.porte], estVerrouillee: true },
+  // Capteur de mouvement — toujours en ligne, détection aléatoire
+  [devices.capteurMouvement]: { status: "ENLIGNE", consommationActuelle: 3, typeCapteur: "MOUVEMENT", detected: false },
+  // Capteur de fumée — toujours en ligne, valeur PPM stable
+  [devices.capteurFumee]:     { status: "ENLIGNE", consommationActuelle: 2, typeCapteur: "FUMEE", valeurActuelle: 15 },
 };
 
-// ── 2️⃣ CONNEXION AU BROKER MQTT ──
+// ── 3️⃣ CONNEXION AU BROKER MQTT ──
 const MQTT_BROKER = 'mqtt://broker.emqx.io'; 
 const MQTT_PORT = 1883;
 
@@ -50,13 +63,12 @@ client.on('connect', () => {
   client.subscribe(COMMAND_TOPIC, (err) => {
     if (!err) {
       console.log(`📥 Abonné au topic des commandes. Sync initiale en cours...`);
-      // Tentative de récupération des états précis de la DB
       client.publish(COMMAND_TOPIC, JSON.stringify({ action: "ASK_STATUS" }));
     }
   });
 });
 
-// ── 3️⃣ RÉCEPTION ET TRAITEMENT DES COMMANDES ET SYNCHRONISATIONS ──
+// ── 4️⃣ RÉCEPTION ET TRAITEMENT DES COMMANDES ──
 client.on('message', (topic, message) => {
   if (topic === COMMAND_TOPIC) {
     try {
@@ -64,7 +76,6 @@ client.on('message', (topic, message) => {
       const { deviceId, action, valeur } = command;
 
       if (states[deviceId]) {
-        // Traitement unifié du contrôle direct et du retour de synchronisation Database
         if (action === "TOGGLE" || action === "SYNC_STATUS") {
           const isOn = valeur; 
           states[deviceId].status = isOn ? "ENLIGNE" : "HORSLIGNE";
@@ -82,6 +93,11 @@ client.on('message', (topic, message) => {
         if (action === "SET_POSITION" && (deviceId === devices.rideau1 || deviceId === devices.rideau2)) {
           states[deviceId].position = valeur;
         }
+
+        if (action === "LOCK" && deviceId === devices.porte) {
+          states[deviceId].estVerrouillee = valeur;
+          console.log(`🔒 [LOCK] Porte => ${valeur ? 'VERROUILLÉE' : 'DÉVERROUILLÉE'}`);
+        }
       }
     } catch (e) {
       console.error("❌ Erreur Parsing JSON :", e.message);
@@ -89,7 +105,7 @@ client.on('message', (topic, message) => {
   }
 });
 
-// ── 4️⃣ ENVOI DE LA TÉLÉMÉTRIE EN CONTINU (TOUTES LES 10 SECONDES) ──
+// ── 5️⃣ ENVOI DE LA TÉLÉMÉTRIE EN CONTINU (TOUTES LES 10 SECONDES) ──
 setInterval(() => {
   console.log("\n--------------------------------------------------");
   console.log(`🔄 [MQTT PUSH] Envoi du cycle de télémétrie...`);
@@ -106,30 +122,63 @@ setInterval(() => {
     states[climId].temperatureActuelle = +(24 + Math.random() * 2).toFixed(1);
   }
 
-  // Boucle d'envoi unifiée
+  // Simulation aléatoire du capteur de mouvement (détection toutes les ~30s)
+  const motionId = devices.capteurMouvement;
+  states[motionId].detected = Math.random() > 0.7;
+  if (states[motionId].detected) {
+    console.log(`🚶 [MOTION] Mouvement détecté !`);
+  }
+
+  // Simulation du capteur de fumée (PPM stable avec légère variation)
+  const smokeId = devices.capteurFumee;
+  states[smokeId].valeurActuelle = +(12 + Math.random() * 8).toFixed(1);
+
+  // Boucle d'envoi unifiée pour tous les appareils
   Object.keys(devices).forEach((key) => {
     const id = devices[key];
     const payload = {};
 
+    // Consommation en Watts (avec variation aléatoire pour les appareils actifs)
     if (states[id].consommationActuelle !== undefined) {
       let wattsEnvoyes = states[id].consommationActuelle;
 
-      if (wattsEnvoyes > 0 && id !== devices.lampe) {
+      if (wattsEnvoyes > 0 && id !== devices.lampe && id !== devices.porte) {
         wattsEnvoyes = Math.floor(wattsEnvoyes * (0.96 + Math.random() * 0.08));
       }
 
       payload.consommationActuelle = wattsEnvoyes;
       console.log(`⚡ [ENERGY] ${key} => ${wattsEnvoyes} W [${states[id].status}]`);
 
+      // Données spécifiques au climatiseur
       if (id === devices.climatiseur) {
         payload.temperatureActuelle = states[id].temperatureActuelle;
         console.log(`🌡️ [SENSOR] Climatiseur Température => ${states[id].temperatureActuelle} °C`);
       }
     }
     
+    // Position des rideaux motorisés
     if (states[id].position !== undefined) {
       payload.position = states[id].position;
       console.log(`🪟 [POSITION] ${key} => ${states[id].position} %`);
+    }
+
+    // État de la porte intelligente
+    if (states[id].estVerrouillee !== undefined) {
+      payload.estVerrouillee = states[id].estVerrouillee;
+      console.log(`🔒 [DOOR] ${key} => ${states[id].estVerrouillee ? 'VERROUILLÉE' : 'DÉVERROUILLÉE'}`);
+    }
+
+    // Capteur de mouvement
+    if (states[id].typeCapteur === "MOUVEMENT") {
+      payload.typeCapteur = "MOUVEMENT";
+      payload.detected = states[id].detected;
+    }
+
+    // Capteur de fumée
+    if (states[id].typeCapteur === "FUMEE") {
+      payload.typeCapteur = "FUMEE";
+      payload.valeurActuelle = states[id].valeurActuelle;
+      console.log(`💨 [SMOKE] ${key} => ${states[id].valeurActuelle} PPM`);
     }
 
     client.publish(TELEMETRIE_TOPIC, JSON.stringify({

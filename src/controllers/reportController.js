@@ -6,6 +6,7 @@
 const { Appareil } = require('../models/Appareil');
 const { getEnergyAggregated } = require('../services/influxService');
 const { pgPool } = require('../config/db');
+const { getAppareilFilter } = require('../utils/userScope');
 
 // ==========================================
 // FALLBACK DATA — matches UI screenshots exactly
@@ -152,11 +153,12 @@ exports.getReportSummary = async (req, res) => {
         // Returns realistic random data every request (demo/proof mode)
         // ==========================================
         if (req.query.simulate === 'true') {
-            // Grab real device counts from MongoDB for authenticity
+            // Grab real device counts from MongoDB for authenticity (scoped to user)
             let realActive = null, realTotal = null;
             try {
-                realTotal = await Appareil.countDocuments();
-                realActive = await Appareil.countDocuments({ status: 'ENLIGNE' });
+                const userFilter = await getAppareilFilter(req.user.id);
+                realTotal = await Appareil.countDocuments(userFilter);
+                realActive = await Appareil.countDocuments({ ...userFilter, status: 'ENLIGNE' });
             } catch (_) { /* ignore — use random */ }
             const simData = generateSimulatedData(realActive, realTotal);
             console.log('[Reports] 🎲 SIMULATION MODE — returning randomized data');
@@ -166,6 +168,9 @@ exports.getReportSummary = async (req, res) => {
         // ==========================================
         // PARALLEL QUERIES — all databases hit simultaneously
         // ==========================================
+        // SECURITE : Filtrer uniquement les appareils de la maison de l'utilisateur
+        const userFilter = await getAppareilFilter(req.user.id);
+
         const [
             allDevices,
             totalDeviceCount,
@@ -176,12 +181,12 @@ exports.getReportSummary = async (req, res) => {
             peakHourResult,
             peakDayResult
         ] = await Promise.all([
-            // 1. MongoDB: all devices with consumption data
-            Appareil.find({}).select('nomAppareil typeAppareil status consommationActuelle tempsUtilisationTotal dernierAllumage'),
-            // 2. MongoDB: total count
-            Appareil.countDocuments(),
-            // 3. MongoDB: active count
-            Appareil.countDocuments({ status: 'ENLIGNE' }),
+            // 1. MongoDB: all devices with consumption data (scoped to user)
+            Appareil.find(userFilter).select('nomAppareil typeAppareil status consommationActuelle tempsUtilisationTotal dernierAllumage'),
+            // 2. MongoDB: total count (scoped to user)
+            Appareil.countDocuments(userFilter),
+            // 3. MongoDB: active count (scoped to user)
+            Appareil.countDocuments({ ...userFilter, status: 'ENLIGNE' }),
             // 4. InfluxDB: daily chart (7 days, 1-day buckets)
             getEnergyAggregated('-7d', '1d'),
             // 5. InfluxDB: weekly chart (4 weeks, 7-day buckets)

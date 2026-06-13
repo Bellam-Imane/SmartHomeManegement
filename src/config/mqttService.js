@@ -1,14 +1,11 @@
 const mqtt = require('mqtt');
 const mongoose = require('mongoose');
 
-// Importations des services d'archivage InfluxDB
 const { saveSensorData, saveDeviceConsumption } = require('../services/influxService'); 
 
-// Configurations du Broker MQTT (Broker URL from .env ou par défaut EMQX)
 const MQTT_BROKER = process.env.MQTT_BROKER_URL || process.env.MQTT_BROKER || 'mqtt://broker.emqx.io';
 const MQTT_PORT = process.env.MQTT_PORT || 1883;
 
-// Topics Phase 2 & Phase 3
 const TOPIC_COMMANDES = 'smart/home/appareils/commandes';
 const TOPIC_TELEMETRIE = 'smart/home/appareils/telemetrie';
 const TOPIC_CLIMA_PUB = "smart/home/climatiseur/mesures"; 
@@ -16,16 +13,12 @@ const TOPIC_HUMI_PUB = "smart/home/capteurs/humidite";
 const TOPIC_AIR_PUB = "smart/home/capteurs/air";         
 const TOPIC_CONSO_ACK = "smart/home/appareils/consommation"; 
 
-// Chargement des modèles nécessaires
 const Appareil = require('../models/Appareil');
 const SystemeGestionEnergetique = require('../models/SystemeGestionEnergetique');
 const Regle = require('../models/Regle'); 
 
 let client = null;
 
-/**
- * 📡 INITIALISATION DU CLIENT MQTT GLOBAL
- */
 const initializeMqtt = (io) => {
     console.log(`📡 Connexion MQTT en cours sur : ${MQTT_BROKER}:${MQTT_PORT}`);
 
@@ -39,7 +32,6 @@ const initializeMqtt = (io) => {
     client.on('connect', () => {
         console.log('✅ MQTT connecté avec succès au Broker !');
 
-        // Souscriptions aux différents flux
         const topicsToSubscribe = [
             TOPIC_TELEMETRIE, 
             TOPIC_COMMANDES, 
@@ -61,13 +53,12 @@ const initializeMqtt = (io) => {
         const payloadRaw = message.toString();
 
         try {
-            // ── 🔄 TRAITEMENT DE LA SYNCHRONISATION INITIALE DE L'ESP32 ──
             if (topic === TOPIC_COMMANDES) {
                 let commandData;
                 try { commandData = JSON.parse(payloadRaw); } catch (e) { return; }
 
                 if (commandData.action === "ASK_STATUS") {
-                    console.log("📡 SYNC demandée par un composant matériel (Wokwi/FakeESP)");
+                    console.log("📡 SYNC demandée par un composant matériel");
                     if (mongoose.connection.readyState !== 1) return;
 
                     const appareilsEnBase = await Appareil.find({}, 'status');
@@ -82,7 +73,6 @@ const initializeMqtt = (io) => {
                 }
             }
 
-            // ── ⚡ TRAITEMENT DE LA TÉLÉMÉTRIE EN TEMPS RÉEL (CAPTEURS GENERAL) ──
             if (topic === TOPIC_TELEMETRIE) {
                 let data;
                 try { data = JSON.parse(payloadRaw); } catch (err) { return; }
@@ -95,7 +85,6 @@ const initializeMqtt = (io) => {
 
                 const updateQuery = {};
 
-                // Calcul et incrémentation de l'énergie consommée (Wh)
                 if (payload.consommationActuelle !== undefined) {
                     const watts = payload.consommationActuelle;
                     const energie = (watts * 10) / 3600;
@@ -117,7 +106,6 @@ const initializeMqtt = (io) => {
                     { returnDocument: 'after' }
                 );
 
-                // Sauvegarde InfluxDB
                 if (payload.consommationActuelle !== undefined) {
                     saveDeviceConsumption(deviceId, appareilActuel.type || 'AppareilInconnu', Number(payload.consommationActuelle));
                     await recalculerEnergieGlobale(io);
@@ -128,7 +116,6 @@ const initializeMqtt = (io) => {
                     await verifierEtExecuterRegles(appareilMisAJour, io);
                 }
 
-                // Synchronisation UI via Socket.io
                 if (io) {
                     io.emit('appareil_update', {
                         deviceId,
@@ -142,7 +129,6 @@ const initializeMqtt = (io) => {
                 }
             }
 
-            // ── 🍂 TOPICS PHASE 3 : SPECIFIQUES ──
             if (topic === TOPIC_HUMI_PUB && payloadRaw.startsWith("HUMI:")) {
                 const humidite = parseFloat(payloadRaw.split(":")[1]);
                 if (!isNaN(humidite)) await saveSensorData('dht11_salon', 'humidite', humidite);
@@ -167,9 +153,6 @@ const initializeMqtt = (io) => {
     });
 };
 
-/**
- * 🧠 MOTEUR D'AUTOMATION ÉVÉNEMENTIELLE (REGLES)
- */
 async function verifierEtExecuterRegles(appareil, io) {
     try {
         const reglesActives = await Regle.find({ etat: true, 'condition.typeAppareil': appareil.type });
@@ -207,7 +190,6 @@ async function verifierEtExecuterRegles(appareil, io) {
                             action: "TOGGLE",
                             valeur: isCommandeOn
                         }));
-                        console.log(`🔌 [MQTT PUSH] Ordre automatique envoyé à l'appareil ${idCible} => ${commandeAAffecter}`);
                     }
 
                     if (io) {
@@ -223,13 +205,10 @@ async function verifierEtExecuterRegles(appareil, io) {
             }
         }
     } catch (err) {
-        console.error("❌ Erreur au niveau du moteur d'automatisation (Regles) :", err.message);
+        console.error("❌ Erreur au niveau du moteur d'automatisation :", err.message);
     }
 }
 
-/**
- * ── RECALCUL DE L'ÉNERGIE GLOBALE DE LA MAISON ──
- */
 async function recalculerEnergieGlobale(io) {
     try {
         const appareils = await Appareil.find({});
@@ -255,9 +234,6 @@ async function recalculerEnergieGlobale(io) {
     }
 }
 
-/**
- * ── ENVOI FLUSH DE SÉCURITÉ MQTT ──
- */
 const publishMqttMessage = (topic, message) => {
     if (!client || !client.connected) return;
     client.publish(topic, message, { qos: 1 });

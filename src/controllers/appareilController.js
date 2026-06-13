@@ -13,6 +13,7 @@ const {
 const Piece = require('../models/Piece');
 const { publishMessage } = require('../config/mqttService');
 const { logDeviceEvent } = require('../services/historyService');
+const { getAppareilFilter, getUserPieceIds } = require('../utils/userScope');
 
 /**
  * ---------------------------------------------------------------------------------
@@ -28,6 +29,15 @@ exports.createAppareil = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Veuillez fournir le nom, le type de l'appareil et la piece associee."
+      });
+    }
+
+    // SECURITE : Verifier que la piece appartient bien a la maison de l'utilisateur
+    const userPieces = await getUserPieceIds(req.user.id);
+    if (!userPieces.some(p => p.toString() === piece.toString())) {
+      return res.status(403).json({
+        success: false,
+        message: "Acces refuse : cette piece n'appartient pas a votre maison."
       });
     }
 
@@ -132,6 +142,15 @@ exports.updateAppareil = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "L'appareil demande est introuvable."
+      });
+    }
+
+    // SECURITE : Verifier que l'appareil appartient a la maison de l'utilisateur
+    const userPieces = await getUserPieceIds(req.user.id);
+    if (!userPieces.some(p => p.toString() === appareilExiste.piece.toString())) {
+      return res.status(403).json({
+        success: false,
+        message: "Acces refuse : cet appareil n'appartient pas a votre maison."
       });
     }
 
@@ -309,12 +328,40 @@ exports.updateAppareil = async (req, res) => {
 
 /**
  * ---------------------------------------------------------------------------------
- * CONTROLLER : RECUPERER TOUS LES APPAREILS
+ * CONTROLLER : RECUPERER TOUS LES APPAREILS (avec filtrage optionnel)
+ * Query params supportes :
+ *   ?type=ECLAIRAGE              -> filtre par type unique
+ *   ?type=CAMERA,PORTE,CAPTEUR   -> filtre par types multiples (virgule)
+ *   ?status=ENLIGNE              -> filtre par statut
+ *   ?typeCapteur=MOUVEMENT       -> filtre les capteurs par sous-type
  * ---------------------------------------------------------------------------------
  */
 exports.getAllAppareils = async (req, res) => {
   try {
-    const appareils = await Appareil.find({}).populate({
+    // SECURITE : Filtrer uniquement les appareils de la maison de l'utilisateur
+    const userId = req.user.id;
+    const scopeFilter = await getAppareilFilter(userId);
+
+    const { type, status, typeCapteur } = req.query;
+    const filter = { ...scopeFilter };
+
+    // Filtrage par typeAppareil (supporte les valeurs multiples separees par virgule)
+    if (type) {
+      const types = type.split(',').map(t => t.trim().toUpperCase());
+      filter.typeAppareil = types.length === 1 ? types[0] : { $in: types };
+    }
+
+    // Filtrage par status (ENLIGNE / HORSLIGNE)
+    if (status) {
+      filter.status = status.toUpperCase();
+    }
+
+    // Filtrage par sous-type de capteur (MOUVEMENT / FUMEE / HUMIDITE)
+    if (typeCapteur) {
+      filter.typeCapteur = typeCapteur.toUpperCase();
+    }
+
+    const appareils = await Appareil.find(filter).populate({
       path: 'piece',
       select: 'nomPiece'
     });

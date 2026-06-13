@@ -52,17 +52,13 @@ const server = http.createServer(app);
 // -----------------------------------------------------------------------------
 const io = require('socket.io')(server, {
     cors: {
-        origin: 'http://localhost:3000', // Autorise uniquement votre Frontend React
+        origin: 'http://localhost:3000', 
         methods: ['GET', 'POST']
     }
 });
 
-// Partage de l'instance Socket.IO dans l'application Express
 app.set('io', io);
 
-// -----------------------------------------------------------------------------
-// ÉCOUTEUR DE CONNEXIONS SOCKET.IO
-// -----------------------------------------------------------------------------
 io.on('connection', (socket) => {
     console.log(`🔌 [SOCKET.IO] Client connecté de manière bidirectionnelle : ${socket.id}`);
     socket.on('disconnect', () => {
@@ -71,7 +67,7 @@ io.on('connection', (socket) => {
 });
 
 // -----------------------------------------------------------------------------
-// MIDDLEWARES GLOBAUX (SÉCURITÉ, PARSING ET LOGGER)
+// MIDDLEWARES GLOBAUX
 // -----------------------------------------------------------------------------
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
@@ -94,49 +90,34 @@ app.use('/api/history', historyRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 
-// -----------------------------------------------------------------------------
-// ROUTE DE VÉRIFICATION DE SANTÉ (HEALTH CHECK)
-// -----------------------------------------------------------------------------
 app.get('/test-health', (req, res) => {
-  res.json({
-    message: "Services are running!",
-    status: "All systems operational"
-  });
+  res.json({ message: "Services are running!", status: "All systems operational" });
 });
 
-// -----------------------------------------------------------------------------
-// GESTIONNAIRE GLOBAL DES ERREURS INTERNES
-// -----------------------------------------------------------------------------
 app.use((err, req, res, next) => {
     console.error("❌ [ERREUR SERVEUR]:", err.stack);
-    res.status(500).json({
-        message: "Erreur interne du serveur",
-        error: err.message
-    });
+    res.status(500).json({ message: "Erreur interne du serveur", error: err.message });
 });
 
 // -----------------------------------------------------------------------------
-// DÉMARRAGE DU SYSTÈME APRÈS VÉRIFICATION DES BASES DE DONNÉES
+// DÉMARRAGE DU SYSTÈME
 // -----------------------------------------------------------------------------
 connectDatabases()
     .then(async () => {
-        // Étape A : Initialisation de la base SQL (PostgreSQL) si nécessaire
         try {
             await initializePostgres();
         } catch (err) {
             console.error("❌ Erreur lors de l'initialisation PostgreSQL:", err.message);
         }
 
-        // Étape B : Lancement effectif de l'écoute du serveur HTTP (Écoute sur 0.0.0.0 pour le Mobile)
+        // Écoute sur 0.0.0.0 pour ton IP Mobile
         server.listen(port, '0.0.0.0', () => {
             console.log(`✅ Serveur démarré avec succès sur http://192.168.0.107:${port}`);
             console.log(`🚀 Bases de données connectées et prêtes`);
 
-            // Étape C : Démarrage des tâches de fond automatiques (Cron)
-            console.log("⏰ Démarrage du Cron Service (Planification)...");
+            console.log("⏰ Démarrage du Cron Service...");
             initializeMonthlyResetCron();
 
-            // Étape D : Lancement du service d'écoute MQTT
             console.log("⚡ Démarrage du service d'écoute MQTT...");
             const ioInstance = app.get('io');
             if (ioInstance) {
@@ -147,5 +128,5 @@ connectDatabases()
         });
     })
     .catch(err => {
-        console.error("❌ Échec critique du démarrage du système complet:", err.message);
+        console.error("❌ Échec critique du démarrage du système:", err.message);
     });
