@@ -11,7 +11,7 @@ require('./src/models/Maison');
 const { connectDatabases } = require('./src/config/db');
 const initializePostgres = require('./src/models/initPostgres');
 
-// 🔌 INTEGRATION MQTT : Importation du service de messagerie IoT
+// Importation du service de messagerie IoT
 const { initializeMqtt } = require('./src/config/mqttService');
 
 // Importation des routes de l'application
@@ -25,7 +25,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // --- Middlewares ---
-app.use(cors({ origin: 'http://localhost:3000' })); // Autoriser les requêtes cross-origin (React sur port 3000)
+
+app.use(cors({ origin: '*' })); 
 app.use(express.json()); // Parser JSON body pour récupérer les req.body
 
 // Middleware pour voir passer toutes les requêtes dans la console (pratique pour le debug)
@@ -36,7 +37,7 @@ app.use((req, res, next) => {
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/pieces', pieceRoutes); // Activation officielle du préfixe /api/pieces pour le backend
+app.use('/api/pieces', pieceRoutes); 
 app.use('/api/appareils', appareilRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/users', userRoutes);
@@ -66,11 +67,11 @@ connectDatabases().then(async () => {
     }
 
     // Lancement de l'écoute du serveur sur le port défini
-    app.listen(port, () => {
-        console.log(`✅ Server running on http://localhost:${port}`);
+    
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`✅ Server running on http://192.168.0.107:${port}`);
         console.log(`🚀 All Databases are ready and tables are checked!`);
         
-        // 🔌 INTEGRATION MQTT SECURISEE : On lance le MQTT uniquement APRES que le serveur soit 100% prêt
         console.log("⚡ Démarrage du service MQTT...");
         initializeMqtt();
     });

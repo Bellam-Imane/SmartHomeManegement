@@ -3,39 +3,43 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import backgroundLogin from '../assets/background-login.jpeg';
 
-
-
 const Login = () => {
     const [email, setEmail] = useState('');
     const [motDePasse, setPassword] = useState('');
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
-    e.preventDefault();
+        e.preventDefault();
+        console.log("FORM SUBMITTED"); 
 
-    console.log("FORM SUBMITTED"); 
+        try {
+            // 🌟 تنظيف الإيميل وتحويله لحروف صغيرة لتفادي مشاكل كيبورد الهاتف
+            const cleanEmail = email.toLowerCase().trim();
+            console.log("DATA:", { email: cleanEmail, motDePasse });
 
-    try {
-        console.log("DATA:", { email, motDePasse });
+            // 🌟 تحديد الرابط ديناميكياً على حساب واش PC أو هاتف
+            const API_BASE_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:5000' 
+                : 'http://192.168.0.107:5000';
 
-        const response = await axios.post(
-            'http://localhost:5000/api/auth/login',
-            { email, motDePasse }
-        );
+            const response = await axios.post(
+                `${API_BASE_URL}/api/auth/login`,
+                { email: cleanEmail, motDePasse }
+            );
 
-        console.log("RESPONSE:", response.data);
+            console.log("RESPONSE:", response.data);
 
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        alert('Connexion réussie !');
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            alert('Connexion réussie !');
 
-        navigate('/home/Dashboard');
+            navigate('/home/Dashboard');
 
-    } catch (error) {
-        console.log("ERROR:", error.response?.data || error.message);
-        alert('Email ou Mot de passe incorrect!');
-    }
-};
+        } catch (error) {
+            console.log("ERROR:", error.response?.data || error.message);
+            alert('Email ou Mot de passe incorrect!');
+        }
+    };
 
     return (
         <div style={styles.container}>

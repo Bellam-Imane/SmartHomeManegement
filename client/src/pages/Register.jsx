@@ -30,27 +30,29 @@ function Register() {
     }
 
     try {
-      /**
-       * IMPORTANT: On envoie les données à plat (flat) car le controller 
-       * fait un destructuring direct : const { email, motDePasse, nom, ... } = req.body
-       */
+      // تنظيف الإيميل وتحويله لحروف صغيرة لتجنب المشاكل قبل الإرسال
+      const cleanEmail = formData.email.toLowerCase().trim();
+
       const dataToSend = {
         nom: formData.nom,
         prenom: formData.prenom,
-        email: formData.email,
+        email: cleanEmail,
         motDePasse: formData.motDePasse,
         telephone: formData.telephone,
         role: formData.role
       };
 
-      // Appel à l'API backend
-      const response = await axios.post("http://localhost:5000/api/auth/register-admin", dataToSend);
+      // 🌟 تحديد الرابط ديناميكياً على حساب واش PC أو هاتف
+      const API_BASE_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000' 
+        : 'http://192.168.0.107:5000';
+
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register-admin`, dataToSend);
       
       if (response.status === 201 || response.status === 200) {
         alert("Compte Administrateur créé avec succès !");
       }
     } catch (err) {
-      // Affichage de l'erreur détaillée en cas d'échec
       console.error("Détails de l'erreur API:", err.response?.data || err.message);
       const errorMsg = err.response?.data?.message || "Erreur lors de la création du compte.";
       alert("Erreur: " + errorMsg);
