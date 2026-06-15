@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
@@ -22,6 +22,13 @@ const API_BASE = 'http://localhost:5000';
 const Sidebar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const socketRef = useRef(null);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    if (socketRef.current) socketRef.current.disconnect();
+    navigate('/login');
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -79,7 +86,7 @@ const Sidebar = () => {
     { id: 8, path: "/home/Notifications", icon: Bell, badge: true },
     { id: 9, path: "/home/Users", icon: Users },
     { id: 10, path: "/home/Settings", icon: Settings },
-    { id: 11, path: "/home/Logout", icon: LogOut },
+    { id: 11, icon: LogOut, logout: true },
   ];
 
   return (
@@ -92,7 +99,16 @@ const Sidebar = () => {
         {menuItems.map((item) => {
           const Icon = item.icon;
 
-          return (
+          return item.logout ? (
+            <button
+              key={item.id}
+              onClick={handleLogout}
+              className="relative w-12 h-12 flex items-center justify-center transition-all duration-300 rounded-2xl text-[#4A4D5A] opacity-60 hover:opacity-100 hover:scale-105 hover:bg-red-100 hover:text-red-600"
+              title="Logout"
+            >
+              <Icon size={21} />
+            </button>
+          ) : (
             <NavLink
               key={item.id}
               to={item.path}
@@ -105,7 +121,6 @@ const Sidebar = () => {
               }
             >
               <Icon size={21} />
-              {/* Unread badge for notifications */}
               {item.badge && unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-md">
                   {unreadCount > 99 ? '99+' : unreadCount}
