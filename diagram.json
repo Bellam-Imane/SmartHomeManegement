@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "author": "Smart Home Management",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-lcd1602", "id": "lcd1", "top": -190, "left": -130, "attrs": { "pins": "i2c", "i2cAddress": "0x27", "background": "green" } },
+    { "type": "wokwi-dht22", "id": "dht1", "top": -170, "left": 180, "attrs": {} },
+
+    { "type": "wokwi-led", "id": "led_light", "top": 380, "left": -340, "attrs": { "color": "white", "label": "Lumiere" } },
+    { "type": "wokwi-led", "id": "led_cam_pwr", "top": 380, "left": -240, "attrs": { "color": "yellow", "label": "Camera" } },
+    { "type": "wokwi-led", "id": "led_cam_rec", "top": 380, "left": -160, "attrs": { "color": "red", "label": "REC" } },
+
+    { "type": "wokwi-led", "id": "led_ac_pwr", "top": 480, "left": -340, "attrs": { "color": "cyan", "label": "AC Power" } },
+    { "type": "wokwi-led", "id": "led_ac_froid", "top": 480, "left": -240, "attrs": { "color": "blue", "label": "AC Froid" } },
+    { "type": "wokwi-led", "id": "led_ac_chaud", "top": 480, "left": -160, "attrs": { "color": "red", "label": "AC Chaud" } },
+
+    { "type": "wokwi-rgb-led", "id": "rgb_tv", "top": 480, "left": 200, "attrs": { "common": "cathode", "label": "TV RGB" } },
+
+    { "type": "wokwi-led", "id": "led_rideau1", "top": 580, "left": -340, "attrs": { "color": "green", "label": "Rideau 1" } },
+    { "type": "wokwi-led", "id": "led_rideau2", "top": 580, "left": -240, "attrs": { "color": "green", "label": "Rideau 2" } },
+
+    { "type": "wokwi-led", "id": "led_vac_pwr", "top": 580, "left": -100, "attrs": { "color": "orange", "label": "Aspirateur" } },
+    { "type": "wokwi-led", "id": "led_vac_std", "top": 580, "left": -20, "attrs": { "color": "white", "label": "Mode STD" } },
+
+    { "type": "wokwi-servo", "id": "servo_door", "top": 680, "left": -340, "attrs": {} },
+
+    { "type": "wokwi-buzzer", "id": "bz_alarm", "top": 680, "left": 200, "attrs": { "volume": "0.1" } },
+    { "type": "wokwi-led", "id": "led_alarm", "top": 680, "left": 300, "attrs": { "color": "red", "label": "Alarme" } },
+
+    { "type": "wokwi-led", "id": "led_motion", "top": 780, "left": -240, "attrs": { "color": "limegreen", "label": "Mouvement" } },
+    { "type": "wokwi-led", "id": "led_smoke", "top": 780, "left": -140, "attrs": { "color": "orange", "label": "Fumee" } },
+
+    { "type": "wokwi-slide-switch", "id": "sw_motion", "top": 380, "left": 260, "attrs": { "value": "0" } },
+    { "type": "wokwi-potentiometer", "id": "pot_smoke", "top": 780, "left": 60, "attrs": { "value": "0" } },
+    { "type": "wokwi-pushbutton", "id": "btn_manual", "top": 780, "left": 200, "attrs": { "color": "blue", "label": "Manual" } }
+  ],
+  "connections": [
+    ["esp:TX", "$serialMonitor:RX", "", []],
+    ["esp:RX", "$serialMonitor:TX", "", []],
+
+    ["esp:3V3", "lcd1:VCC", "red", []],
+    ["esp:GND.1", "lcd1:GND", "black", []],
+    ["esp:21", "lcd1:SDA", "green", []],
+    ["esp:22", "lcd1:SCL", "blue", []],
+
+    ["esp:3V3", "dht1:VCC", "red", []],
+    ["esp:GND.1", "dht1:GND", "black", []],
+    ["esp:35", "dht1:SDA", "yellow", []],
+
+    ["esp:2", "led_light:A", "white", []],
+    ["esp:GND.2", "led_light:C", "black", []],
+
+    ["esp:16", "led_cam_pwr:A", "yellow", []],
+    ["esp:GND.2", "led_cam_pwr:C", "black", []],
+    ["esp:17", "led_cam_rec:A", "red", []],
+    ["esp:GND.2", "led_cam_rec:C", "black", []],
+
+    ["esp:13", "led_ac_pwr:A", "cyan", []],
+    ["esp:GND.2", "led_ac_pwr:C", "black", []],
+    ["esp:12", "led_ac_froid:A", "blue", []],
+    ["esp:GND.2", "led_ac_froid:C", "black", []],
+    ["esp:26", "led_ac_chaud:A", "red", []],
+    ["esp:GND.2", "led_ac_chaud:C", "black", []],
+
+    ["esp:27", "rgb_tv:R", "red", []],
+    ["esp:32", "rgb_tv:G", "green", []],
+    ["esp:33", "rgb_tv:B", "blue", []],
+    ["esp:GND.2", "rgb_tv:COM", "black", []],
+
+    ["esp:5", "led_rideau1:A", "green", []],
+    ["esp:GND.2", "led_rideau1:C", "black", []],
+    ["esp:18", "led_rideau2:A", "green", []],
+    ["esp:GND.2", "led_rideau2:C", "black", []],
+
+    ["esp:19", "led_vac_pwr:A", "orange", []],
+    ["esp:GND.2", "led_vac_pwr:C", "black", []],
+    ["esp:25", "led_vac_std:A", "white", []],
+    ["esp:GND.2", "led_vac_std:C", "black", []],
+
+    ["esp:4", "servo_door:PWM", "orange", []],
+    ["esp:5V", "servo_door:V+", "red", []],
+    ["esp:GND.1", "servo_door:GND", "black", []],
+
+    ["esp:14", "bz_alarm:1", "red", []],
+    ["esp:GND.1", "bz_alarm:2", "black", []],
+    ["esp:15", "led_alarm:A", "red", []],
+    ["esp:GND.2", "led_alarm:C", "black", []],
+
+    ["esp:0", "led_motion:A", "limegreen", []],
+    ["esp:GND.2", "led_motion:C", "black", []],
+    ["esp:23", "led_smoke:A", "orange", []],
+    ["esp:GND.2", "led_smoke:C", "black", []],
+
+    ["esp:3V3", "sw_motion:1", "red", []],
+    ["esp:36", "sw_motion:2", "yellow", []],
+    ["esp:GND.1", "sw_motion:3", "black", []],
+
+    ["esp:3V3", "pot_smoke:VCC", "red", []],
+    ["esp:GND.1", "pot_smoke:GND", "black", []],
+    ["esp:39", "pot_smoke:SIG", "orange", []],
+
+    ["esp:34", "btn_manual:1", "blue", []],
+    ["esp:GND.1", "btn_manual:2", "black", []]
+  ]
+}

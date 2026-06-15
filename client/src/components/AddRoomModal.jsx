@@ -31,7 +31,10 @@ export default function AddRoomModal({ isOpen, onClose, onRoomAdded }) {
       // Envoi de la requête POST vers le serveur avec les headers d'authentification
       const response = await axios.post(
         "http://localhost:5000/api/pieces/ajouter", 
-        formData,
+        {
+          ...formData,
+          superficie: Number(formData.superficie) || 0
+        },
         {
           headers: {
             Authorization: `Bearer ${token}` // ✅ Authentification passée au middleware
@@ -110,7 +113,7 @@ export default function AddRoomModal({ isOpen, onClose, onRoomAdded }) {
                     <Maximize size={16} /> Superficie (m²)
                   </label>
                   <input 
-                    type="text"
+                    type="number"
                     required // Requis par votre PieceSchema
                     className="w-full bg-gray-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500"
                     placeholder="25"

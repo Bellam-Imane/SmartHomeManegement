@@ -10,7 +10,7 @@ export default function FilterDropdown({
     selectedEtage, 
     onSelectEtage 
 }) {
-    const categories = ["Tous", "Salon", "Chambre à coucher", "Cuisine", "Bureau", "Garage"];
+    const categories = ["Tous", "Salon", "Chambre à coucher", "Cuisine", "Bureau", "Autre"];
     const etages = ["Tous", 0, 1, 2, 3];
 
     return (

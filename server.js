@@ -1,79 +1,135 @@
+// -----------------------------------------------------------------------------
+// IMPORTATIONS DES MODULES DE BASE
+// -----------------------------------------------------------------------------
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 
-// 🌟 PRE-LOADING CRITIQUE : Charger tous les modèles Mongoose en premier pour éviter le bug "Schema hasn't been registered"
-require('./src/models/Appareil');
-require('./src/models/Piece');
+// -----------------------------------------------------------------------------
+// CHARGEMENT DES CONFIGURATIONS ET VARIABLES D'ENVIRONNEMENT (MODELS)
+// -----------------------------------------------------------------------------
 require('./src/models/Maison');
+require('./src/models/Appareil'); 
+require('./src/models/SystemeGestionEnergetique');
+require('./src/models/HistoriqueConsommation');
+require('./src/models/Notifications');
 
-// Import de la connexion multi-bases (MongoDB, PostgreSQL, InfluxDB)
+// -----------------------------------------------------------------------------
+// CONNEXIONS AUX BASES DE DONNÉES (MONGOOSE + POSTGRESQL)
+// -----------------------------------------------------------------------------
 const { connectDatabases } = require('./src/config/db');
 const initializePostgres = require('./src/models/initPostgres');
 
-// 🔌 INTEGRATION MQTT : Importation du service de messagerie IoT
+// -----------------------------------------------------------------------------
+// SERVICES EXTERNES (MQTT & CRON DE PLANIFICATION)
+// -----------------------------------------------------------------------------
 const { initializeMqtt } = require('./src/config/mqttService');
+const { initializeMonthlyResetCron, initializePlanningCron } = require('./src/services/cronService');
 
-// Importation des routes de l'application
+// -----------------------------------------------------------------------------
+// IMPORTATION DES ROUTES DE L'API
+// -----------------------------------------------------------------------------
 const authRoutes = require('./src/routes/authRoutes');
-const pieceRoutes = require('./src/routes/pieceRoutes'); 
+const pieceRoutes = require('./src/routes/pieceRoutes');
 const appareilRoutes = require('./src/routes/appareilRoutes');
 const securityRoutes = require('./src/routes/securityRoutes');
 const userRoutes = require('./src/routes/userRoutes');
+const automationRoutes = require('./src/routes/automationRoutes');
+const historyRoutes = require('./src/routes/historyRoutes');
+const dashboardRoutes = require('./src/routes/dashboardRoutes');
+const reportRoutes = require('./src/routes/reportRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
 
+// -----------------------------------------------------------------------------
+// INITIALISATION DE L'APPLICATION EXPRESS ET HTTP SERVER
+// -----------------------------------------------------------------------------
 const app = express();
 const port = process.env.PORT || 5000;
+const server = http.createServer(app);
 
-// --- Middlewares ---
-app.use(cors({ origin: 'http://localhost:3000' })); // Autoriser les requêtes cross-origin (React sur port 3000)
-app.use(express.json()); // Parser JSON body pour récupérer les req.body
+// -----------------------------------------------------------------------------
+// CONFIGURATION DE SOCKET.IO (MOTEUR TEMPS RÉEL)
+// -----------------------------------------------------------------------------
+const io = require('socket.io')(server, {
+    cors: {
+        origin: 'http://localhost:3000', 
+        methods: ['GET', 'POST']
+    }
+});
 
-// Middleware pour voir passer toutes les requêtes dans la console (pratique pour le debug)
+app.set('io', io);
+
+io.on('connection', (socket) => {
+    console.log(`🔌 [SOCKET.IO] Client connecté de manière bidirectionnelle : ${socket.id}`);
+    socket.on('disconnect', () => {
+        console.log(`🔌 [SOCKET.IO] Client déconnecté du serveur`);
+    });
+});
+
+// -----------------------------------------------------------------------------
+// MIDDLEWARES GLOBAUX
+// -----------------------------------------------------------------------------
+app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(express.json());
+
 app.use((req, res, next) => {
-    console.log("👉 REQUEST:", req.method, req.url);
+    console.log(`👉 [HTTP REQUEST] ${req.method} ${req.url}`);
     next();
 });
 
-// --- Routes ---
+// -----------------------------------------------------------------------------
+// ENREGISTREMENT DES ROUTES API
+// -----------------------------------------------------------------------------
 app.use('/api/auth', authRoutes);
-app.use('/api/pieces', pieceRoutes); // Activation officielle du préfixe /api/pieces pour le backend
+app.use('/api/pieces', pieceRoutes);
 app.use('/api/appareils', appareilRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api', automationRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-// --- Health check endpoint ---
 app.get('/test-health', (req, res) => {
-  res.json({
-    message: "Services are running!",
-    status: "All systems operational"
-  });
+  res.json({ message: "Services are running!", status: "All systems operational" });
 });
 
-// Middleware global pour capturer et afficher les erreurs 500 du serveur
 app.use((err, req, res, next) => {
-  console.error("❌ ERROR STACK:", err.stack);
-  res.status(500).json({ message: "Erreur interne du serveur", error: err.message });
+    console.error("❌ [ERREUR SERVEUR]:", err.stack);
+    res.status(500).json({ message: "Erreur interne du serveur", error: err.message });
 });
 
-// --- Start server after DB connection ---
-connectDatabases().then(async () => {
-    
-    // Activation et vérification des tables PostgreSQL
-    try {
-        await initializePostgres();
-    } catch (err) {
-        console.error("❌ Impossible d'initialiser PostgreSQL:", err.message);
-    }
+// -----------------------------------------------------------------------------
+// DÉMARRAGE DU SYSTÈME
+// -----------------------------------------------------------------------------
+connectDatabases()
+    .then(async () => {
+        try {
+            await initializePostgres();
+        } catch (err) {
+            console.error("❌ Erreur lors de l'initialisation PostgreSQL:", err.message);
+        }
 
-    // Lancement de l'écoute du serveur sur le port défini
-    app.listen(port, () => {
-        console.log(`✅ Server running on http://localhost:${port}`);
-        console.log(`🚀 All Databases are ready and tables are checked!`);
-        
-        // 🔌 INTEGRATION MQTT SECURISEE : On lance le MQTT uniquement APRES que le serveur soit 100% prêt
-        console.log("⚡ Démarrage du service MQTT...");
-        initializeMqtt();
+        // Écoute sur 0.0.0.0 pour ton IP Mobile
+        server.listen(port, '0.0.0.0', () => {
+            console.log(`✅ Serveur démarré avec succès sur http://192.168.0.107:${port}`);
+            console.log(`🚀 Bases de données connectées et prêtes`);
+
+            console.log("⏰ Démarrage du Cron Service...");
+            initializeMonthlyResetCron();
+            initializePlanningCron();
+
+            console.log("⚡ Démarrage du service d'écoute MQTT...");
+            const ioInstance = app.get('io');
+            if (ioInstance) {
+                initializeMqtt(ioInstance);
+            } else {
+                initializeMqtt(io);
+            }
+        });
+    })
+    .catch(err => {
+        console.error("❌ Échec critique du démarrage du système:", err.message);
     });
-}).catch(err => {
-    console.error("❌ Failed to start the system:", err.message);
-});

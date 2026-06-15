@@ -46,7 +46,7 @@ const initializePostgres = async () => {
   `;
 
   try {
-    const client = await pgPool.connect(); // ✅ pgPool بدل pool
+    const client = await pgPool.connect(); 
     await client.query(createTablesQuery);
     console.log("✅ PostgreSQL: Toutes les tables (Historique, Logs, Notifications) sont prêtes !");
     client.release();

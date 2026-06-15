@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Tv, MoreVertical, Volume2, VolumeX, ChevronLeft, ChevronRight, 
+  Tv, Volume2, VolumeX, ChevronLeft, ChevronRight, 
   ChevronUp, ChevronDown, Clock, Radio, Music, Play, Pause
 } from 'lucide-react';
 import tvImage from '../assets/images/tv_image.png';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT MULTIMEDIACARD
@@ -11,7 +12,7 @@ import tvImage from '../assets/images/tv_image.png';
  * Intègre la gestion du volume, du changement d'applications, des chaînes,
  * de l'état Lecture/Pause, et le calcul dynamique du temps de visionnage.
  */
-const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) => {
+const MultimediaCard = ({ multimediaData, onUpdateAppareil, onEditDevice, onDeleteDevice, className = '' }) => {
   
   // Sécurisation des données reçues sous forme de tableau
   const items = Array.isArray(multimediaData) ? multimediaData : [];
@@ -73,13 +74,13 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
     );
   }
 
-  // Extraction des propriétés d'état du téléviseur actuel
-  const isOn = currentTv.status === 'ENLIGNE';
-  const volume = currentTv.volume !== undefined ? currentTv.volume : 50;
-  const estMuet = currentTv.estMuet || false;
-  const appActive = currentTv.application || 'NONE'; 
-  const channel = currentTv.chaineActuelle || 1;
-  const estEnLecture = currentTv.lectureActive !== undefined ? currentTv.lectureActive : true;
+  // Extraction des propriétés d'état du téléviseur actuel (Sécurisé contre les valeurs undefined)
+  const isOn = currentTv?.status === 'ENLIGNE';
+  const volume = currentTv?.volume !== undefined ? currentTv.volume : 50;
+  const estMuet = currentTv?.estMuet || false;
+  const appActive = currentTv?.application || 'NONE'; 
+  const channel = currentTv?.chaineActuelle || 1;
+  const estEnLecture = currentTv?.lectureActive !== undefined ? currentTv.lectureActive : true;
 
   /**
    * 📊 FONCTION UTILITAIRE : Formate les minutes en heures et minutes (ex: 75 -> 1h 15min)
@@ -102,11 +103,13 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
 
   // Navigation : Passage au téléviseur suivant
   const nextTv = () => {
+    if (items.length <= 1) return;
     setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
   };
 
   // Navigation : Retour au téléviseur précédent
   const prevTv = () => {
+    if (items.length <= 1) return;
     setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
@@ -165,7 +168,7 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
           <Tv size={24} className="text-gray-700" />
           <div className="flex flex-col text-left">
             <h3 className="text-xl font-bold text-gray-800 leading-tight">
-              {currentTv.nomAppareil || 'Téléviseur'}
+              {currentTv?.nomAppareil || 'Téléviseur'}
             </h3>
             <span className="text-[11px] text-gray-500 font-bold tracking-tight mt-0.5">
               {items.length} appareils connectés
@@ -180,16 +183,21 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-1' : 'left-1'}`} />
           </button>
-          <button className="text-gray-700 hover:bg-black/5 p-1 rounded-full transition-colors">
-            <MoreVertical size={20} />
-          </button>
+          <DeviceMenu
+            deviceName={currentTv?.nomAppareil}
+            onEdit={() => onEditDevice?.(currentTv)}
+            onDelete={() => onDeleteDevice?.(currentTv?._id || currentTv?.id)}
+          />
         </div>
       </div>
 
       {/* ─── SECTION CENTRALE (Aperçu de l'Écran et Jauge de Volume) ─── */}
       <div className="flex items-center justify-between my-4 relative h-48 px-1">
         {/* Navigation Gauche */}
-        <button onClick={prevTv} className="p-2 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0">
+        <button 
+          onClick={prevTv} 
+          className={`p-2 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0 ${items.length <= 1 ? 'opacity-30 pointer-events-none' : ''}`}
+        >
           <ChevronLeft size={28} className="text-gray-600" />
         </button>
 
@@ -243,7 +251,10 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
         </div>
 
         {/* Navigation Droite */}
-        <button onClick={nextTv} className="p-2 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0">
+        <button 
+          onClick={nextTv} 
+          className={`p-2 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0 ${items.length <= 1 ? 'opacity-30 pointer-events-none' : ''}`}
+        >
           <ChevronRight size={28} className="text-gray-600" />
         </button>
       </div>
@@ -302,7 +313,7 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
 
             {/* ⏱️ Bloc d'affichage du Temps Cumulé accumulé en direct */}
             <div className="flex items-center justify-center gap-1.5 p-1 border-t border-gray-100 pt-2 w-full">
-              <Clock size={12} className={`text-gray-400 ${isOn && 'text-blue-500 animate-pulse'}`} />
+              <Clock size={12} className={`text-gray-400 ${isOn ? 'text-blue-500 animate-pulse' : ''}`} />
               <div className="flex flex-col text-left">
                 <span className="text-[10px] font-black text-gray-700 leading-tight">
                   {formaterTemps(tempsAffiche)}
@@ -320,4 +331,5 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
   );
 };
 
+// Exportation par défaut pour une intégration fluide dans RoomDetails.jsx
 export default MultimediaCard;

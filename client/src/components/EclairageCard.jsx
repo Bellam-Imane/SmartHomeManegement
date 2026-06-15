@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
+import { Lightbulb, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import lampe from '../assets/images/lampe.png';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT ECLAIRAGECARD : Divisé équitablement à 50% de la hauteur totale
  */
-const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
+const EclairageCard = ({ bulbsData, onUpdateAppareil, onEditDevice, onDeleteDevice, className = '' }) => {
   
   // Validation : Affichage d'un état de chargement si aucune donnée n'est reçue
   if (!bulbsData || bulbsData.length === 0) {
@@ -18,24 +19,26 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
   
   const currentBulb = bulbsData[currentIndex];
 
-  // Effet pour réinitialiser l'index si la liste des lampes change ou diminue
+  // Sécurité : éviter crash si index dépasse la liste
   useEffect(() => {
     if (currentIndex >= bulbsData.length) {
       setCurrentIndex(0);
     }
-  }, [bulbsData, currentIndex]);
+  }, [bulbsData.length, currentIndex]);
 
   // Détermination si la lampe actuelle est allumée
-  const isOn = currentBulb.status === 'ENLIGNE';
+  const isOn = currentBulb?.status === 'ENLIGNE';
   
   // Valeur réelle stockée en base (par défaut 100 si elle n'existe pas)
-  const savedIntensity = currentBulb.intensite !== undefined ? currentBulb.intensite : 100;
+  const savedIntensity = currentBulb?.intensite !== undefined ? currentBulb.intensite : 100;
   
   // Affichage visuel : 0% si éteint, sinon l'intensité mémorisée
   const displayIntensity = isOn ? savedIntensity : 0;
 
   // Passage à la lampe suivante avec animation de transition
   const nextBulb = () => {
+    if (bulbsData.length <= 1) return;
+
     setIsChanging(true);
     setTimeout(() => {
       setCurrentIndex((prev) => (prev === bulbsData.length - 1 ? 0 : prev + 1));
@@ -45,6 +48,8 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
 
   // Passage à la lampe précédente avec animation de transition
   const prevBulb = () => {
+    if (bulbsData.length <= 1) return;
+
     setIsChanging(true);
     setTimeout(() => {
       setCurrentIndex((prev) => (prev === 0 ? bulbsData.length - 1 : prev - 1));
@@ -54,7 +59,7 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
 
   // Fonction centrale pour envoyer les mises à jour de l'appareil vers le parent (API Backend)
   const updateBulbProperty = (updates) => {
-    if (onUpdateAppareil) {
+    if (onUpdateAppareil && currentBulb) {
       onUpdateAppareil(currentBulb._id || currentBulb.id, {
         ...currentBulb,
         ...updates
@@ -101,7 +106,7 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
           <div className="flex items-center gap-1.5">
             <Lightbulb size={16} className="text-gray-800" />
             <h3 className="text-[15px] font-bold text-gray-800 tracking-tight line-clamp-1">
-              {currentBulb.nomAppareil} 
+              {currentBulb?.nomAppareil} 
             </h3>
           </div>
           <span className="text-[11px] text-gray-600 font-medium ml-5">
@@ -109,7 +114,6 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
           </span>
         </div>
         
-        {/* Actions de la lampe : Le bouton Switch puis les trois points à l'extrémité droite */}
         <div className="flex items-center gap-1">
           <button 
             onClick={togglePower}
@@ -118,29 +122,35 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-0.5' : 'left-0.5'}`} />
           </button>
 
-          <button className="p-1 hover:bg-black/5 rounded-full transition-colors cursor-pointer">
-            <MoreVertical size={18} className="text-gray-800" />
-          </button>
+          <DeviceMenu
+            deviceName={currentBulb?.nomAppareil}
+            onEdit={() => onEditDevice?.(currentBulb)}
+            onDelete={() => onDeleteDevice?.(currentBulb?._id || currentBulb?.id)}
+          />
         </div>
       </div>
 
-      {/* 2. SECTION CENTRALE (Image de la lampe avec halo) */}
+      {/* 2. SECTION CENTRALE */}
       <div className="flex items-center justify-between my-2 relative flex-1 min-h-[160px]">
-        <button onClick={prevBulb} className="p-1 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0 cursor-pointer">
+        <button 
+          onClick={prevBulb} 
+          disabled={bulbsData.length <= 1}
+          className="p-1 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0 cursor-pointer"
+        >
           <ChevronLeft size={24} className="text-[#3A4D62]" />
         </button>
 
         <div className={`relative flex justify-center items-center w-full h-full transition-all duration-300 ${isChanging ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
-          {/* Halo lumineux dynamique basé sur l'intensité mémorisée */}
           {isOn && (
             <div 
               className="absolute w-44 h-44 rounded-full blur-[40px] transition-all duration-500"
               style={{ 
-                backgroundColor: currentBulb.couleur || '#FFFFFF',
+                backgroundColor: currentBulb?.couleur || '#FFFFFF',
                 opacity: (savedIntensity / 100) * 0.6
               }}
             />
           )}
+
           <img 
             src={lampe} 
             alt="Lamp"
@@ -153,16 +163,19 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
           />
         </div>
 
-        <button onClick={nextBulb} className="p-1 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0 cursor-pointer">
+        <button 
+          onClick={nextBulb} 
+          disabled={bulbsData.length <= 1}
+          className="p-1 hover:bg-black/5 rounded-full transition-colors z-20 shrink-0 cursor-pointer"
+        >
           <ChevronRight size={24} className="text-[#3A4D62]" />
         </button>
       </div>
 
-      {/* 3. SECTION FOOTER (Contrôle de l'intensité) */}
+      {/* 3. SECTION FOOTER */}
       <div 
         className={`shrink-0 relative flex items-center p-[3px] w-full h-[42px] bg-white/20 backdrop-blur-md rounded-[50px] border border-white/30 box-sizing-border-box overflow-hidden transition-opacity duration-300 ${!isOn ? 'opacity-60' : 'opacity-100'}`}
       >
-        {/* Remplissage graphique de la barre basé sur la valeur affichée (0 ou intensité) */}
         <div style={{
           height: '100%',
           width: `${displayIntensity}%`, 
@@ -183,7 +196,6 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
           />
         </div>
 
-        {/* Affichage textuel du pourcentage au dessus du slider */}
         <span style={{ 
           position: 'absolute', 
           right: '15px', 
@@ -196,14 +208,13 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
           {displayIntensity}%
         </span>
 
-        {/* Curseur HTML standard invisible superposé pour capturer les mouvements de glissement */}
         <input 
           type="range" 
           min="0" 
           max="100" 
-          value={savedIntensity} // Liaison obligatoire avec la valeur réelle pour un déplacement stable et précis
+          value={savedIntensity}
           onChange={handleSliderChange} 
-          disabled={!isOn} // Désactivation native si la lampe est éteinte
+          disabled={!isOn}
           className={`absolute inset-0 w-full h-full opacity-0 z-10 pointer-events-auto ${isOn ? 'cursor-pointer' : 'cursor-not-allowed'}`}
         />  
       </div>

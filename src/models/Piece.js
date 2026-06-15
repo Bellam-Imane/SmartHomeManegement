@@ -20,7 +20,8 @@ const pieceSchema = new mongoose.Schema({
 
     superficie: {
 
-        type: String,
+        type: Number,
+
         required: true
     },
 

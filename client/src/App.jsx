@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-
+import { SecurityProvider } from './context/SecurityContext';
 // Pages
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -48,6 +48,7 @@ function App() {
   };
 
   return (
+    <SecurityProvider>
     <Router>
       <Routes>
 
@@ -87,6 +88,7 @@ function App() {
 
       </Routes>
     </Router>
+    </SecurityProvider>
   );
 }
 

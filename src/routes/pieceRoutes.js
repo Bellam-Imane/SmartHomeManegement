@@ -1,23 +1,46 @@
 const express = require('express');
 const router = express.Router();
+
 const pieceController = require('../controllers/pieceController');
 const auth = require('../middleware/authMiddleware');
 
-// --- Routes pour la gestion des pièces ---
 
-// 1. [GET] Récupérer toutes les pièces de l'utilisateur connecté
-router.get('/all', auth, pieceController.getPieces); 
+/**
+ * -------------------------------------------------------------------
+ * ROUTES DE GESTION DES PIÈCES
+ * -------------------------------------------------------------------
+ */
 
-// 2. [GET] Voir les détails d'une pièce spécifique (Celle-ci doit être avant PUT/DELETE)
+
+/**
+ * [GET] Récupérer toutes les pièces de l'utilisateur connecté
+ */
+router.get('/all', auth, pieceController.getPieces);
+
+
+/**
+ * [GET] Récupérer les détails d'une pièce spécifique
+ * ⚠️ Cette route doit rester avant PUT et DELETE pour éviter les conflits
+ */
 router.get('/:id', auth, pieceController.getPieceDetails);
 
-// 3. [POST] Ajouter une pièce 
-router.post('/ajouter', auth, pieceController.ajouterPiece); 
 
-// 4. [PUT] Modifier une pièce spécifique par son ID
+/**
+ * [POST] Ajouter une nouvelle pièce
+ */
+router.post('/ajouter', auth, pieceController.ajouterPiece);
+
+
+/**
+ * [PUT] Modifier une pièce par ID
+ */
 router.put('/:id', auth, pieceController.updatePiece);
 
-// 5. [DELETE] Supprimer une pièce spécifique par son ID
+
+/**
+ * [DELETE] Supprimer une pièce par ID
+ */
 router.delete('/:id', auth, pieceController.deletePiece);
+
 
 module.exports = router;

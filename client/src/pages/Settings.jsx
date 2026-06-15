@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Globe, Check, Camera } from "lucide-react";
+import { Globe, Check, Camera, Search } from "lucide-react"; // Search 
 import VoiceControlButton from "../components/VoiceControlButton";
+import Spinner from "../components/Spinner";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
 
 const { translations } = require("../translations");
 
@@ -32,8 +32,20 @@ export default function Settings() {
   const [twoFactor, setTwoFactor] = useState(false);
   const [emergencyContact, setEmergencyContact] = useState("");
   const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("Français");
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem("language") || "Français";
+  });
   const [langOpen, setLangOpen] = useState(false);
+
+  // ---------------------------------------
+  const [location, setLocation] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [debouncer, setDebouncer] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [searchQuery, setSearchQuery] = useState([]);
+  const [showSpinner, setShowspinner] = useState(false);
+  // --------------------------------
 
   const [notifications, setNotifications] = useState({
     security: { mobile: true, email: true },
@@ -44,7 +56,8 @@ export default function Settings() {
 
   const t = translations[language] || translations["Français"];
 
-  // 1. Récupérer les données réelles du serveur lors de l’ouverture de la page
+
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -52,7 +65,7 @@ export default function Settings() {
         const res = await axios.get('http://localhost:5000/api/users/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         if (res.data) {
           setProfile({
             name: res.data.nom || "",
@@ -67,7 +80,16 @@ export default function Settings() {
             setTwoFactor(prefs.twoFactor ?? false);
             setEmergencyContact(prefs.emergencyContact || "");
             setDarkMode(prefs.darkMode ?? false);
-            setLanguage(prefs.language || "Français");
+            const localLang = localStorage.getItem("language");
+
+            if (localLang) {
+              setLanguage(localLang);
+            } else if (prefs.language) {
+              setLanguage(prefs.language);
+              localStorage.setItem("language", prefs.language);
+            }
+            setLocation(prefs.location || {});
+            setSearchTerm(prefs.location?.city || "");
             if (prefs.notifications) {
               setNotifications(prefs.notifications);
             }
@@ -80,18 +102,65 @@ export default function Settings() {
     fetchProfile();
   }, []);
 
+  let debounceQuery = ""
+  const handleLocationSearch = (query, timeout = .5) => {
+    if (debouncer) {
+      clearTimeout(debouncer);
+    }
+    if (!query) return;
+    const d = setTimeout(async () => {
+      debounceQuery = query
+      setShowspinner(true)
+      const response = await axios.get(`https://photon.komoot.io/api/?q=${query}&osm_tag=place`);
+      setShowspinner(false)
+      console.log(query, debounceQuery)
+      if (query == debounceQuery) {
+        setSuggestions(
+          response.data.features.map(item => ({
+            city: item.properties.name,
+            country: item.properties.country,
+            lon: item.geometry.coordinates[0],
+            lat: item.geometry.coordinates[1],
+          }))
+        )
+      }
+    }, timeout * 1000);
+    setDebouncer(d);
+  }
   const handleUpdatePreference = async (updatedPrefs) => {
+    // ✅ أول حاجة: نحدثو الـ States فـ الـ UI فوراً باش ما يرجعوش Static
+    if (updatedPrefs.language) setLanguage(updatedPrefs.language);
+    if (updatedPrefs.darkMode !== undefined) setDarkMode(updatedPrefs.darkMode);
+    if (updatedPrefs.twoFactor !== undefined) setTwoFactor(updatedPrefs.twoFactor);
+    if (updatedPrefs.notifications) setNotifications(updatedPrefs.notifications);
+    if (updatedPrefs.location) setLocation(updatedPrefs.location);
+
     try {
       const token = localStorage.getItem('token');
-      const currentPrefs = { twoFactor, emergencyContact, darkMode, language, notifications, ...updatedPrefs };
+      
+      const currentPrefs = { 
+        twoFactor, 
+        emergencyContact, 
+        darkMode, 
+        language, // هادي غاتاخد القيمة القديمة من الـ state إيلا ما كانتش فـ updatedPrefs
+        notifications, 
+        location,
+        ...updatedPrefs 
+      };
 
-      await axios.put('http://localhost:5000/api/users/profile', { preferences: currentPrefs }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // ✅ سيف فـ LocalStorage قبل ما نصيفطو للسيرفر باش نحميو الحالة
+      if (currentPrefs.language) localStorage.setItem("language", currentPrefs.language);
+      if (currentPrefs.darkMode !== undefined) localStorage.setItem("darkMode", currentPrefs.darkMode ? "true" : "false");
 
-      localStorage.setItem("darkMode", currentPrefs.darkMode ? "true" : "false");
-      localStorage.setItem("language", currentPrefs.language);
-      window.dispatchEvent(new Event("storage"));
+      const res = await axios.put('http://localhost:5000/api/users/profile', 
+        { preferences: currentPrefs }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.status === 200) {
+        window.dispatchEvent(new Event("storage"));
+        console.log("Sync OK!");
+      }
     } catch (err) {
       console.error("Erreur auto-save preference", err);
     }
@@ -100,14 +169,14 @@ export default function Settings() {
   const handleSaveProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const updatedData = { 
-        nom: profile.name, 
-        prenom: profile.prenom, 
-        email: profile.email, 
-        telephone: profile.phone, 
-        photo: profile.photo 
+      const updatedData = {
+        nom: profile.name,
+        prenom: profile.prenom,
+        email: profile.email,
+        telephone: profile.phone,
+        photo: profile.photo
       };
-      
+
       const res = await axios.put('http://localhost:5000/api/users/profile', updatedData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -115,9 +184,7 @@ export default function Settings() {
       if (res.status === 200) {
         const userData = res.data.user ? res.data.user : res.data;
         localStorage.setItem("user", JSON.stringify(userData));
-        
-        window.dispatchEvent(new Event("storage")); 
-        
+        window.dispatchEvent(new Event("storage"));
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
@@ -136,7 +203,7 @@ export default function Settings() {
   };
 
   const languages = ["Français", "English", "العربية"];
-  
+
   const notifRows = [
     { key: "security", label: t.securityAlerts, desc: t.securityDesc },
     { key: "system", label: t.systemUpdates, desc: t.systemDesc },
@@ -147,17 +214,17 @@ export default function Settings() {
   const toggleNotif = (type, channel) => {
     const updatedNotifs = { ...notifications, [type]: { ...notifications[type], [channel]: !notifications[type][channel] } };
     setNotifications(updatedNotifs);
-    handleUpdatePreference({ notifications: updatedNotifs }); 
+    handleUpdatePreference({ notifications: updatedNotifs });
   };
 
   return (
     <div className="min-h-screen p-6 md:p-8" style={{ background: "#F8FAFC" }} dir={language === "العربية" ? "rtl" : "ltr"}>
-      
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-[#111827]">{t.settingsTitle}</h1>
         <div className="flex items-center gap-6">
-          <VoiceControlButton />  
+          <VoiceControlButton />
         </div>
       </div>
 
@@ -170,8 +237,8 @@ export default function Settings() {
           <div className="flex flex-col items-center gap-3 flex-shrink-0">
             <div className="relative">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gray-50 shadow-md">
-                <img src={profile.photo} alt="Profile" className="w-full h-full object-cover" 
-                     onError={(e) => e.currentTarget.src = "https://ui-avatars.com/api/?name=User"} />
+                <img src={profile.photo} alt="Profile" className="w-full h-full object-cover"
+                  onError={(e) => e.currentTarget.src = "https://ui-avatars.com/api/?name=User"} />
               </div>
               <button onClick={() => fileInputRef.current.click()} className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg border border-gray-100"><Camera size={16} /></button>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoChange} />
@@ -216,12 +283,12 @@ export default function Settings() {
             </div>
             <Toggle checked={twoFactor} onChange={(val) => { setTwoFactor(val); handleUpdatePreference({ twoFactor: val }); }} />
           </div>
-          <input 
-            value={emergencyContact} 
-            onChange={(e) => setEmergencyContact(e.target.value)} 
-            onBlur={(e) => handleUpdatePreference({ emergencyContact: e.target.value })} 
-            placeholder={t.emergencyContact} 
-            className="px-4 py-2 text-sm border rounded-xl" 
+          <input
+            value={emergencyContact}
+            onChange={(e) => setEmergencyContact(e.target.value)}
+            onBlur={(e) => handleUpdatePreference({ emergencyContact: e.target.value })}
+            placeholder={t.emergencyContact}
+            className="px-4 py-2 text-sm border rounded-xl"
           />
         </div>
       </div>
@@ -251,10 +318,10 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Display & Language */}
+      {/* Display & Language + البحث عن المدينة */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-base font-bold mb-4">{t.display}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
           <div className="relative">
             <button onClick={() => setLangOpen(!langOpen)} className="w-full flex items-center justify-between px-4 py-2 border rounded-xl">
               <span>{language}</span><Globe size={14} />
@@ -274,7 +341,50 @@ export default function Settings() {
             <Toggle checked={darkMode} onChange={(val) => { setDarkMode(val); handleUpdatePreference({ darkMode: val }); }} />
           </div>
         </div>
+
+        {/* سيكشن البحث الجديدة (GPS Alternative) */}
+        <hr className="my-6 border-gray-50" />
+        <h2 className="text-sm font-bold mb-4 text-gray-700">
+          {language === "العربية" ? "موقع المدينة (الطقس)" : language === "English" ? "City Location (Weather)" : "Localisation Ville (Météo)"}
+        </h2>
+        <div className="relative w-full md:w-1/2">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); handleLocationSearch(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              placeholder={language === "العربية" ? "ابحث عن مدينتك..." : "Rechercher votre ville..."}
+              className="w-full px-10  py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 bg-gray-50"
+            />
+
+            <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+            {/* <svg  className="absolute right-3 top-2.5 text-gray-400 mr-3 size-5 animate-spin" viewBox="0 0 24 24"/> */}
+            {showSpinner ?
+              <Spinner className="absolute right-3 top-2 h-6 w-6" /> : <div />}
+
+          </div>
+
+          {showSuggestions && searchTerm && (
+            <div className="absolute bottom-[calc(100%+5px)] w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 max-h-40 overflow-y-auto">
+              {suggestions.map((suggestion) => (
+                <button
+                  onClick={() => {
+                    setLocation(suggestion);
+                    setSearchTerm(suggestion.city);
+                    setShowSuggestions(false);
+                    handleUpdatePreference({ location: suggestion });
+                  }}
+                  className={`w-full px-4 py-2 text-sm hover:bg-gray-50 text-left ${language === "العربية" ? "text-right" : "text-left"}`}
+                >
+                  {suggestion.city} - {suggestion.country}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      {showSuggestions && <div className="fixed inset-0 z-40" onClick={() => setShowSuggestions(false)} />}
     </div>
   );
 }

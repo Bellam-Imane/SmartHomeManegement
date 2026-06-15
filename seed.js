@@ -13,7 +13,7 @@ const seedDB = async () => {
         await Appareil.deleteMany({});
         await Piece.deleteMany({});
 
-        // 1. Création d'une maison/pièce de test
+        // 1. Création d'une pièce de test (Grand Salon)
         const salon = new Piece({
             nomPiece: "Grand Salon",
             type: "Salon",
@@ -23,9 +23,10 @@ const seedDB = async () => {
         });
         await salon.save();
 
-        // 2. Liste des appareils à insérer
+        // 2. Liste des appareils à insérer avec les IDs MQTT correspondants
         const initialDevices = [
             {
+                _id: new mongoose.Types.ObjectId("6a0cf42e7264a021407dae9d"),
                 nomAppareil: "Lumière Principale",
                 typeAppareil: "ECLAIRAGE",
                 piece: salon._id,
@@ -34,6 +35,16 @@ const seedDB = async () => {
                 couleur: "#FFFFFF"
             },
             {
+                _id: new mongoose.Types.ObjectId("6a0cf43a7264a021407dae9e"),
+                nomAppareil: "Caméra Entrée",
+                typeAppareil: "CAMERA",
+                piece: salon._id,
+                status: "ENLIGNE",
+                resolution: "1080p",
+                estEnregistrement: true
+            },
+            {
+                _id: new mongoose.Types.ObjectId("6a0cf4487264a021407dae9f"),
                 nomAppareil: "Climatiseur Samsung",
                 typeAppareil: "THERMIQUE",
                 piece: salon._id,
@@ -43,12 +54,42 @@ const seedDB = async () => {
                 mode: "FROID"
             },
             {
-                nomAppareil: "Caméra Entrée",
-                typeAppareil: "CAMERA",
+                _id: new mongoose.Types.ObjectId("6a0e0999a05e12a54e87872b"),
+                nomAppareil: "Télévision Salon",
+                typeAppareil: "MULTIMEDIA",
                 piece: salon._id,
                 status: "ENLIGNE",
-                resolution: "1080p",
-                estEnregistrement: true
+                volume: 20,
+                source: "HDMI",
+                application: "NONE",
+                lectureActive: true
+            },
+            {
+                _id: new mongoose.Types.ObjectId("6a10d976513a833a7ea56ecf"),
+                nomAppareil: "Rideau Salon 1",
+                typeAppareil: "MOTORISE",
+                piece: salon._id,
+                status: "ENLIGNE",
+                pourcentageOuverture: 40,
+                estVerrouille: false
+            },
+            {
+                _id: new mongoose.Types.ObjectId("6a10d99c513a833a7ea56ed0"),
+                nomAppareil: "Rideau Salon 2",
+                typeAppareil: "MOTORISE",
+                piece: salon._id,
+                status: "ENLIGNE",
+                pourcentageOuverture: 60,
+                estVerrouille: false
+            },
+            {
+                _id: new mongoose.Types.ObjectId("6a10dc92513a833a7ea56ed1"),
+                nomAppareil: "Aspirateur Robot",
+                typeAppareil: "ASPIRATEUR",
+                piece: salon._id,
+                status: "HORSLIGNE",
+                chargeBatterie: 100,
+                modeNettoyage: "STANDARD"
             }
         ];
 
