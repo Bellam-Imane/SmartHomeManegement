@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  MoreVertical,
   BatteryCharging,
   Battery,
   ChevronLeft,
@@ -8,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import vacuumImage from '../assets/images/aspirateur.png';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT VACUUMCARD :
@@ -16,6 +16,8 @@ import vacuumImage from '../assets/images/aspirateur.png';
 const VacuumCard = ({
   vacuumData = [],
   onUpdateAppareil,
+  onEditDevice,
+  onDeleteDevice,
   className = ''
 }) => {
 
@@ -173,9 +175,11 @@ const VacuumCard = ({
             />
           </button>
 
-          <button className="text-gray-600 hover:bg-black/5 p-1 rounded-full transition-colors">
-            <MoreVertical size={20} />
-          </button>
+          <DeviceMenu
+            deviceName={currentVacuum?.nomAppareil}
+            onEdit={() => onEditDevice?.(currentVacuum)}
+            onDelete={() => onDeleteDevice?.(currentVacuum?._id || currentVacuum?.id)}
+          />
 
         </div>
       </div>

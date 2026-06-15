@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Eye, Radio, Video, VideoOff, ChevronLeft, ChevronRight, 
-  MoreVertical, Maximize2, X 
+  Maximize2, X 
 } from 'lucide-react';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT CAMERACARD
  */
-const CameraCard = ({ cameraData, imageSrc, onUpdateAppareil, className = '' }) => {
+const CameraCard = ({ cameraData, imageSrc, onUpdateAppareil, onEditDevice, onDeleteDevice, className = '' }) => {
   
   const items = Array.isArray(cameraData) ? cameraData : [];
 
@@ -120,9 +121,12 @@ const CameraCard = ({ cameraData, imageSrc, onUpdateAppareil, className = '' }) 
             >
               <Maximize2 size={14} />
             </button>
-            <button className="text-white bg-black/30 p-1.5 rounded-full">
-              <MoreVertical size={14} />
-            </button>
+            <DeviceMenu
+              dark
+              deviceName={nomAppareil}
+              onEdit={() => onEditDevice?.(currentCamera)}
+              onDelete={() => onDeleteDevice?.(_id || id)}
+            />
           </div>
         </div>
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Tv, MoreVertical, Volume2, VolumeX, ChevronLeft, ChevronRight, 
+  Tv, Volume2, VolumeX, ChevronLeft, ChevronRight, 
   ChevronUp, ChevronDown, Clock, Radio, Music, Play, Pause
 } from 'lucide-react';
 import tvImage from '../assets/images/tv_image.png';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT MULTIMEDIACARD
@@ -11,7 +12,7 @@ import tvImage from '../assets/images/tv_image.png';
  * Intègre la gestion du volume, du changement d'applications, des chaînes,
  * de l'état Lecture/Pause, et le calcul dynamique du temps de visionnage.
  */
-const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) => {
+const MultimediaCard = ({ multimediaData, onUpdateAppareil, onEditDevice, onDeleteDevice, className = '' }) => {
   
   // Sécurisation des données reçues sous forme de tableau
   const items = Array.isArray(multimediaData) ? multimediaData : [];
@@ -182,9 +183,11 @@ const MultimediaCard = ({ multimediaData, onUpdateAppareil, className = '' }) =>
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-1' : 'left-1'}`} />
           </button>
-          <button className="text-gray-700 hover:bg-black/5 p-1 rounded-full transition-colors">
-            <MoreVertical size={20} />
-          </button>
+          <DeviceMenu
+            deviceName={currentTv?.nomAppareil}
+            onEdit={() => onEditDevice?.(currentTv)}
+            onDelete={() => onDeleteDevice?.(currentTv?._id || currentTv?.id)}
+          />
         </div>
       </div>
 

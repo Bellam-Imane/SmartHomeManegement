@@ -66,10 +66,69 @@ client.on('connect', () => {
       client.publish(COMMAND_TOPIC, JSON.stringify({ action: "ASK_STATUS" }));
     }
   });
+
+  // Subscribe to per-device topics (real MQTT commands from backend)
+  Object.keys(devices).forEach((key) => {
+    const deviceTopic = `smart/home/appareil/${devices[key]}`;
+    client.subscribe(deviceTopic, (err) => {
+      if (!err) console.log(`📥 [SYNC] Abonné à ${key} => ${deviceTopic}`);
+    });
+  });
+
+  // Subscribe to security topics
+  client.subscribe('smart/home/portes', (err) => { if (!err) console.log('📥 [SYNC] Abonné à smart/home/portes'); });
+  client.subscribe('smart/home/alarme', (err) => { if (!err) console.log('📥 [SYNC] Abonné à smart/home/alarme'); });
 });
 
 // ── 4️⃣ RÉCEPTION ET TRAITEMENT DES COMMANDES ──
 client.on('message', (topic, message) => {
+  const msgStr = message.toString();
+
+  // ── Per-device topics: smart/home/appareil/{id} ──
+  if (topic.startsWith('smart/home/appareil/')) {
+    const deviceId = topic.split('/').pop();
+    const parts = msgStr.split(':');
+    const action = (parts[0] || '').toUpperCase();
+    const isOn = (action === 'ON');
+
+    if (states[deviceId]) {
+      states[deviceId].status = isOn ? "ENLIGNE" : "HORSLIGNE";
+      if (BASE_POWER[deviceId] !== undefined) {
+        states[deviceId].consommationActuelle = isOn ? BASE_POWER[deviceId] : 0;
+      }
+      console.log(`🔌 [PER-DEVICE] ${deviceId} => ${states[deviceId].status} | Raw: ${msgStr}`);
+
+      // Parse type-specific data
+      if (deviceId === devices.climatiseur && parts.length >= 3) {
+        states[deviceId].temperatureCible = parseInt(parts[2]) || 24;
+        console.log(`🌡️ [AC] Target temp: ${states[deviceId].temperatureCible}°C`);
+      }
+      if (deviceId === devices.porte && parts.length >= 2) {
+        states[deviceId].estVerrouillee = (parts[1].toUpperCase() === 'LOCKED');
+        console.log(`🔒 [DOOR] ${states[deviceId].estVerrouillee ? 'VERROUILLÉE' : 'DÉVERROUILLÉE'}`);
+      }
+    }
+    return;
+  }
+
+  // ── Security topics ──
+  if (topic === 'smart/home/portes') {
+    const parts = msgStr.split(':');
+    const isLock = (parts[0] || '').toUpperCase() === 'LOCK';
+    if (states[devices.porte]) {
+      states[devices.porte].estVerrouillee = isLock;
+      console.log(`🔒 [PORTES] ${isLock ? 'VERROUILLÉE' : 'DÉVERROUILLÉE'} (${parts[1] || 'unknown'})`);
+    }
+    return;
+  }
+
+  if (topic === 'smart/home/alarme') {
+    const isArmed = msgStr.trim().toUpperCase() === 'ON';
+    console.log(`🚨 [ALARME] ${isArmed ? 'ARMÉ' : 'DÉSARMÉ'}`);
+    return;
+  }
+
+  // ── Centralized command topic (legacy) ──
   if (topic === COMMAND_TOPIC) {
     try {
       const command = JSON.parse(message.toString());

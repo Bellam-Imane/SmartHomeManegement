@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
+import { Lightbulb, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import lampe from '../assets/images/lampe.png';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT ECLAIRAGECARD : Divisé équitablement à 50% de la hauteur totale
  */
-const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
+const EclairageCard = ({ bulbsData, onUpdateAppareil, onEditDevice, onDeleteDevice, className = '' }) => {
   
   // Validation : Affichage d'un état de chargement si aucune donnée n'est reçue
   if (!bulbsData || bulbsData.length === 0) {
@@ -121,9 +122,11 @@ const EclairageCard = ({ bulbsData, onUpdateAppareil, className = '' }) => {
             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-0.5' : 'left-0.5'}`} />
           </button>
 
-          <button className="p-1 hover:bg-black/5 rounded-full transition-colors cursor-pointer">
-            <MoreVertical size={18} className="text-gray-800" />
-          </button>
+          <DeviceMenu
+            deviceName={currentBulb?.nomAppareil}
+            onEdit={() => onEditDevice?.(currentBulb)}
+            onDelete={() => onDeleteDevice?.(currentBulb?._id || currentBulb?.id)}
+          />
         </div>
       </div>
 

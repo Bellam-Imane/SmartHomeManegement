@@ -7,11 +7,14 @@ const {
   Camera,
   PorteIntelligent,
   Capteur,
-  Aspirateur
+  Aspirateur,
+  AppareilSecurite
 } = require('../models/Appareil');
 
 const Piece = require('../models/Piece');
+const Notification = require('../models/Notifications');
 const { publishMessage } = require('../config/mqttService');
+const TOPIC_COMMANDES = 'smart/home/appareils/commandes';
 const { logDeviceEvent } = require('../services/historyService');
 const { getAppareilFilter, getUserPieceIds } = require('../utils/userScope');
 
@@ -77,6 +80,19 @@ exports.createAppareil = async (req, res) => {
     } else if (typeAppareil === 'CAMERA') {
       appareilData.niveauSensibilite = 'MEDIUM';
       appareilData.estDeclanche = false;
+    } else if (typeAppareil === 'SECURITE') {
+      appareilData.niveauSensibilite = 'MEDIUM';
+      appareilData.estDeclanche = false;
+    } else if (typeAppareil === 'PORTE') {
+      appareilData.niveauSensibilite = 'LOW';
+      appareilData.estDeclanche = false;
+      appareilData.estVerrouillee = true;
+      appareilData.codePin = '';
+    } else if (typeAppareil === 'CAPTEUR') {
+      appareilData.niveauSensibilite = 'MEDIUM';
+      appareilData.estDeclanche = false;
+      appareilData.typeCapteur = 'MOUVEMENT';
+      appareilData.valeurActuelle = 0;
     }
 
     // Instanciation du bon sous-modele Mongoose selon le discriminateur
@@ -88,6 +104,9 @@ exports.createAppareil = async (req, res) => {
       case 'MOTORISE':   nouvelAppareil = new AppareilMotorise(appareilData); break;
       case 'ASPIRATEUR': nouvelAppareil = new Aspirateur(appareilData); break;
       case 'CAMERA':     nouvelAppareil = new Camera(appareilData); break;
+      case 'SECURITE':   nouvelAppareil = new AppareilSecurite(appareilData); break;
+      case 'PORTE':      nouvelAppareil = new PorteIntelligent(appareilData); break;
+      case 'CAPTEUR':    nouvelAppareil = new Capteur(appareilData); break;
       default:           nouvelAppareil = new Appareil(appareilData);
     }
 
@@ -310,6 +329,49 @@ exports.updateAppareil = async (req, res) => {
       publishMessage(deviceTopic, multimediaPayload);
     }
 
+    // --- MQTT : PORTE INTELLIGENTE (Format -> STATUS:LOCK_STATE) ---
+    else if (typeReel === 'PORTE') {
+      const currentStatus = updateData.status || appareilModifie.status;
+      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      const lockPayload = appareilModifie.estVerrouillee !== false ? 'LOCKED' : 'UNLOCKED';
+      const porteMsg = `${statusPayload}:${lockPayload}`;
+
+      console.log(`[MQTT - PORTE] Topic: ${deviceTopic} | Payload: ${porteMsg}`);
+      publishMessage(deviceTopic, porteMsg);
+    }
+
+    // --- MQTT : SECURITE (Format -> STATUS:ARMED_STATE) ---
+    else if (typeReel === 'SECURITE') {
+      const currentStatus = updateData.status || appareilModifie.status;
+      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      const armedPayload = appareilModifie.estDeclanche ? 'TRIGGERED' : 'ARMED';
+      const secMsg = `${statusPayload}:${armedPayload}`;
+
+      console.log(`[MQTT - SECURITE] Topic: ${deviceTopic} | Payload: ${secMsg}`);
+      publishMessage(deviceTopic, secMsg);
+    }
+
+    // --- MQTT : CAPTEUR (Format -> STATUS:SENSOR_TYPE:VALUE) ---
+    else if (typeReel === 'CAPTEUR') {
+      const currentStatus = updateData.status || appareilModifie.status;
+      const statusPayload = currentStatus === 'ENLIGNE' ? 'ON' : 'OFF';
+      const sensorType = (appareilModifie.typeCapteur || 'MOUVEMENT').toUpperCase();
+      const sensorVal = appareilModifie.valeurActuelle || 0;
+      const capteurMsg = `${statusPayload}:${sensorType}:${sensorVal}`;
+
+      console.log(`[MQTT - CAPTEUR] Topic: ${deviceTopic} | Payload: ${capteurMsg}`);
+      publishMessage(deviceTopic, capteurMsg);
+    }
+
+    // --- CENTRALIZED COMMAND (for fakeEsp32.js sync) ---
+    publishMessage(TOPIC_COMMANDES, JSON.stringify({
+      deviceId: id,
+      action: "TOGGLE",
+      valeur: appareilModifie.status === 'ENLIGNE',
+      type: typeReel,
+      extra: appareilModifie.estVerrouillee !== undefined ? { estVerrouillee: appareilModifie.estVerrouillee } : {}
+    }));
+
     return res.status(200).json({
       success: true,
       message: "Appareil mis a jour avec succes !",
@@ -376,6 +438,87 @@ exports.getAllAppareils = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Une erreur est survenue lors de la recuperation des appareils.",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * ---------------------------------------------------------------------------------
+ * CONTROLLER : SUPPRIMER UN APPAREIL
+ * ---------------------------------------------------------------------------------
+ */
+exports.deleteAppareil = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // 1. Verify device exists
+    const appareil = await Appareil.findById(id);
+    if (!appareil) {
+      return res.status(404).json({
+        success: false,
+        message: "Appareil introuvable."
+      });
+    }
+
+    // 2. SECURITY: Verify device belongs to user's maison
+    const userPieces = await getUserPieceIds(userId);
+    if (!userPieces.some(p => p.toString() === appareil.piece.toString())) {
+      return res.status(403).json({
+        success: false,
+        message: "Accès refusé : cet appareil n'appartient pas à votre maison."
+      });
+    }
+
+    const deviceName = appareil.nomAppareil;
+    const pieceId = appareil.piece;
+
+    // 3. Remove device reference from piece's appareils array
+    await Piece.findByIdAndUpdate(pieceId, {
+      $pull: { appareils: appareil._id }
+    });
+
+    // 4. Delete the device from DB
+    await Appareil.findByIdAndDelete(id);
+
+    // 5. Create notification
+    const notif = await Notification.create({
+      titre: 'Appareil supprimé',
+      message: `L'appareil "${deviceName}" a été supprimé avec succès.`,
+      type: 'INFO',
+      categorie: 'SYSTEME',
+      priorite: 'LOW',
+      utilisateur: userId
+    });
+
+    // 6. Socket.IO push
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user:${userId}`).emit('new_notification', {
+        _id: notif._id,
+        titre: notif.titre,
+        message: notif.message,
+        type: notif.type,
+        categorie: notif.categorie,
+        priorite: notif.priorite,
+        lu: false,
+        createdAt: notif.createdAt
+      });
+      io.to(`user:${userId}`).emit('notifications_changed', { action: 'new' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Appareil "${deviceName}" supprimé avec succès.`,
+      data: { id }
+    });
+
+  } catch (error) {
+    console.error("Erreur dans fonction [deleteAppareil]:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Une erreur est survenue lors de la suppression de l'appareil.",
       error: error.message
     });
   }

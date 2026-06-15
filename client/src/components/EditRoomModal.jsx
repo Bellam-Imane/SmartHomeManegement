@@ -12,6 +12,8 @@ const EditRoomModal = ({ isOpen, onClose, roomId, onRoomUpdated }) => {
   
   const [loading, setLoading] = useState(false);       // Pour le bouton "Confirmer"
   const [fetching, setFetching] = useState(true);       // Bloque l'affichage tant que les infos chargent
+  const [formError, setFormError] = useState('');       // Erreur de formulaire
+  const [formSuccess, setFormSuccess] = useState('');   // Succès de formulaire
 
   /**
    * Effet pour charger les détails de la pièce sélectionnée dès l'ouverture du modal
@@ -35,7 +37,7 @@ const EditRoomModal = ({ isOpen, onClose, roomId, onRoomUpdated }) => {
           console.log("Données de la pièce reçues :", response.data);
 
           if (response.data.success && isMounted) {
-            const room = response.data.piece; 
+            const room = response.data.data; 
             
             if (room) {
               // Remplissage complet des inputs avec les valeurs de la BDD
@@ -68,19 +70,27 @@ const EditRoomModal = ({ isOpen, onClose, roomId, onRoomUpdated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setFormError('');
+    setFormSuccess('');
     try {
       const token = localStorage.getItem("token");
       
-      await axios.put(`http://localhost:5000/api/pieces/${roomId}`, formData, {
+      await axios.put(`http://localhost:5000/api/pieces/${roomId}`, {
+        ...formData,
+        superficie: Number(formData.superficie) || 0,
+        etage: Number(formData.etage) || 0
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert("Pièce modifiée avec succès !");
-      onRoomUpdated(); 
-      onClose();       
+      setFormSuccess("Pièce modifiée avec succès !");
+      setTimeout(() => {
+        onRoomUpdated(); 
+        onClose();
+      }, 800);
     } catch (err) {
       console.error("Erreur lors de la mise à jour :", err.message);
-      alert("Erreur lors de la mise à jour.");
+      setFormError(err.response?.data?.message || "Erreur lors de la mise à jour.");
     } finally {
       setLoading(false);
     }
@@ -101,6 +111,18 @@ const EditRoomModal = ({ isOpen, onClose, roomId, onRoomUpdated }) => {
         </button>
         
         <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Modifier la pièce</h3>
+        
+        {/* Messages de succès / erreur */}
+        {formSuccess && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm font-medium">
+            <span>✓</span> {formSuccess}
+          </div>
+        )}
+        {formError && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+            <span>✕</span> {formError}
+          </div>
+        )}
         
         {/* Spinner de chargement : empêche de voir le formulaire vide */}
         {fetching ? (
