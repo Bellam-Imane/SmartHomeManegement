@@ -5,6 +5,7 @@ require('./Appareil');
 
 const pieceSchema = new mongoose.Schema({
     nomPiece: {
+
         type: String,
         required: true,
         trim: true
@@ -18,9 +19,12 @@ const pieceSchema = new mongoose.Schema({
     },
 
     superficie: {
+
         type: Number,
+
         required: true
     },
+
 
     etage: {
         type: Number,
@@ -30,10 +34,12 @@ const pieceSchema = new mongoose.Schema({
     maison: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Maison',
+
         required: true
     },
 
     appareils: [{
+
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Appareil'
     }]
@@ -41,3 +47,4 @@ const pieceSchema = new mongoose.Schema({
 
 // Exportation unique conforme
 module.exports = mongoose.model('Piece', pieceSchema);
+

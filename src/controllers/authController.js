@@ -81,16 +81,21 @@ exports.registerAdmin = async (req, res) => {
  */
 exports.login = async (req, res) => {
     try {
+
         const { email, motDePasse } = req.body;
+
 
         // On cherche dans Administrateur
         const user = await Administrateur.findOne({ email: email.toLowerCase().trim() }).populate('role');
         
+
         if (!user) {
             return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
 
+
         // Vérification du mot de passe
+
         const isMatch = await bcrypt.compare(motDePasse, user.motDePasse);
         if (!isMatch) {
             return res.status(400).json({ message: "Mot de passe incorrect" });

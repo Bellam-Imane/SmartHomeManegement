@@ -12,6 +12,7 @@ const maisonSchema = new mongoose.Schema({
       required: true
    },
 
+
    superficieTotale: Number,
 
    nbEtages: {
