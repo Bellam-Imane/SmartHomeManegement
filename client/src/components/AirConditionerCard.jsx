@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Wind, MoreVertical, ChevronLeft, ChevronRight, Plus, Minus, 
+  Wind, ChevronLeft, ChevronRight, Plus, Minus, 
   Settings, Snowflake, Flame 
 } from 'lucide-react';
 import acImage from '../assets/images/climatiseur.png';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT AIRCONDITIONERCARD (Version Large & Horizontale)
  * Contrôle des climatiseurs avec modes automatiques et débrayage en mode Manuel
  */
-const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
+const AirConditionerCard = ({ acData, onUpdateAppareil, onEditDevice, onDeleteDevice, className = '' }) => {
 
   const items = Array.isArray(acData) ? acData : [];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -126,9 +127,11 @@ const AirConditionerCard = ({ acData, onUpdateAppareil, className = '' }) => {
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-1' : 'left-1'}`} />
           </button>
 
-          <button className="text-gray-700 hover:bg-black/5 p-1 rounded-full transition-colors">
-            <MoreVertical size={18} />
-          </button>
+          <DeviceMenu
+            deviceName={currentAc?.nomAppareil}
+            onEdit={() => onEditDevice?.(currentAc)}
+            onDelete={() => onDeleteDevice?.(currentAc?._id || currentAc?.id)}
+          />
         </div>
       </div>
 

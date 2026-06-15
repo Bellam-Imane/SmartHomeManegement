@@ -1,5 +1,6 @@
 const Piece = require('../models/Piece');
 const Maison = require('../models/Maison');
+const Notification = require('../models/Notifications');
 
 // 🌟 INTEGRATION DIRECTE : Chargement du modèle Appareil
 const { Appareil } = require('../models/Appareil'); 
@@ -104,6 +105,34 @@ exports.ajouterPiece = async (req, res) => {
 
         await nouvellePiece.save();
 
+        // ── NOTIFICATION: Room created ──
+        try {
+            const notif = await Notification.create({
+                titre: 'Nouvelle pièce ajoutée',
+                message: `La pièce "${nomPiece}" a été ajoutée avec succès.`,
+                type: 'INFO',
+                categorie: 'SYSTEME',
+                priorite: 'LOW',
+                utilisateur: userId
+            });
+            const io = req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('new_notification', {
+                    _id: notif._id,
+                    titre: notif.titre,
+                    message: notif.message,
+                    type: notif.type,
+                    categorie: notif.categorie,
+                    priorite: notif.priorite,
+                    estLue: false,
+                    dateCreation: notif.dateCreation
+                });
+                io.to(`user:${userId}`).emit('notifications_changed', { action: 'new' });
+            }
+        } catch (notifErr) {
+            console.error("Erreur notification (ajouterPiece):", notifErr.message);
+        }
+
         return res.status(201).json({
             success: true,
             type: "created",
@@ -132,27 +161,69 @@ exports.ajouterPiece = async (req, res) => {
 exports.updatePiece = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.id;
 
-        const pieceModifiee = await Piece.findByIdAndUpdate(
-            id,
-            req.body,
-            { new: true }
-        ).populate('appareils');
+        // ── USER-SCOPED SECURITY: verify room belongs to user's maison ──
+        const maison = await Maison.findOne({
+            $or: [{ proprietaire: userId }, { membres: userId }]
+        });
 
-        if (!pieceModifiee) {
+        if (!maison) {
             return res.status(404).json({
                 success: false,
                 type: "error",
-                message: "Pièce non trouvée.",
+                message: "Aucune maison trouvée pour cet utilisateur.",
                 data: null
             });
+        }
+
+        const piece = await Piece.findOne({ _id: id, maison: maison._id });
+        if (!piece) {
+            return res.status(404).json({
+                success: false,
+                type: "error",
+                message: "Pièce non trouvée ou accès non autorisé.",
+                data: null
+            });
+        }
+
+        Object.assign(piece, req.body);
+        await piece.save();
+        await piece.populate('appareils');
+
+        // ── NOTIFICATION: Room updated ──
+        try {
+            const notif = await Notification.create({
+                titre: 'Pièce modifiée',
+                message: `La pièce "${piece.nomPiece}" a été mise à jour.`,
+                type: 'INFO',
+                categorie: 'SYSTEME',
+                priorite: 'LOW',
+                utilisateur: userId
+            });
+            const io = req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('new_notification', {
+                    _id: notif._id,
+                    titre: notif.titre,
+                    message: notif.message,
+                    type: notif.type,
+                    categorie: notif.categorie,
+                    priorite: notif.priorite,
+                    estLue: false,
+                    dateCreation: notif.dateCreation
+                });
+                io.to(`user:${userId}`).emit('notifications_changed', { action: 'new' });
+            }
+        } catch (notifErr) {
+            console.error("Erreur notification (updatePiece):", notifErr.message);
         }
 
         return res.status(200).json({
             success: true,
             type: "updated",
             message: "Pièce modifiée avec succès !",
-            data: pieceModifiee
+            data: piece
         });
 
     } catch (error) {
@@ -174,21 +245,66 @@ exports.updatePiece = async (req, res) => {
 exports.deletePiece = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.id;
 
-        // Suppression des appareils liés
-        await Appareil.deleteMany({ piece: id });
+        // ── USER-SCOPED SECURITY: verify room belongs to user's maison ──
+        const maison = await Maison.findOne({
+            $or: [{ proprietaire: userId }, { membres: userId }]
+        });
 
-        console.log(`🧹 Suppression des appareils liés à la pièce ${id}`);
-
-        const pieceSupprimee = await Piece.findByIdAndDelete(id);
-
-        if (!pieceSupprimee) {
+        if (!maison) {
             return res.status(404).json({
                 success: false,
                 type: "error",
-                message: "Pièce non trouvée.",
+                message: "Aucune maison trouvée pour cet utilisateur.",
                 data: null
             });
+        }
+
+        const piece = await Piece.findOne({ _id: id, maison: maison._id });
+        if (!piece) {
+            return res.status(404).json({
+                success: false,
+                type: "error",
+                message: "Pièce non trouvée ou accès non autorisé.",
+                data: null
+            });
+        }
+
+        const pieceNom = piece.nomPiece;
+
+        // Suppression des appareils liés
+        await Appareil.deleteMany({ piece: id });
+        console.log(`🧹 Suppression des appareils liés à la pièce ${id}`);
+
+        await Piece.deleteOne({ _id: id });
+
+        // ── NOTIFICATION: Room deleted ──
+        try {
+            const notif = await Notification.create({
+                titre: 'Pièce supprimée',
+                message: `La pièce "${pieceNom}" et ses appareils ont été supprimés.`,
+                type: 'INFO',
+                categorie: 'SYSTEME',
+                priorite: 'MEDIUM',
+                utilisateur: userId
+            });
+            const io = req.app.get('io');
+            if (io) {
+                io.to(`user:${userId}`).emit('new_notification', {
+                    _id: notif._id,
+                    titre: notif.titre,
+                    message: notif.message,
+                    type: notif.type,
+                    categorie: notif.categorie,
+                    priorite: notif.priorite,
+                    estLue: false,
+                    dateCreation: notif.dateCreation
+                });
+                io.to(`user:${userId}`).emit('notifications_changed', { action: 'new' });
+            }
+        } catch (notifErr) {
+            console.error("Erreur notification (deletePiece):", notifErr.message);
         }
 
         return res.status(200).json({
@@ -217,23 +333,55 @@ exports.deletePiece = async (req, res) => {
 exports.getPieceDetails = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.id;
 
-        const piece = await Piece.findById(id).populate('appareils');
+        // ── USER-SCOPED SECURITY: verify room belongs to user's maison ──
+        const maison = await Maison.findOne({
+            $or: [{ proprietaire: userId }, { membres: userId }]
+        }).populate('proprietaire', 'profile email role')
+          .populate('membres', 'profile email role')
+          .populate('invites', 'profile email role');
+
+        if (!maison) {
+            return res.status(404).json({
+                success: false,
+                type: "error",
+                message: "Aucune maison trouvée pour cet utilisateur.",
+                data: null
+            });
+        }
+
+        const piece = await Piece.findOne({ _id: id, maison: maison._id }).populate('appareils');
 
         if (!piece) {
             return res.status(404).json({
                 success: false,
                 type: "error",
-                message: "Pièce non trouvée.",
+                message: "Pièce non trouvée ou accès non autorisé.",
                 data: null
             });
+        }
+
+        // ── Build users list from maison members ──
+        const utilisateurs = [];
+        if (maison.proprietaire) {
+            utilisateurs.push({ ...maison.proprietaire.toObject(), userType: 'Administrateur' });
+        }
+        if (maison.membres) {
+            maison.membres.forEach(m => utilisateurs.push({ ...m.toObject(), userType: 'Membre' }));
+        }
+        if (maison.invites) {
+            maison.invites.forEach(i => utilisateurs.push({ ...i.toObject(), userType: 'Invite' }));
         }
 
         return res.status(200).json({
             success: true,
             type: "success",
             message: "Détails de la pièce récupérés",
-            data: piece
+            data: {
+                ...piece.toObject(),
+                utilisateurs
+            }
         });
 
     } catch (error) {

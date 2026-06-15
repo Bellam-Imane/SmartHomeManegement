@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 
 /**
  * COMPOSANTE ADDAPPAREILMODAL : Version corrigée avec intégration complète des types d'appareils.
@@ -9,7 +9,8 @@ const AddAppareilModal = ({
   onClose, 
   onSubmit, 
   formData, 
-  setFormData 
+  setFormData,
+  isLoading = false
 }) => {
   if (!isOpen) return null;
 
@@ -31,7 +32,8 @@ const AddAppareilModal = ({
           <button 
             type="button"
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+            disabled={isLoading}
+            className={`p-1.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <X size={18} className="text-gray-500" />
           </button>
@@ -80,6 +82,9 @@ const AddAppareilModal = ({
                 <option value="THERMIQUE">Thermique (Climatiseur)</option>
                 <option value="MOTORISE">Motorisé (Rideaux)</option>
                 <option value="ASPIRATEUR">Aspirateur Robot</option>
+                <option value="SECURITE">Sécurité (Alarme)</option>
+                <option value="PORTE">Porte Intelligente</option>
+                <option value="CAPTEUR">Capteur</option>
               </select>
               
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
@@ -93,9 +98,13 @@ const AddAppareilModal = ({
           {/* Bouton de confirmation forcé en type="submit" */}
           <button 
             type="submit"
-            className="w-full mt-2 bg-[#20242c] hover:bg-[#2c323d] text-white font-bold py-3.5 rounded-xl shadow-md transition-colors text-sm cursor-pointer active:scale-[0.99]"
+            disabled={isLoading}
+            className={`w-full mt-2 bg-[#20242c] hover:bg-[#2c323d] text-white font-bold py-3.5 rounded-xl shadow-md transition-colors text-sm cursor-pointer active:scale-[0.99] flex items-center justify-center gap-2 ${
+              isLoading ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
           >
-            Confirmer l'ajout
+            {isLoading && <Loader2 size={16} className="animate-spin" />}
+            {isLoading ? 'Ajout en cours...' : "Confirmer l'ajout"}
           </button>
 
         </form>

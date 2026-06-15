@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';      
 import { 
-  Blinds, MoreVertical, ChevronLeft, ChevronRight, Moon, Sun, 
+  Blinds, ChevronLeft, ChevronRight, Moon, Sun, 
   ShieldCheck, Clapperboard, Settings2
 } from 'lucide-react';
+import DeviceMenu from './DeviceMenu';
 
 /**
  * COMPOSANT CURTAINSCARD (Version Large & Horizontale)
  * Gère l'affichage dynamique et le contrôle des rideaux connectés.
  */
-const CurtainsCard = ({ curtainsData, onUpdateAppareil, className = '' }) => {
+const CurtainsCard = ({ curtainsData, onUpdateAppareil, onEditDevice, onDeleteDevice, className = '' }) => {
 
   const items = Array.isArray(curtainsData) ? curtainsData : [];
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -134,6 +135,12 @@ const CurtainsCard = ({ curtainsData, onUpdateAppareil, className = '' }) => {
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isOn ? 'right-1' : 'left-1'}`} />
           </button>
+
+          <DeviceMenu
+            deviceName={currentCurtain?.nomAppareil}
+            onEdit={() => onEditDevice?.(currentCurtain)}
+            onDelete={() => onDeleteDevice?.(currentCurtain?._id || currentCurtain?.id)}
+          />
         </div>
       </div>
 
