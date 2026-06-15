@@ -13,7 +13,7 @@ const TOPIC_HUMI_PUB = "smart/home/capteurs/humidite";
 const TOPIC_AIR_PUB = "smart/home/capteurs/air";         
 const TOPIC_CONSO_ACK = "smart/home/appareils/consommation"; 
 
-const Appareil = require('../models/Appareil');
+const { Appareil } = require('../models/Appareil');
 const SystemeGestionEnergetique = require('../models/SystemeGestionEnergetique');
 const Regle = require('../models/Regle'); 
 
